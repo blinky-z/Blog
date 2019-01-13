@@ -55,15 +55,15 @@ BODY {
     float: right;
 }
 
-.item1 {
+.header {
     grid-area: header;
 }
 
-.item2 {
+.main {
     grid-area: main;
 }
 
-.item3 {
+.footer {
     grid-area: footer;
 }
 
