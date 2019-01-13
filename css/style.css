@@ -5,19 +5,22 @@ BODY {
 .site-title {
     font-size: 45px;
     text-transform: uppercase;
-    margin-bottom: 10px;
+    margin-bottom: 20px;
     margin-top: 15px;
 }
 
 .site-description {
     font-size: 20px;
     text-transform: uppercase;
-    margin-bottom: 10px;
+    margin-bottom: 30px;
+}
+
+.search-button {
+    margin-right: 20px;
+    margin-left: 10px;
 }
 
 .menu-navigation {
-    margin-left: 20%;
-    margin-right: 20%;
 }
 
 .menu-navigation ul {
@@ -34,11 +37,13 @@ BODY {
     display: block;
     color: black;
     text-allign: center;
-    padding-left: 8px; padding-right: 8px;
+    padding-left: 6px;
+    padding-right: 6px;
     text-decoration: none;
 }
 
 .menu-navigation-site {
+    margin-left: 10px;
     font-size: 14px;
     text-transform: uppercase;
 }
@@ -48,12 +53,10 @@ BODY {
 }
 
 .menu-navigation-socials {
-
-}
-
-.menu-navigation-socials li {
+    margin-right: 10px;
     float: right;
 }
+
 
 .header {
     grid-area: header;
@@ -68,6 +71,8 @@ BODY {
 }
 
 .grid-container {
+    margin: 0 auto;
+    width: 1000px;
     display: grid;
     grid-template-areas: 'header' 'main' 'footer';
     grid-gap: 0;
@@ -76,7 +81,7 @@ BODY {
 }
 
 .grid-container > div {
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(255, 255, 255, 0);
     text-align: center;
     padding: 20px 0;
     font-size: 30px;
