@@ -114,7 +114,7 @@ pre {
     margin: 0 auto;
 }
 
-.blog-post {
+.blog-post, .post {
     text-align: left;
     margin-top: 10px;
     margin-bottom: 25px;
@@ -122,7 +122,7 @@ pre {
     border: solid 2px #000000;
 }
 
-.blog-post-header {
+.blog-post-header, .post-header {
     text-transform: uppercase;
     font-size: 48px;
     padding-top: 5px;
@@ -130,7 +130,7 @@ pre {
     font-weight: 600;
 }
 
-.blog-post-description {
+.blog-post-description, .post-description {
     font-weight: 500;
     font-size: 18px;
     padding-bottom: 30px;
@@ -179,9 +179,10 @@ pre {
 }
 
 .blog-page-selector {
+    text-align: center;
     font-size: 16px;
     font-weight: 500;
-    margin-top: -45px;
+    margin-top: -50px;
     margin-bottom: 20px;
     padding: 10px 0 20px;
 }
@@ -196,7 +197,7 @@ pre {
 }
 
 .blog-page-selector-home {
-    margin-left: 100px;
+    margin-left: 100px; /*хак чтобы сдвинуть home в центр над футером*/
     text-align: center;
 }
 
@@ -210,6 +211,26 @@ pre {
     text-align: center;
     font-size: 14px;
     margin-bottom: -15px;
+}
+
+.post-page-selector-never-post {
+    display: inline;
+    float: left;
+}
+
+.post-page-selector-home {
+    display: inline;
+}
+
+.post-page-selector-older-post {
+    display: inline;
+    float: right;
+}
+
+.post-content {
+    text-align: left;
+    font-size: 18px;
+    line-height: 22px;
 }
 
 .container {
