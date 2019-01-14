@@ -1,3 +1,8 @@
+html {
+    overflow-x: hidden;
+    margin-left: calc(1 * (100vw - 100%));
+}
+
 body {
     font-family: 'Dosis';
     font-size: 22px;
@@ -8,7 +13,7 @@ h1 {
     font-style: normal;
     font-variant: normal;
     font-weight: 700;
-    line-height: 26.4px;
+    line-height: 26px;
 }
 
 h2 {
@@ -16,39 +21,23 @@ h2 {
     font-weight: 500;
     font-style: normal;
     font-variant: normal;
-    line-height: 22.4px;
+    line-height: 22px;
 }
 
 h3 {
-    font-family: "Dosis";
+    font-size: 24px;
     font-style: normal;
     font-variant: normal;
-    font-weight: 300;
-    line-height: 15.4px;
-}
-
-p {
-    font-family: "Dosis";
-    font-style: normal;
-    font-variant: normal;
-    font-weight: 400;
+    font-weight: 600;
     line-height: 20px;
 }
 
-blockquote {
-    font-family: "Dosis";
+h4 {
+    font-size: 20px;
     font-style: normal;
     font-variant: normal;
-    font-weight: 400;
-    line-height: 30px;
-}
-
-pre {
-    font-family: "Dosis";
-    font-style: normal;
-    font-variant: normal;
-    font-weight: 400;
-    line-height: 18.5714px;
+    font-weight: 600;
+    line-height: 18px;
 }
 
 .site-title {
@@ -145,7 +134,8 @@ pre {
 .blog-post-share {
     float: left;
     font-size: 16px;
-    padding: 15px 0 5px;
+    padding-top: 15px;
+    padding-bottom: 15px;
 }
 
 .blog-post-share-socials {
@@ -197,7 +187,7 @@ pre {
 }
 
 .blog-page-selector-home {
-    margin-left: 100px; /*хак чтобы сдвинуть home в центр над футером*/
+    margin-left: 100px; /*сдвинуть home в центр над футером*/
     text-align: center;
 }
 
@@ -214,6 +204,8 @@ pre {
 }
 
 .post-page-selector-never-post {
+    width: 100px;
+    text-align: left;
     display: inline;
     float: left;
 }
@@ -223,14 +215,46 @@ pre {
 }
 
 .post-page-selector-older-post {
+    width: 100px;
     display: inline;
+    text-align: right;
     float: right;
 }
 
 .post-content {
+    font-family: "Times New Roman";
     text-align: left;
     font-size: 18px;
     line-height: 22px;
+    margin-bottom: 20px;
+}
+
+.post-related-posts {
+    overflow: hidden;
+    margin-top: 20px;
+}
+
+.post-related-posts-thumbnail {
+    display: block;
+    float: left;
+    width: 120px;
+    padding: 0 10px 0 10px;
+}
+
+.post-related-posts-thumbnail img {
+    width: 100%;
+    height: auto;
+}
+
+.post-related-posts-thumbnails-desc {
+    padding-top: 5px;
+    font-size: 16px;
+    text-align: left;
+}
+
+.post-related-posts-thumbnails-desc a {
+    text-decoration: none;
+    color: #000000;
 }
 
 .container {
