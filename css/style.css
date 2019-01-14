@@ -60,6 +60,11 @@ pre {
     margin-top: 30px;
 }
 
+.site-title a {
+    text-decoration: none;
+    color: black;
+}
+
 .site-description {
     text-transform: uppercase;
     margin-bottom: 25px;
@@ -68,8 +73,8 @@ pre {
 .menu-navigation {
     font-family: 'Dosis';
     font-weight: 200;
-    margin-left: 10px;
-    margin-right: 10px;
+    margin-left: -6px; /*двигаем вправо/влево из-за padding списка menu-navigation li a*/
+    margin-right: -6px;
 }
 
 .menu-navigation ul {
@@ -112,7 +117,8 @@ pre {
 
 .blog-post {
     text-align: left;
-    margin: 10px 15px 25px;
+    margin-top: 10px;
+    margin-bottom: 25px;
     padding: 30px 50px 80px 50px;
     border: solid 2px #000000;
 }
@@ -169,6 +175,10 @@ pre {
     padding: 15px 0 5px;
 }
 
+.blog-post-read-more a {
+    color: black;
+}
+
 .blog-page-selector {
     font-size: 16px;
     font-weight: 500;
@@ -177,26 +187,35 @@ pre {
     padding: 10px 0 20px;
 }
 
+.blog-page-selector a {
+    text-decoration: none;
+    color: black;
+}
+
+.blog-page-selector a:hover {
+    text-decoration: underline;
+}
+
 .blog-page-selector-home {
+    margin-left: 100px;
     text-align: center;
 }
 
 .blog-page-selector-older-posts {
+    width: 100px;
     float: right;
     text-align: right;
-    margin-right: 15px;
 }
 
 .footer-bottom {
     text-align: center;
     font-size: 14px;
-    margin-bottom: -20px;
+    margin-bottom: -15px;
 }
 
 .container {
     width: 1000px;
     background-color: #ffffff;
-    padding: 5px;
     margin: 0 auto 25px auto;
     border-bottom: solid 2px #000000;
 }
