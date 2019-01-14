@@ -13,8 +13,7 @@ h1 {
 
 h2 {
     font-family: "Amatic SC";
-    font-size: 32px;
-    font-weight: 100;
+    font-weight: 500;
     font-style: normal;
     font-variant: normal;
     line-height: 22.4px;
@@ -24,7 +23,7 @@ h3 {
     font-family: "Dosis";
     font-style: normal;
     font-variant: normal;
-    font-weight: 700;
+    font-weight: 300;
     line-height: 15.4px;
 }
 
@@ -53,7 +52,6 @@ pre {
 }
 
 .site-title {
-    font-weight: 600;
     font-size: 64px;
     text-transform: uppercase;
     margin-bottom: 40px;
@@ -66,6 +64,7 @@ pre {
 }
 
 .site-description {
+    font-size: 32px;
     text-transform: uppercase;
     margin-bottom: 25px;
 }
@@ -224,5 +223,4 @@ pre {
     background-color: rgba(255, 255, 255, 0);
     text-align: center;
     padding: 20px 0;
-    font-size: 30px;
 }
