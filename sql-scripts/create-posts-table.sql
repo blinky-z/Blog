@@ -1,0 +1,7 @@
+CREATE TABLE Posts
+(
+  ID      SERIAL PRIMARY KEY,
+  TITLE   CHARACTER VARYING(120),
+  DATE    TIMESTAMPTZ,
+  Content text
+);
