@@ -8,10 +8,17 @@ import (
 	_ "github.com/lib/pq"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
 var (
+	logInfoOutfile, _  = os.OpenFile("./logs/Info.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	logErrorOutfile, _ = os.OpenFile("./logs/Error.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+
+	logInfo  = log.New(logInfoOutfile, "INFO: ", log.Ltime)
+	logError = log.New(logErrorOutfile, "ERROR: ", log.Ltime)
+
 	db *sql.DB
 )
 
@@ -30,7 +37,7 @@ type Post struct {
 
 func checkError(err error) {
 	if err != nil {
-		log.Fatal(err)
+		logError.Print(err)
 	}
 }
 
@@ -93,16 +100,13 @@ func main() {
 
 	router := mux.NewRouter()
 
-	server := &http.Server{ReadTimeout: 5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
-		Handler:      router,
-		Addr:         "localhost:8080"}
+	port := "8080"
+	address := "localhost:" + port
 
 	router.HandleFunc("/posts", getPosts).Methods("GET")
 	router.HandleFunc("/posts", createPost).Methods("POST")
 	router.HandleFunc("/posts/{id}", getCertainPost).Methods("GET")
 
-	fmt.Printf("listening on address %s", server.Addr)
-	log.Fatal(http.ListenAndServe(":8000", router))
+	logInfo.Printf("listening on address %s", address)
+	logInfo.Fatal(http.ListenAndServe(address, router))
 }
