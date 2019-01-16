@@ -1,15 +1,15 @@
 package main
 
 import (
+	"./handler"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
+	"github.com/spf13/viper"
 	"log"
 	"net/http"
 	"os"
-	"time"
 )
 
 var (
@@ -19,94 +19,47 @@ var (
 	logInfo  = log.New(logInfoOutfile, "INFO: ", log.Ltime)
 	logError = log.New(logErrorOutfile, "ERROR: ", log.Ltime)
 
-	db *sql.DB
+	port    = "8080"
+	address = "localhost:" + port
+
+	DbUser     string
+	DbPassword string
+	DbName     string
 )
 
-const (
-	DB_USER     = "postgres"
-	DB_PASSWORD = "postgres"
-	DB_NAME     = "testdb"
-)
-
-type Post struct {
-	ID      string    `json:"id"`
-	Title   string    `json:"name"`
-	Date    time.Time `json:"time"`
-	Content string    `json:"content"`
-}
-
-func checkError(err error) {
+func RunServer(configName, configPath string) {
+	viper.SetConfigName(configName)
+	viper.AddConfigPath(configPath)
+	err := viper.ReadInConfig()
 	if err != nil {
-		logError.Print(err)
+		logError.Fatalf("Fatal error config file: %s \n", err)
 	}
-}
 
-func respond(w http.ResponseWriter, code int) {
-	w.WriteHeader(code)
-	_, err := w.Write([]byte{})
-	checkError(err)
-}
+	DbUser = viper.GetString("DB_USER")
+	DbPassword = viper.GetString("DB_PASSWORD")
+	DbName = viper.GetString("DB_NAME")
 
-func respondwithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	response, _ := json.Marshal(payload)
-	fmt.Println(payload)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	_, err := w.Write(response)
-	checkError(err)
-}
-
-func getPosts(w http.ResponseWriter, r *http.Request) {
-	var posts []Post
-
-	rows, err := db.Query("select * from posts")
-	defer rows.Close()
-	checkError(err)
-	rows.Scan(posts)
-
-	respondwithJSON(w, 200, posts)
-}
-
-func getCertainPost(w http.ResponseWriter, r *http.Request) {
-	var post Post
-	var id string
-	json.NewDecoder(r.Body).Decode(&id)
-
-	row, err := db.Query("select * from posts WHERE id = ?", id)
-	defer row.Close()
-	checkError(err)
-	row.Scan(&post)
-
-	respondwithJSON(w, 200, post)
-}
-
-func createPost(w http.ResponseWriter, r *http.Request) {
-	var post Post
-	json.NewDecoder(r.Body).Decode(&post)
-
-	_, err := db.Exec("insert into posts(id, title, date, content) values(DEFAULT, $1, $2, $3);",
-		post.Title, post.Date, post.Content)
-	checkError(err)
-
-	respond(w, http.StatusCreated)
-}
-
-func main() {
 	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
-		DB_USER, DB_PASSWORD, DB_NAME)
+		DbUser, DbPassword, DbName)
 	db, err := sql.Open("postgres", dbinfo)
-	checkError(err)
+	if err != nil {
+		logError.Fatal(err)
+	}
+	handler.Db = db
+	handler.LogInfo = logInfo
+	handler.LogError = logError
 	defer db.Close()
 
 	router := mux.NewRouter()
 
-	port := "8080"
-	address := "localhost:" + port
-
-	router.HandleFunc("/posts", getPosts).Methods("GET")
-	router.HandleFunc("/posts", createPost).Methods("POST")
-	router.HandleFunc("/posts/{id}", getCertainPost).Methods("GET")
+	router.HandleFunc("/posts", handler.GetPosts).Methods("GET")
+	router.HandleFunc("/posts", handler.CreatePost).Methods("POST")
+	router.HandleFunc("/posts/{id}", handler.GetCertainPost).Methods("GET")
 
 	logInfo.Printf("listening on address %s", address)
 	logInfo.Fatal(http.ListenAndServe(address, router))
+}
+
+func main() {
+	RunServer("config", ".")
 }
