@@ -40,6 +40,36 @@ h4 {
     line-height: 18px;
 }
 
+strong {
+    font-weight: 800;
+}
+
+b {
+    font-weight: 800;
+}
+
+i {
+    font-style: italic;
+}
+
+em {
+    font-style: italic;
+}
+
+ul {
+    display: block;
+    list-style-type: disc;
+    margin-top: 1em;
+    margin-bottom: 1em;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 40px;
+}
+
+li {
+    display: list-item;
+}
+
 .site-title {
     font-size: 64px;
     text-transform: uppercase;
