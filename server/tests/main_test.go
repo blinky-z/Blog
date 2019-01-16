@@ -65,5 +65,5 @@ func TestGetCertainPost(t *testing.T) {
 }
 
 func main() {
-
+	//RunServer("testConfig", "testPath")
 }
