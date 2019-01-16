@@ -1,9 +1,9 @@
 package main
 
 import (
-	"./handler"
 	"database/sql"
 	"fmt"
+	"github.com/Blog/server/handler"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 	"github.com/spf13/viper"

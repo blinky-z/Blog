@@ -1,13 +1,13 @@
 package main
 
 import (
-	. "./models"
 	"bytes"
 	"encoding/json"
-	"github.com/spf13/cast"
+	. "github.com/Blog/server/models"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -75,8 +75,8 @@ func TestGetCertainPost(t *testing.T) {
 func TestGetPosts(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		message := map[string]interface{}{
-			"title":   "Title" + cast.ToString(i),
-			"content": "Content" + cast.ToString(i),
+			"title":   "Title" + strconv.Itoa(i),
+			"content": "Content" + strconv.Itoa(i),
 		}
 
 		encodedMessage, _ := json.Marshal(message)
@@ -103,8 +103,8 @@ func TestGetPosts(t *testing.T) {
 	}
 
 	for i, receivedPost := range receivedPosts[1:] {
-		curPostIndex := cast.ToString(i)
-		databaseOffset := cast.ToString(i + 2)
+		curPostIndex := strconv.Itoa(i)
+		databaseOffset := strconv.Itoa(i + 2)
 		properPost := Post{ID: databaseOffset, Title: "Title" + curPostIndex, Content: "Content" + curPostIndex}
 
 		if receivedPost.ID != properPost.ID || receivedPost.Title != properPost.Title ||
