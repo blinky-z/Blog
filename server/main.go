@@ -27,9 +27,9 @@ var (
 	DbName     string
 )
 
-func RunServer(configName, configPath string) {
-	viper.SetConfigName(configName)
-	viper.AddConfigPath(configPath)
+func main() {
+	viper.SetConfigName(os.Args[1])
+	viper.AddConfigPath(os.Args[2])
 	err := viper.ReadInConfig()
 	if err != nil {
 		logError.Fatalf("Fatal error config file: %s \n", err)
@@ -45,10 +45,10 @@ func RunServer(configName, configPath string) {
 	if err != nil {
 		logError.Fatal(err)
 	}
+	defer db.Close()
 	handler.Db = db
 	handler.LogInfo = logInfo
 	handler.LogError = logError
-	defer db.Close()
 
 	router := mux.NewRouter()
 
@@ -58,8 +58,4 @@ func RunServer(configName, configPath string) {
 
 	logInfo.Printf("listening on address %s", address)
 	logInfo.Fatal(http.ListenAndServe(address, router))
-}
-
-func main() {
-	RunServer("config", ".")
 }

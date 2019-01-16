@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"testing"
-	"time"
 )
 
 func TestCreatePost(t *testing.T) {
