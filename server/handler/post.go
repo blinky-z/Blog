@@ -4,7 +4,6 @@ import (
 	. "../models"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 	"log"
@@ -30,24 +29,55 @@ func respond(w http.ResponseWriter, code int) {
 	checkError(err)
 }
 
-func respondwithJSON(w http.ResponseWriter, code int, payload interface{}) {
+func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	response, _ := json.Marshal(payload)
-	fmt.Println(payload)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	_, err := w.Write(response)
 	checkError(err)
 }
 
+func CreatePost(w http.ResponseWriter, r *http.Request) {
+	var post Post
+	err := json.NewDecoder(r.Body).Decode(&post)
+	if err != nil {
+		respondWithJSON(w, http.StatusBadRequest, "Bad post body")
+		return
+	}
+
+	LogInfo.Print("Got new post creation job\nPost:")
+	LogInfo.Print(post)
+
+	_, err = Db.Query("insert into posts(id, title, date, content) values(DEFAULT, $1, DEFAULT, $2);",
+		post.Title, post.Content)
+
+	if err != nil {
+		respondWithJSON(w, http.StatusInternalServerError, err)
+	} else {
+		respond(w, http.StatusCreated)
+	}
+}
+
 func GetPosts(w http.ResponseWriter, r *http.Request) {
 	var posts []Post
 
 	rows, err := Db.Query("select * from posts")
-	defer rows.Close()
-	checkError(err)
-	rows.Scan(posts)
+	if err != nil {
+		respondWithJSON(w, http.StatusInternalServerError, err)
+		return
+	}
 
-	respondwithJSON(w, 200, posts)
+	for rows.Next() {
+		var currentPost Post
+		err = rows.Scan(&currentPost.ID, &currentPost.Title, &currentPost.Date, &currentPost.Content)
+		if err != nil {
+			respondWithJSON(w, http.StatusInternalServerError, err)
+			return
+		}
+		posts = append(posts, currentPost)
+	}
+
+	respondWithJSON(w, 200, posts)
 }
 
 func GetCertainPost(w http.ResponseWriter, r *http.Request) {
@@ -56,24 +86,12 @@ func GetCertainPost(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	row, _ := Db.Query("select * from posts WHERE id = ?", id)
-	defer row.Close()
-	err := row.Scan(&post)
-	checkError(err)
+	row := Db.QueryRow("select * from posts where id = $1", id)
 
-	respondwithJSON(w, 200, post)
-}
-
-func CreatePost(w http.ResponseWriter, r *http.Request) {
-	var post Post
-	err := json.NewDecoder(r.Body).Decode(&post)
-	checkError(err)
-	LogInfo.Print("Got new post creation job\nPost:")
-	LogInfo.Print(post)
-
-	_, err = Db.Query("insert into posts(id, title, date, content) values(DEFAULT, $1, DEFAULT, $2);",
-		post.Title, post.Content)
-	checkError(err)
-
-	respond(w, http.StatusCreated)
+	err := row.Scan(&post.ID, &post.Title, &post.Date, &post.Content)
+	if err != nil {
+		respondWithJSON(w, http.StatusInternalServerError, err)
+	} else {
+		respondWithJSON(w, 200, post)
+	}
 }

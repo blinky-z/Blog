@@ -25,28 +25,33 @@ var (
 	DbUser     string
 	DbPassword string
 	DbName     string
+
+	Db *sql.DB
 )
 
-func main() {
-	viper.SetConfigName(os.Args[1])
-	viper.AddConfigPath(os.Args[2])
+func RunServer(configName, configPath string) {
+	viper.SetConfigName(configName)
+	viper.AddConfigPath(configPath)
 	err := viper.ReadInConfig()
 	if err != nil {
 		logError.Fatalf("Fatal error config file: %s \n", err)
 	}
 
-	DbUser = viper.GetString("DB_USER")
-	DbPassword = viper.GetString("DB_PASSWORD")
-	DbName = viper.GetString("DB_NAME")
+	DbUser = viper.GetString("db_user")
+	DbPassword = viper.GetString("db_password")
+	DbName = viper.GetString("db_name")
 
-	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s",
 		DbUser, DbPassword, DbName)
-	db, err := sql.Open("postgres", dbinfo)
+
+	logInfo.Printf("Logging into postgres database with following credentials: %s", dbinfo)
+
+	Db, err = sql.Open("postgres", dbinfo)
 	if err != nil {
 		logError.Fatal(err)
 	}
-	defer db.Close()
-	handler.Db = db
+	defer Db.Close()
+	handler.Db = Db
 	handler.LogInfo = logInfo
 	handler.LogError = logError
 
@@ -58,4 +63,8 @@ func main() {
 
 	logInfo.Printf("listening on address %s", address)
 	logInfo.Fatal(http.ListenAndServe(address, router))
+}
+
+func main() {
+	RunServer(os.Args[1], os.Args[2])
 }
