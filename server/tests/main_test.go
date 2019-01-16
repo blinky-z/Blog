@@ -1,6 +1,7 @@
 package main
 
 import (
+	. "../models"
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
@@ -9,13 +10,6 @@ import (
 	"testing"
 	"time"
 )
-
-type Post struct {
-	ID      string    `json:"id"`
-	Title   string    `json:"title"`
-	Date    time.Time `json:"date"`
-	Content string    `json:"content"`
-}
 
 func TestCreatePost(t *testing.T) {
 	message := map[string]interface{}{
