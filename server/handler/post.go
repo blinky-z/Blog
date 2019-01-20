@@ -10,12 +10,18 @@ import (
 )
 
 var (
-	LogInfo  *log.Logger
+	// LogInfo - log for writing+ messages
+	LogInfo *log.Logger
+	// LogError - log for writing server errors
 	LogError *log.Logger
 
+	// Db - database connection. This variable is set by main function
 	Db *sql.DB
 )
 
+// Response - behaves like Either Monad
+// 'Error' field is set while error occurred.
+// Otherwise 'Body' field is used to return post from database
 type Response struct {
 	Error postErrorCode `json:"error"`
 	Body  interface{}   `json:"body"`
@@ -24,10 +30,10 @@ type Response struct {
 type postErrorCode string
 
 const (
-	TechnicalError postErrorCode = "TECHNICAL_ERROR"
-	InvalidTitle   postErrorCode = "INVALID_TITLE"
-	BadPostBody    postErrorCode = "INVALID_BODY"
-	NoSuchPost     postErrorCode = "NO_SUCH_POST"
+	technicalError postErrorCode = "TECHNICAL_ERROR"
+	invalidTitle   postErrorCode = "INVALID_TITLE"
+	badPostBody    postErrorCode = "INVALID_BODY"
+	noSuchPost     postErrorCode = "NO_SUCH_POST"
 
 	maxPostTitleLen int = 120
 )
@@ -46,19 +52,20 @@ func respondWithBody(w http.ResponseWriter, code int, payload interface{}) {
 	checkError(err)
 }
 
+// CreatePost - create post http handler
 func CreatePost(w http.ResponseWriter, r *http.Request) {
 	var response Response
 
 	var post models.Post
 	err := json.NewDecoder(r.Body).Decode(&post)
 	if err != nil {
-		response.Error = BadPostBody
+		response.Error = badPostBody
 		respondWithBody(w, http.StatusBadRequest, response)
 		return
 	}
 
 	if len(post.Title) > maxPostTitleLen {
-		response.Error = InvalidTitle
+		response.Error = invalidTitle
 		respondWithBody(w, http.StatusBadRequest, response)
 		return
 	}
@@ -70,7 +77,7 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 	err = Db.QueryRow("insert into posts(title, content) values($1, $2) RETURNING *;",
 		post.Title, post.Content).Scan(&createdPost.ID, &createdPost.Title, &createdPost.Date, &createdPost.Content)
 	if err != nil {
-		response.Error = TechnicalError
+		response.Error = technicalError
 		LogError.Print(err)
 		respondWithBody(w, http.StatusInternalServerError, response)
 		return
@@ -82,6 +89,7 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 	respondWithBody(w, http.StatusCreated, response)
 }
 
+// UpdatePost - update post http handler
 func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	var response Response
 
@@ -91,13 +99,13 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	var post models.Post
 	err := json.NewDecoder(r.Body).Decode(&post)
 	if err != nil {
-		response.Error = BadPostBody
+		response.Error = badPostBody
 		respondWithBody(w, http.StatusBadRequest, response)
 		return
 	}
 
 	if len(post.Title) > maxPostTitleLen {
-		response.Error = InvalidTitle
+		response.Error = invalidTitle
 		respondWithBody(w, http.StatusBadRequest, response)
 		return
 	}
@@ -107,12 +115,12 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	err = Db.QueryRow("select from posts where id = $1", id).Scan()
 	if err != nil {
 		if err == sql.ErrNoRows {
-			response.Error = NoSuchPost
+			response.Error = noSuchPost
 			respondWithBody(w, http.StatusNotFound, response)
 			return
 		}
 
-		response.Error = TechnicalError
+		response.Error = technicalError
 		LogError.Print(err)
 		respondWithBody(w, http.StatusInternalServerError, response)
 		return
@@ -122,7 +130,7 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	err = Db.QueryRow("UPDATE posts SET title = $1, content = $2 WHERE id = $3 RETURNING *;",
 		post.Title, post.Content, id).Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Date, &updatedPost.Content)
 	if err != nil {
-		response.Error = TechnicalError
+		response.Error = technicalError
 		LogError.Print(err)
 		respondWithBody(w, http.StatusInternalServerError, response)
 		return
@@ -134,6 +142,7 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	respondWithBody(w, http.StatusOK, response)
 }
 
+// DeletePost - delete post http handler
 func DeletePost(w http.ResponseWriter, r *http.Request) {
 	var response Response
 
@@ -145,12 +154,12 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 	err := Db.QueryRow("select from posts where id = $1", id).Scan()
 	if err != nil {
 		if err == sql.ErrNoRows {
-			response.Error = NoSuchPost
+			response.Error = noSuchPost
 			respondWithBody(w, http.StatusNotFound, response)
 			return
 		}
 
-		response.Error = TechnicalError
+		response.Error = technicalError
 		LogError.Print(err)
 		respondWithBody(w, http.StatusInternalServerError, response)
 		return
@@ -158,7 +167,7 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 
 	_, err = Db.Exec("DELETE FROM posts WHERE id = $1;", id)
 	if err != nil {
-		response.Error = TechnicalError
+		response.Error = technicalError
 		LogError.Print(err)
 		respondWithBody(w, http.StatusInternalServerError, response)
 		return
@@ -169,6 +178,7 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 	respondWithBody(w, http.StatusOK, response)
 }
 
+// GetCertainPost - get single post from database http handler
 func GetCertainPost(w http.ResponseWriter, r *http.Request) {
 	var response Response
 
@@ -181,12 +191,12 @@ func GetCertainPost(w http.ResponseWriter, r *http.Request) {
 		&post.ID, &post.Title, &post.Date, &post.Content)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			response.Error = NoSuchPost
+			response.Error = noSuchPost
 			respondWithBody(w, http.StatusNotFound, response)
 			return
 		}
 
-		response.Error = TechnicalError
+		response.Error = technicalError
 		LogError.Print(err)
 		respondWithBody(w, http.StatusInternalServerError, response)
 		return
@@ -196,6 +206,7 @@ func GetCertainPost(w http.ResponseWriter, r *http.Request) {
 	respondWithBody(w, 200, response)
 }
 
+// GetPosts - get all posts from database http handler
 func GetPosts(w http.ResponseWriter, r *http.Request) {
 	var response Response
 
@@ -203,7 +214,7 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := Db.Query("select * from posts")
 	if err != nil {
-		response.Error = TechnicalError
+		response.Error = technicalError
 		LogError.Print(err)
 		respondWithBody(w, http.StatusInternalServerError, response)
 		return
@@ -213,7 +224,7 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 		var currentPost models.Post
 		err = rows.Scan(&currentPost.ID, &currentPost.Title, &currentPost.Date, &currentPost.Content)
 		if err != nil {
-			response.Error = TechnicalError
+			response.Error = technicalError
 			LogError.Print(err)
 			respondWithBody(w, http.StatusInternalServerError, response)
 			return

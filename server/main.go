@@ -19,16 +19,20 @@ var (
 	logInfo  = log.New(logInfoOutfile, "INFO: ", log.Ltime)
 	logError = log.New(logErrorOutfile, "ERROR: ", log.Ltime)
 
-	Port    = "8080"
+	// Port - server Port
+	Port = "8080"
+	// Address - server address with port
 	Address = "localhost:" + Port
 
 	user     string
 	password string
 	dbName   string
 
+	// Db - database connection
 	Db *sql.DB
 )
 
+// RunServer - run server function. Config file name and path should be passed
 func RunServer(configName, configPath string) {
 	viper.SetConfigName(configName)
 	viper.AddConfigPath(configPath)
@@ -50,7 +54,12 @@ func RunServer(configName, configPath string) {
 	if err != nil {
 		logError.Fatal(err)
 	}
-	defer Db.Close()
+	defer func() {
+		err := Db.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
 	handler.Db = Db
 	handler.LogInfo = logInfo
 	handler.LogError = logError
@@ -65,8 +74,6 @@ func RunServer(configName, configPath string) {
 	router.HandleFunc("/hc", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Methods("GET")
-
-	Db.Prepare("SELECT id FROM posts WHERE id = $1")
 
 	logInfo.Printf("listening on address %s", Address)
 	logError.Fatal(http.ListenAndServe(Address, router))
