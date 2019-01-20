@@ -13,18 +13,18 @@ import (
 )
 
 var (
-	logInfoOutfile, _  = os.OpenFile("./logs/Info.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	logErrorOutfile, _ = os.OpenFile("./logs/Error.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	logInfoOutfile, _  = os.OpenFile("./logs/Info.log", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	logErrorOutfile, _ = os.OpenFile("./logs/Error.log", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 
 	logInfo  = log.New(logInfoOutfile, "INFO: ", log.Ltime)
 	logError = log.New(logErrorOutfile, "ERROR: ", log.Ltime)
 
-	port    = "8080"
-	address = "localhost:" + port
+	Port    = "8080"
+	Address = "localhost:" + Port
 
-	DbUser     string
-	DbPassword string
-	DbName     string
+	user     string
+	password string
+	dbName   string
 
 	Db *sql.DB
 )
@@ -37,12 +37,12 @@ func RunServer(configName, configPath string) {
 		logError.Fatalf("Fatal error config file: %s \n", err)
 	}
 
-	DbUser = viper.GetString("db_user")
-	DbPassword = viper.GetString("db_password")
-	DbName = viper.GetString("db_name")
+	user = viper.GetString("user")
+	password = viper.GetString("password")
+	dbName = viper.GetString("db_name")
 
 	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s",
-		DbUser, DbPassword, DbName)
+		user, password, dbName)
 
 	logInfo.Printf("Logging into postgres database with following credentials: %s", dbinfo)
 
@@ -60,9 +60,16 @@ func RunServer(configName, configPath string) {
 	router.HandleFunc("/posts", handler.GetPosts).Methods("GET")
 	router.HandleFunc("/posts", handler.CreatePost).Methods("POST")
 	router.HandleFunc("/posts/{id}", handler.GetCertainPost).Methods("GET")
+	router.HandleFunc("/posts/{id}", handler.UpdatePost).Methods("PUT")
+	router.HandleFunc("/posts/{id}", handler.DeletePost).Methods("DELETE")
+	router.HandleFunc("/hc", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}).Methods("GET")
 
-	logInfo.Printf("listening on address %s", address)
-	logInfo.Fatal(http.ListenAndServe(address, router))
+	Db.Prepare("SELECT id FROM posts WHERE id = $1")
+
+	logInfo.Printf("listening on address %s", Address)
+	logError.Fatal(http.ListenAndServe(Address, router))
 }
 
 func main() {
