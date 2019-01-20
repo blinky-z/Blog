@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	. "github.com/Blog/server/models"
+	. "github.com/blinky-z/Blog/server/models"
 	"io"
 	"log"
 	"net/http"
