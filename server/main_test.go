@@ -15,8 +15,7 @@ import (
 )
 
 var (
-	workingPost models.Post
-	client      = &http.Client{}
+	client = &http.Client{}
 )
 
 type Response struct {
@@ -122,27 +121,152 @@ func sendMessage(method, address string, message interface{}) *http.Response {
 	return response
 }
 
-func TestCreatePost(t *testing.T) {
+func TestHandlePostIntegrationTest(t *testing.T) {
+	var workingPost models.Post
+
+	// Step 1: Create Post
+	{
+		var response Response
+
+		message := map[string]interface{}{
+			"title":   "Title1",
+			"content": "Content1 Content2 Content3",
+		}
+
+		resp := createPost(message)
+		defer func() {
+			err := resp.Body.Close()
+			if err != nil {
+				panic(err)
+			}
+		}()
+		decodeMessage(resp.Body, &response)
+		if resp.StatusCode != http.StatusCreated {
+			t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+		}
+
+		workingPost = response.Body
+
+		log.Printf("Created post id: %s", workingPost.ID)
+	}
+
+	// Step 2: Get created post
+	{
+		var response Response
+
+		resp := getPost(workingPost.ID)
+		defer func() {
+			err := resp.Body.Close()
+			if err != nil {
+				panic(err)
+			}
+		}()
+		decodeMessage(resp.Body, &response)
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+		}
+
+		receivedPost := response.Body
+
+		if receivedPost != workingPost {
+			t.Errorf("Received post does not match proper post\nReceived post: %v\n Proper post: %v",
+				receivedPost, workingPost)
+		}
+	}
+
+	// Step 3: Update created post
+	{
+		var response Response
+
+		newPost := workingPost
+		newPost.Title = "newTitle"
+		newPost.Content = "NewContent"
+
+		resp := updatePost(workingPost.ID, newPost)
+		defer func() {
+			err := resp.Body.Close()
+			if err != nil {
+				panic(err)
+			}
+		}()
+		decodeMessage(resp.Body, &response)
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+		}
+
+		updatedPost := response.Body
+		if updatedPost != newPost {
+			t.Errorf("Received post does not match proper post\nReceived post: %v\n Proper post: %v",
+				updatedPost, workingPost)
+		}
+
+		workingPost = updatedPost
+	}
+
+	// Step 4: Delete updated post
+	{
+		var response Response
+
+		resp := deletePost(workingPost.ID)
+		decodeMessage(resp.Body, &response)
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+		}
+
+		resp = getPost(workingPost.ID)
+		defer func() {
+			err := resp.Body.Close()
+			if err != nil {
+				panic(err)
+			}
+		}()
+		decodeMessage(resp.Body, &response)
+		if resp.StatusCode != http.StatusNotFound {
+			t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+		}
+	}
+}
+
+func TestCreatePostWithInvalidRequestBody(t *testing.T) {
+	var response Response
+
+	message := `{"bad request body"}`
+
+	resp := createPost(message)
+	decodeMessage(resp.Body, &response)
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.BadRequestBody {
+		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+	}
+}
+
+func TestCreatePostWithNullTitle(t *testing.T) {
 	var response Response
 
 	message := map[string]interface{}{
-		"title":   "Title1",
+		"title":   "",
 		"content": "Content1 Content2 Content3",
 	}
 
 	resp := createPost(message)
 	decodeMessage(resp.Body, &response)
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusCreated {
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidTitle {
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
-
-	workingPost = response.Body
-
-	log.Printf("Created post id: %s", workingPost.ID)
 }
 
-func TestCreatePostWithInvalidTitle(t *testing.T) {
+func TestCreatePostWithLongTitle(t *testing.T) {
 	var response Response
 
 	message := map[string]interface{}{
@@ -152,27 +276,51 @@ func TestCreatePostWithInvalidTitle(t *testing.T) {
 
 	resp := createPost(message)
 	decodeMessage(resp.Body, &response)
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
 	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidTitle {
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
 }
 
-func TestGetCertainPost(t *testing.T) {
+func TestCreatePostWithNullContent(t *testing.T) {
 	var response Response
 
-	resp := getPost(workingPost.ID)
-	decodeMessage(resp.Body, &response)
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+	message := map[string]interface{}{
+		"title":   "Title1",
+		"content": "",
 	}
 
-	receivedPost := response.Body
+	resp := createPost(message)
+	decodeMessage(resp.Body, &response)
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidContent {
+		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+	}
+}
 
-	if receivedPost != workingPost {
-		t.Errorf("Received post does not match proper post\nReceived post: %v\n Proper post: %v",
-			receivedPost, workingPost)
+func TestGetPostWithInvalidID(t *testing.T) {
+	var response Response
+
+	resp := getPost("post1")
+	decodeMessage(resp.Body, &response)
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidID {
+		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
 }
 
@@ -181,36 +329,57 @@ func TestGetNonexistentPost(t *testing.T) {
 
 	resp := getPost("-1")
 	decodeMessage(resp.Body, &response)
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
 }
 
-func TestUpdatePost(t *testing.T) {
+func TestUpdatePostWithInvalidRequestBody(t *testing.T) {
 	var response Response
 
-	newPost := workingPost
-	newPost.Title = "newTitle"
-	newPost.Content = "NewContent"
+	message := `{"bad request body":"asd"}`
 
-	resp := updatePost(workingPost.ID, newPost)
+	resp := updatePost("1", message)
 	decodeMessage(resp.Body, &response)
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.BadRequestBody {
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
-
-	updatedPost := response.Body
-	if updatedPost != newPost {
-		t.Errorf("Received post does not match proper post\nReceived post: %v\n Proper post: %v",
-			updatedPost, workingPost)
-	}
-
-	workingPost = updatedPost
 }
 
-func TestUpdatePostWithInvalidTitle(t *testing.T) {
+func TestUpdatePostWithNullTitle(t *testing.T) {
+	var response Response
+
+	message := map[string]interface{}{
+		"title":   "",
+		"content": "Content1 Content2 Content3",
+	}
+
+	resp := updatePost("1", message)
+	decodeMessage(resp.Body, &response)
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidTitle {
+		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+	}
+}
+
+func TestUpdatePostWithLongTitle(t *testing.T) {
 	var response Response
 
 	message := map[string]interface{}{
@@ -218,15 +387,41 @@ func TestUpdatePostWithInvalidTitle(t *testing.T) {
 		"content": "Content1 Content2 Content3",
 	}
 
-	resp := updatePost(workingPost.ID, message)
+	resp := updatePost("1", message)
 	decodeMessage(resp.Body, &response)
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
 	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidTitle {
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
 }
 
-func TestUpdateNonexistentPost(t *testing.T) {
+func TestUpdatePostWithNullContent(t *testing.T) {
+	var response Response
+
+	message := map[string]interface{}{
+		"title":   "TITLE2",
+		"content": "",
+	}
+
+	resp := updatePost("1", message)
+	decodeMessage(resp.Body, &response)
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidContent {
+		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+	}
+}
+
+func TestUpdatePostNonexistentPost(t *testing.T) {
 	var response Response
 
 	message := map[string]interface{}{
@@ -236,37 +431,66 @@ func TestUpdateNonexistentPost(t *testing.T) {
 
 	resp := updatePost("-1", message)
 	decodeMessage(resp.Body, &response)
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
 }
 
-func TestDeletePost(t *testing.T) {
+func TestUpdatePostWithInvalidID(t *testing.T) {
 	var response Response
 
-	resp := deletePost(workingPost.ID)
-	decodeMessage(resp.Body, &response)
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+	message := map[string]interface{}{
+		"title":   "TITLE2",
+		"content": "Content1 Content2 Content3",
 	}
-	resp.Body.Close()
 
-	resp = getPost(workingPost.ID)
-	defer resp.Body.Close()
+	resp := updatePost("post1", message)
 	decodeMessage(resp.Body, &response)
-	if resp.StatusCode != http.StatusNotFound {
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidID {
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
 }
 
-func TestDeleteNonexistentPost(t *testing.T) {
+func TestDeletePostNonexistentPost(t *testing.T) {
 	var response Response
 
 	resp := deletePost("-1")
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
 	decodeMessage(resp.Body, &response)
 	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+	}
+}
+
+func TestDeletePostWithInvalidID(t *testing.T) {
+	var response Response
+
+	resp := deletePost("post1")
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+	decodeMessage(resp.Body, &response)
+	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidID {
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
 }
