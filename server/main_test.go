@@ -4,24 +4,24 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	. "github.com/blinky-z/Blog/server/models"
+	"github.com/blinky-z/Blog/server/handler"
+	"github.com/blinky-z/Blog/server/models"
 	"io"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 )
 
 var (
-	workingPost Post
+	workingPost models.Post
 	client      = &http.Client{}
 )
 
 type Response struct {
-	Error string
-	Body  Post
+	Error handler.PostErrorCode
+	Body  models.Post
 }
 
 func encodeMessage(message interface{}) []byte {
@@ -49,6 +49,22 @@ func TestRunServer(t *testing.T) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
+}
+
+func getPost(postID string) *http.Response {
+	return sendMessage("GET", "http://"+Address+"/posts/"+postID, "")
+}
+
+func createPost(message interface{}) *http.Response {
+	return sendMessage("POST", "http://"+Address+"/posts", message)
+}
+
+func updatePost(postID string, message interface{}) *http.Response {
+	return sendMessage("PUT", "http://"+Address+"/posts/"+postID, message)
+}
+
+func deletePost(postID string) *http.Response {
+	return sendMessage("DELETE", "http://"+Address+"/posts/"+postID, "")
 }
 
 func sendMessage(method, address string, message interface{}) *http.Response {
@@ -114,7 +130,7 @@ func TestCreatePost(t *testing.T) {
 		"content": "Content1 Content2 Content3",
 	}
 
-	resp := sendMessage("POST", "http://"+Address+"/posts", message)
+	resp := createPost(message)
 	decodeMessage(resp.Body, &response)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
@@ -134,10 +150,10 @@ func TestCreatePostWithInvalidTitle(t *testing.T) {
 		"content": "Content1 Content2 Content3",
 	}
 
-	resp := sendMessage("POST", "http://"+Address+"/posts", message)
+	resp := createPost(message)
 	decodeMessage(resp.Body, &response)
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusBadRequest {
+	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidTitle {
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
 }
@@ -145,7 +161,7 @@ func TestCreatePostWithInvalidTitle(t *testing.T) {
 func TestGetCertainPost(t *testing.T) {
 	var response Response
 
-	resp := sendMessage("GET", "http://"+Address+"/posts/"+workingPost.ID, "")
+	resp := getPost(workingPost.ID)
 	decodeMessage(resp.Body, &response)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -163,7 +179,7 @@ func TestGetCertainPost(t *testing.T) {
 func TestGetNonexistentPost(t *testing.T) {
 	var response Response
 
-	resp := sendMessage("GET", "http://"+Address+"/posts/-1", "")
+	resp := getPost("-1")
 	decodeMessage(resp.Body, &response)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
@@ -178,7 +194,7 @@ func TestUpdatePost(t *testing.T) {
 	newPost.Title = "newTitle"
 	newPost.Content = "NewContent"
 
-	resp := sendMessage("PUT", "http://"+Address+"/posts/"+workingPost.ID, newPost)
+	resp := updatePost(workingPost.ID, newPost)
 	decodeMessage(resp.Body, &response)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -202,10 +218,10 @@ func TestUpdatePostWithInvalidTitle(t *testing.T) {
 		"content": "Content1 Content2 Content3",
 	}
 
-	resp := sendMessage("PUT", "http://"+Address+"/posts/"+workingPost.ID, message)
+	resp := updatePost(workingPost.ID, message)
 	decodeMessage(resp.Body, &response)
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusBadRequest {
+	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidTitle {
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
 }
@@ -218,7 +234,7 @@ func TestUpdateNonexistentPost(t *testing.T) {
 		"content": "Content1 Content2 Content3",
 	}
 
-	resp := sendMessage("PUT", "http://"+Address+"/posts/-1", message)
+	resp := updatePost("-1", message)
 	decodeMessage(resp.Body, &response)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
@@ -229,14 +245,14 @@ func TestUpdateNonexistentPost(t *testing.T) {
 func TestDeletePost(t *testing.T) {
 	var response Response
 
-	resp := sendMessage("DELETE", "http://"+Address+"/posts/"+workingPost.ID, "")
+	resp := deletePost(workingPost.ID)
 	decodeMessage(resp.Body, &response)
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
 	resp.Body.Close()
 
-	resp = sendMessage("GET", "http://"+Address+"/posts/"+workingPost.ID, "")
+	resp = getPost(workingPost.ID)
 	defer resp.Body.Close()
 	decodeMessage(resp.Body, &response)
 	if resp.StatusCode != http.StatusNotFound {
@@ -247,10 +263,10 @@ func TestDeletePost(t *testing.T) {
 func TestDeleteNonexistentPost(t *testing.T) {
 	var response Response
 
-	resp := sendMessage("DELETE", "http://"+Address+"/posts/-1", "")
+	resp := deletePost("-1")
 	defer resp.Body.Close()
 	decodeMessage(resp.Body, &response)
-	if resp.StatusCode != http.StatusNotFound {
+	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
 }
