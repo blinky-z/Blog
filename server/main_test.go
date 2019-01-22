@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 var (
@@ -46,6 +47,7 @@ func TestRunServer(t *testing.T) {
 		if err == nil && resp.StatusCode == http.StatusOK {
 			break
 		}
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
@@ -250,45 +252,5 @@ func TestDeleteNonexistentPost(t *testing.T) {
 	decodeMessage(resp.Body, &response)
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
-	}
-}
-
-func TestGetPosts(t *testing.T) {
-	var workingPosts []Post
-
-	testPostsNumber := 10
-
-	for i := 0; i < testPostsNumber; i++ {
-		message := map[string]interface{}{
-			"title":   "Title" + strconv.Itoa(i),
-			"content": "Content" + strconv.Itoa(i),
-		}
-
-		var response Response
-		resp := sendMessage("POST", "http://"+Address+"/posts", message)
-		decodeMessage(resp.Body, &response)
-
-		workingPosts = append(workingPosts, response.Body)
-	}
-
-	type responseAllPosts struct {
-		Error string
-		Body  []Post
-	}
-
-	resp := sendMessage("GET", "http://"+Address+"/posts", "")
-
-	var response responseAllPosts
-	err := json.NewDecoder(resp.Body).Decode(&response)
-	if err != nil {
-		log.Fatalf("Error decoding received body. Error: %s", err)
-	}
-
-	for i, receivedPost := range response.Body[len(response.Body)-testPostsNumber:] {
-		properPost := workingPosts[i]
-		if receivedPost != properPost {
-			log.Fatalf("Received post does not match proper post\nReceived post: %v\n Proper post: %v",
-				receivedPost, properPost)
-		}
 	}
 }
