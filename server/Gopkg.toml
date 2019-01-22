@@ -42,3 +42,13 @@
   name = "github.com/lib/pq"
   version = "1.0.0"
   source = "github.com/lib/pq"
+
+[[constraint]]
+  name = "github.com/dgrijalva/jwt-go"
+  version = "3.2.0"
+  source = "github.com/dgrijalva/jwt-go"
+
+[[constraint]]
+  name = "github.com/auth0/go-jwt-middleware"
+  revision = "5493cabe49f7bfa6e2ec444a09d334d90cd4e2bd"
+  source = "github.com/auth0/go-jwt-middleware"
