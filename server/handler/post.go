@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 var (
@@ -23,17 +24,26 @@ var (
 // 'Error' field is set while error occurred.
 // Otherwise 'Body' field is used to return post from database
 type Response struct {
-	Error postErrorCode `json:"error"`
+	Error PostErrorCode `json:"error"`
 	Body  interface{}   `json:"body"`
 }
 
-type postErrorCode string
+// represents error occurred while handling request
+type PostErrorCode string
 
 const (
-	technicalError postErrorCode = "TECHNICAL_ERROR"
-	invalidTitle   postErrorCode = "INVALID_TITLE"
-	badPostBody    postErrorCode = "INVALID_BODY"
-	noSuchPost     postErrorCode = "NO_SUCH_POST"
+	// TechnicalError - server error
+	TechnicalError PostErrorCode = "TECHNICAL_ERROR"
+	// InvalidTitle - incorrect user input - invalid title of post
+	InvalidTitle PostErrorCode = "INVALID_TITLE"
+	// InvalidID - incorrect user input - invalid id of post
+	InvalidID PostErrorCode = "INVALID_ID"
+	// BadPostBody - incorrect user input - invalid content of posts
+	BadPostBody PostErrorCode = "INVALID_BODY"
+	// NoSuchPost - incorrect user input - requested post does not exist in database
+	NoSuchPost PostErrorCode = "NO_SUCH_POST"
+	// NoError - no error occurred while handling request
+	NoError PostErrorCode = ""
 
 	maxPostTitleLen int = 120
 )
@@ -52,20 +62,42 @@ func respondWithBody(w http.ResponseWriter, code int, payload interface{}) {
 	checkError(err)
 }
 
-// CreatePost - create post http handler
-func CreatePost(w http.ResponseWriter, r *http.Request) {
-	var response Response
-
-	var post models.Post
+func validateUserPost(r *http.Request) (post models.Post, validateError PostErrorCode) {
+	validateError = NoError
 	err := json.NewDecoder(r.Body).Decode(&post)
 	if err != nil {
-		response.Error = badPostBody
-		respondWithBody(w, http.StatusBadRequest, response)
+		validateError = BadPostBody
 		return
 	}
 
 	if len(post.Title) > maxPostTitleLen {
-		response.Error = invalidTitle
+		validateError = InvalidTitle
+		return
+	}
+
+	return
+}
+
+func validateUserID(r *http.Request) (id string, validateError PostErrorCode) {
+	validateError = NoError
+	vars := mux.Vars(r)
+
+	if _, err := strconv.Atoi(vars["id"]); err != nil {
+		validateError = InvalidID
+		return
+	}
+
+	id = vars["id"]
+	return
+}
+
+// CreatePost - create post http handler
+func CreatePost(w http.ResponseWriter, r *http.Request) {
+	var response Response
+
+	post, validatePostError := validateUserPost(r)
+	if validatePostError != NoError {
+		response.Error = validatePostError
 		respondWithBody(w, http.StatusBadRequest, response)
 		return
 	}
@@ -74,10 +106,10 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 
 	var createdPost models.Post
 
-	err = Db.QueryRow("insert into posts(title, content) values($1, $2) RETURNING *;",
+	err := Db.QueryRow("insert into posts(title, content) values($1, $2) RETURNING id, title, date, content;",
 		post.Title, post.Content).Scan(&createdPost.ID, &createdPost.Title, &createdPost.Date, &createdPost.Content)
 	if err != nil {
-		response.Error = technicalError
+		response.Error = TechnicalError
 		LogError.Print(err)
 		respondWithBody(w, http.StatusInternalServerError, response)
 		return
@@ -93,44 +125,41 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	var response Response
 
-	vars := mux.Vars(r)
-	id := vars["id"]
-
-	var post models.Post
-	err := json.NewDecoder(r.Body).Decode(&post)
-	if err != nil {
-		response.Error = badPostBody
+	id, validateIDError := validateUserID(r)
+	if validateIDError != NoError {
+		response.Error = validateIDError
 		respondWithBody(w, http.StatusBadRequest, response)
 		return
 	}
 
-	if len(post.Title) > maxPostTitleLen {
-		response.Error = invalidTitle
+	post, validatePostError := validateUserPost(r)
+	if validatePostError != NoError {
+		response.Error = validatePostError
 		respondWithBody(w, http.StatusBadRequest, response)
 		return
 	}
 
 	LogInfo.Printf("Got new post update job. New post: %v", post)
 
-	err = Db.QueryRow("select from posts where id = $1", id).Scan()
+	err := Db.QueryRow("select from posts where id = $1", id).Scan()
 	if err != nil {
 		if err == sql.ErrNoRows {
-			response.Error = noSuchPost
+			response.Error = NoSuchPost
 			respondWithBody(w, http.StatusNotFound, response)
 			return
 		}
 
-		response.Error = technicalError
+		response.Error = TechnicalError
 		LogError.Print(err)
 		respondWithBody(w, http.StatusInternalServerError, response)
 		return
 	}
 
 	var updatedPost models.Post
-	err = Db.QueryRow("UPDATE posts SET title = $1, content = $2 WHERE id = $3 RETURNING *;",
+	err = Db.QueryRow("UPDATE posts SET title = $1, content = $2 WHERE id = $3 RETURNING id, title, date, content;",
 		post.Title, post.Content, id).Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Date, &updatedPost.Content)
 	if err != nil {
-		response.Error = technicalError
+		response.Error = TechnicalError
 		LogError.Print(err)
 		respondWithBody(w, http.StatusInternalServerError, response)
 		return
@@ -146,28 +175,18 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 func DeletePost(w http.ResponseWriter, r *http.Request) {
 	var response Response
 
-	vars := mux.Vars(r)
-	id := vars["id"]
-
-	LogInfo.Printf("Got new post deletion job. Post id: %s", id)
-
-	err := Db.QueryRow("select from posts where id = $1", id).Scan()
-	if err != nil {
-		if err == sql.ErrNoRows {
-			response.Error = noSuchPost
-			respondWithBody(w, http.StatusNotFound, response)
-			return
-		}
-
-		response.Error = technicalError
-		LogError.Print(err)
-		respondWithBody(w, http.StatusInternalServerError, response)
+	id, validateIDError := validateUserID(r)
+	if validateIDError != NoError {
+		response.Error = validateIDError
+		respondWithBody(w, http.StatusBadRequest, response)
 		return
 	}
 
-	_, err = Db.Exec("DELETE FROM posts WHERE id = $1;", id)
+	LogInfo.Printf("Got new post deletion job. Post id: %s", id)
+
+	_, err := Db.Exec("DELETE FROM posts WHERE id = $1;", id)
 	if err != nil {
-		response.Error = technicalError
+		response.Error = TechnicalError
 		LogError.Print(err)
 		respondWithBody(w, http.StatusInternalServerError, response)
 		return
@@ -187,16 +206,16 @@ func GetCertainPost(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	err := Db.QueryRow("select * from posts where id = $1", id).Scan(
+	err := Db.QueryRow("select id, title, date, content from posts where id = $1", id).Scan(
 		&post.ID, &post.Title, &post.Date, &post.Content)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			response.Error = noSuchPost
+			response.Error = NoSuchPost
 			respondWithBody(w, http.StatusNotFound, response)
 			return
 		}
 
-		response.Error = technicalError
+		response.Error = TechnicalError
 		LogError.Print(err)
 		respondWithBody(w, http.StatusInternalServerError, response)
 		return
@@ -212,9 +231,9 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 
 	var posts []models.Post
 
-	rows, err := Db.Query("select * from posts")
+	rows, err := Db.Query("select id, title, date, content from posts")
 	if err != nil {
-		response.Error = technicalError
+		response.Error = TechnicalError
 		LogError.Print(err)
 		respondWithBody(w, http.StatusInternalServerError, response)
 		return
@@ -224,7 +243,7 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 		var currentPost models.Post
 		err = rows.Scan(&currentPost.ID, &currentPost.Title, &currentPost.Date, &currentPost.Content)
 		if err != nil {
-			response.Error = technicalError
+			response.Error = TechnicalError
 			LogError.Print(err)
 			respondWithBody(w, http.StatusInternalServerError, response)
 			return
