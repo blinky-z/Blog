@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -23,6 +24,11 @@ type Response struct {
 	Body  models.Post
 }
 
+type responseAllPosts struct {
+	Error handler.PostErrorCode
+	Body  []models.Post
+}
+
 func encodeMessage(message interface{}) []byte {
 	encodedMessage, err := json.Marshal(message)
 	if err != nil {
@@ -32,7 +38,14 @@ func encodeMessage(message interface{}) []byte {
 	return encodedMessage
 }
 
-func decodeMessage(responseBody io.ReadCloser, resp *Response) {
+func decodeResponse(responseBody io.ReadCloser, resp *Response) {
+	err := json.NewDecoder(responseBody).Decode(resp)
+	if err != nil {
+		panic(fmt.Sprintf("Error decoding received body. Error: %s", err))
+	}
+}
+
+func decodeResponseAllPosts(responseBody io.ReadCloser, resp *responseAllPosts) {
 	err := json.NewDecoder(responseBody).Decode(resp)
 	if err != nil {
 		panic(fmt.Sprintf("Error decoding received body. Error: %s", err))
@@ -52,6 +65,14 @@ func TestRunServer(t *testing.T) {
 
 func getPost(postID string) *http.Response {
 	return sendMessage("GET", "http://"+Address+"/posts/"+postID, "")
+}
+
+func getPosts(page string, postsPerPage string) *http.Response {
+	if len(postsPerPage) != 0 {
+		return sendMessage("GET", "http://"+Address+"/posts?page="+page+"&posts-per-page="+postsPerPage, "")
+	} else {
+		return sendMessage("GET", "http://"+Address+"/posts?page="+page, "")
+	}
 }
 
 func createPost(message interface{}) *http.Response {
@@ -128,42 +149,51 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 	{
 		var response Response
 
-		message := map[string]interface{}{
-			"title":   "Title1",
-			"content": "Content1 Content2 Content3",
-		}
+		var sourcePost models.Post
+		sourcePost.Title = "Title1"
+		sourcePost.Content = "Content1 Content2 Content3"
 
-		resp := createPost(message)
+		r := createPost(sourcePost)
 		defer func() {
-			err := resp.Body.Close()
+			err := r.Body.Close()
 			if err != nil {
 				panic(err)
 			}
 		}()
-		decodeMessage(resp.Body, &response)
-		if resp.StatusCode != http.StatusCreated {
-			t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+		decodeResponse(r.Body, &response)
+		if r.StatusCode != http.StatusCreated {
+			t.Errorf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
 
 		workingPost = response.Body
 
+		if workingPost.Title != sourcePost.Title {
+			t.Errorf("Created post title does not match source post one\nCreated post: %v\n Source post: %v",
+				workingPost.Title, sourcePost.Title)
+		}
+
+		if workingPost.Content != sourcePost.Content {
+			t.Errorf("Created post content does not match source post one\nCreated post: %v\n Source post: %v",
+				workingPost.Content, sourcePost.Content)
+		}
+
 		log.Printf("Created post id: %s", workingPost.ID)
 	}
 
-	// Step 2: Get created post
+	// Step 2: Get created post and compare it with created one
 	{
 		var response Response
 
-		resp := getPost(workingPost.ID)
+		r := getPost(workingPost.ID)
 		defer func() {
-			err := resp.Body.Close()
+			err := r.Body.Close()
 			if err != nil {
 				panic(err)
 			}
 		}()
-		decodeMessage(resp.Body, &response)
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+		decodeResponse(r.Body, &response)
+		if r.StatusCode != http.StatusOK {
+			t.Errorf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
 
 		receivedPost := response.Body
@@ -182,16 +212,16 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 		newPost.Title = "newTitle"
 		newPost.Content = "NewContent"
 
-		resp := updatePost(workingPost.ID, newPost)
+		r := updatePost(workingPost.ID, newPost)
 		defer func() {
-			err := resp.Body.Close()
+			err := r.Body.Close()
 			if err != nil {
 				panic(err)
 			}
 		}()
-		decodeMessage(resp.Body, &response)
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+		decodeResponse(r.Body, &response)
+		if r.StatusCode != http.StatusOK {
+			t.Errorf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
 
 		updatedPost := response.Body
@@ -207,22 +237,22 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 	{
 		var response Response
 
-		resp := deletePost(workingPost.ID)
-		decodeMessage(resp.Body, &response)
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+		r := deletePost(workingPost.ID)
+		decodeResponse(r.Body, &response)
+		if r.StatusCode != http.StatusOK {
+			t.Errorf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
 
-		resp = getPost(workingPost.ID)
+		r = getPost(workingPost.ID)
 		defer func() {
-			err := resp.Body.Close()
+			err := r.Body.Close()
 			if err != nil {
 				panic(err)
 			}
 		}()
-		decodeMessage(resp.Body, &response)
-		if resp.StatusCode != http.StatusNotFound {
-			t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+		decodeResponse(r.Body, &response)
+		if r.StatusCode != http.StatusNotFound {
+			t.Errorf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
 	}
 }
@@ -233,7 +263,7 @@ func TestCreatePostWithInvalidRequestBody(t *testing.T) {
 	message := `{"bad request body"}`
 
 	resp := createPost(message)
-	decodeMessage(resp.Body, &response)
+	decodeResponse(resp.Body, &response)
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
@@ -254,7 +284,7 @@ func TestCreatePostWithNullTitle(t *testing.T) {
 	}
 
 	resp := createPost(message)
-	decodeMessage(resp.Body, &response)
+	decodeResponse(resp.Body, &response)
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
@@ -266,7 +296,7 @@ func TestCreatePostWithNullTitle(t *testing.T) {
 	}
 }
 
-func TestCreatePostWithLongTitle(t *testing.T) {
+func TestCreatePostWithTooLongTitle(t *testing.T) {
 	var response Response
 
 	message := map[string]interface{}{
@@ -275,7 +305,7 @@ func TestCreatePostWithLongTitle(t *testing.T) {
 	}
 
 	resp := createPost(message)
-	decodeMessage(resp.Body, &response)
+	decodeResponse(resp.Body, &response)
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
@@ -296,7 +326,7 @@ func TestCreatePostWithNullContent(t *testing.T) {
 	}
 
 	resp := createPost(message)
-	decodeMessage(resp.Body, &response)
+	decodeResponse(resp.Body, &response)
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
@@ -312,7 +342,7 @@ func TestGetPostWithInvalidID(t *testing.T) {
 	var response Response
 
 	resp := getPost("post1")
-	decodeMessage(resp.Body, &response)
+	decodeResponse(resp.Body, &response)
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
@@ -328,7 +358,7 @@ func TestGetNonexistentPost(t *testing.T) {
 	var response Response
 
 	resp := getPost("-1")
-	decodeMessage(resp.Body, &response)
+	decodeResponse(resp.Body, &response)
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
@@ -346,7 +376,7 @@ func TestUpdatePostWithInvalidRequestBody(t *testing.T) {
 	message := `{"bad request body":"asd"}`
 
 	resp := updatePost("1", message)
-	decodeMessage(resp.Body, &response)
+	decodeResponse(resp.Body, &response)
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
@@ -367,7 +397,7 @@ func TestUpdatePostWithNullTitle(t *testing.T) {
 	}
 
 	resp := updatePost("1", message)
-	decodeMessage(resp.Body, &response)
+	decodeResponse(resp.Body, &response)
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
@@ -379,7 +409,7 @@ func TestUpdatePostWithNullTitle(t *testing.T) {
 	}
 }
 
-func TestUpdatePostWithLongTitle(t *testing.T) {
+func TestUpdatePostWithTooLongTitle(t *testing.T) {
 	var response Response
 
 	message := map[string]interface{}{
@@ -388,7 +418,7 @@ func TestUpdatePostWithLongTitle(t *testing.T) {
 	}
 
 	resp := updatePost("1", message)
-	decodeMessage(resp.Body, &response)
+	decodeResponse(resp.Body, &response)
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
@@ -409,7 +439,7 @@ func TestUpdatePostWithNullContent(t *testing.T) {
 	}
 
 	resp := updatePost("1", message)
-	decodeMessage(resp.Body, &response)
+	decodeResponse(resp.Body, &response)
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
@@ -430,7 +460,7 @@ func TestUpdatePostNonexistentPost(t *testing.T) {
 	}
 
 	resp := updatePost("-1", message)
-	decodeMessage(resp.Body, &response)
+	decodeResponse(resp.Body, &response)
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
@@ -451,7 +481,7 @@ func TestUpdatePostWithInvalidID(t *testing.T) {
 	}
 
 	resp := updatePost("post1", message)
-	decodeMessage(resp.Body, &response)
+	decodeResponse(resp.Body, &response)
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
@@ -473,7 +503,7 @@ func TestDeletePostNonexistentPost(t *testing.T) {
 			panic(err)
 		}
 	}()
-	decodeMessage(resp.Body, &response)
+	decodeResponse(resp.Body, &response)
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
@@ -489,8 +519,118 @@ func TestDeletePostWithInvalidID(t *testing.T) {
 			panic(err)
 		}
 	}()
-	decodeMessage(resp.Body, &response)
+	decodeResponse(resp.Body, &response)
 	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidID {
+		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+	}
+}
+
+func comparePosts(receivedPosts, properPosts []models.Post) {
+	for i, receivedPost := range receivedPosts {
+		properPost := properPosts[len(receivedPosts)-i-1]
+		if receivedPost != properPost {
+			log.Fatalf("Received post does not match proper post\nReceived post: %v\n Proper post: %v",
+				receivedPost, properPost)
+		}
+	}
+}
+
+func TestGetRangeOfPostsWithCustomPostsPerPage(t *testing.T) {
+	var workingPosts []models.Post
+
+	testPostsNumber := 20
+
+	for i := 0; i < testPostsNumber; i++ {
+		message := map[string]interface{}{
+			"title":   "Title" + strconv.Itoa(i),
+			"content": "Content" + strconv.Itoa(i),
+		}
+
+		var response Response
+		resp := sendMessage("POST", "http://"+Address+"/posts", message)
+		decodeResponse(resp.Body, &response)
+
+		workingPosts = append(workingPosts, response.Body)
+	}
+
+	resp := sendMessage("GET", "http://"+Address+"/posts?page=0&posts-per-page=20", "")
+
+	var response responseAllPosts
+	decodeResponseAllPosts(resp.Body, &response)
+
+	receivedPosts := response.Body
+
+	comparePosts(receivedPosts, workingPosts)
+}
+
+func TestGetRangeOfPostsWithDefaultPostsPerPage(t *testing.T) {
+	var workingPosts []models.Post
+
+	testPostsNumber := 10
+
+	for i := 0; i < testPostsNumber; i++ {
+		message := map[string]interface{}{
+			"title":   "Title" + strconv.Itoa(i),
+			"content": "Content" + strconv.Itoa(i),
+		}
+
+		var response Response
+		resp := sendMessage("POST", "http://"+Address+"/posts", message)
+		decodeResponse(resp.Body, &response)
+
+		workingPosts = append(workingPosts, response.Body)
+	}
+
+	resp := sendMessage("GET", "http://"+Address+"/posts?page=0", "")
+
+	var response responseAllPosts
+	decodeResponseAllPosts(resp.Body, &response)
+
+	receivedPosts := response.Body
+
+	comparePosts(receivedPosts, workingPosts)
+}
+
+func TestGetRangeOfPostsWithNegativePage(t *testing.T) {
+	resp := sendMessage("GET", "http://"+Address+"/posts?page=-1", "")
+
+	var response responseAllPosts
+	decodeResponseAllPosts(resp.Body, &response)
+
+	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidRange {
+		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+	}
+}
+
+func TestGetRangeOfPostsWithNonNumberPage(t *testing.T) {
+	resp := sendMessage("GET", "http://"+Address+"/posts?page=asdsa", "")
+
+	var response responseAllPosts
+	decodeResponseAllPosts(resp.Body, &response)
+
+	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidRange {
+		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+	}
+}
+
+func TestGetRangeOfPostsWithTooLongPostsPerPage(t *testing.T) {
+	resp := sendMessage("GET", "http://"+Address+"/posts?page=0&posts-per-page=100", "")
+
+	var response responseAllPosts
+	decodeResponseAllPosts(resp.Body, &response)
+
+	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidRange {
+		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
+	}
+}
+
+func TestGetRangeOfPostsWithNonNumberPostsPerPage(t *testing.T) {
+	resp := sendMessage("GET", "http://"+Address+"/posts?page=0&posts-per-page=advsc", "")
+
+	var response responseAllPosts
+	decodeResponseAllPosts(resp.Body, &response)
+
+	if resp.StatusCode != http.StatusBadRequest || response.Error != handler.InvalidRange {
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
 }
