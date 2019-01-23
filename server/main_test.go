@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"github.com/blinky-z/Blog/server/handler"
 	"github.com/blinky-z/Blog/server/models"
+	"github.com/google/uuid"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -17,6 +19,12 @@ import (
 
 var (
 	client = &http.Client{}
+
+	loginUsername string
+	loginEmail    string
+	loginPassword string
+
+	authToken string
 )
 
 type Response struct {
@@ -29,6 +37,46 @@ type responseAllPosts struct {
 	Body  []models.Post
 }
 
+type authResponse struct {
+	Error handler.PostErrorCode
+	Body  string
+}
+
+type userCredentials struct {
+	Login    string `json:"login"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// helpful API for testing
+
+// API for matching status code and error message of responses
+
+// checkErrorResponse - check response that should return error
+func checkErrorResponse(r *http.Response, expectedStatusCode int, expectedErrorMessage handler.PostErrorCode) {
+	var response authResponse
+	decodeAuthResponse(r.Body, &response)
+	if r.StatusCode != expectedStatusCode || response.Error != expectedErrorMessage {
+		panic(fmt.Sprintf("Test Error. Received Error code: %d. Error message: %s\n"+
+			"Expected Error code: %d. Error message: %s",
+			r.StatusCode, response.Error, expectedStatusCode, expectedErrorMessage))
+	}
+}
+
+// checkErrorResponse - check response that should not return error
+func checkNiceResponse(r *http.Response, expectedStatusCode int) {
+	if r.StatusCode != expectedStatusCode {
+		var response authResponse
+		decodeAuthResponse(r.Body, &response)
+
+		panic(fmt.Sprintf("Test Error. Received Error code: %d\nExpected Error code: %d",
+			r.StatusCode, expectedStatusCode))
+	}
+}
+
+// -----------
+
+// API for encoding and decoding messages
 func encodeMessage(message interface{}) []byte {
 	encodedMessage, err := json.Marshal(message)
 	if err != nil {
@@ -52,6 +100,16 @@ func decodeResponseAllPosts(responseBody io.ReadCloser, resp *responseAllPosts) 
 	}
 }
 
+func decodeAuthResponse(responseBody io.ReadCloser, response *authResponse) {
+	err := json.NewDecoder(responseBody).Decode(&response)
+	if err != nil {
+		panic(fmt.Sprintf("Error decoding received body. Error: %s", err))
+	}
+}
+
+// -----------
+// Tests
+
 func TestRunServer(t *testing.T) {
 	go RunServer("testConfig", ".")
 	for {
@@ -63,31 +121,218 @@ func TestRunServer(t *testing.T) {
 	}
 }
 
+// Authorization system tests
+
+// Helpful API for testing authorization tests
+func sendAuthUserMessage(address string, credentials userCredentials) *http.Response {
+	encodedCredentials := encodeMessage(credentials)
+
+	request, err := http.NewRequest("GET", address, bytes.NewReader(encodedCredentials))
+	if err != nil {
+		panic(fmt.Sprintf("Can not create request. Error: %s", err))
+	}
+	request.Header.Set("Content-Type", "application/json")
+
+	r, err := client.Do(request)
+	if err != nil {
+		panic(fmt.Sprintf("Can not send request. Error: %s", err))
+	}
+
+	return r
+}
+
+func registerUser(login, email, password string) *http.Response {
+	registrationCredentials := userCredentials{Login: login, Email: email, Password: password}
+
+	return sendAuthUserMessage("http://"+Address+"/user/register", registrationCredentials)
+}
+
+func loginUser(login, email, password string) *http.Response {
+	loginCredentials := userCredentials{Login: login, Email: email, Password: password}
+
+	return sendAuthUserMessage("http://"+Address+"/user/login", loginCredentials)
+}
+
+// tests
+
+// Registration tests
+
+func TestRegisterUser(t *testing.T) {
+	loginUsername = uuid.New().String()
+	loginEmail = loginUsername + "@gmail.com"
+	loginPassword = uuid.New().String() + "Z"
+
+	r := registerUser(loginUsername, loginEmail, loginPassword)
+
+	if r.StatusCode != http.StatusOK {
+		var response authResponse
+		decodeAuthResponse(r.Body, &response)
+
+		panic(fmt.Sprintf("Registration Test Error. Error code: %d. Error message: %s", r.StatusCode, response.Error))
+	}
+}
+
+func TestRegisterUserWithTooLongUsername(t *testing.T) {
+	username := strings.Repeat("a", handler.MaxLoginLen*2)
+
+	r := registerUser(username, loginEmail, loginPassword)
+
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidLogin)
+}
+
+func TestRegisterUserWithTooShortUsername(t *testing.T) {
+	username := strings.Repeat("a", handler.MinLoginLen/2)
+
+	r := registerUser(username, loginEmail, loginPassword)
+
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidLogin)
+}
+
+func TestRegisterUserWithTooLongPassword(t *testing.T) {
+	password := strings.Repeat("A", handler.MaxPwdLen*2)
+
+	r := registerUser(loginUsername, loginEmail, password)
+
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidPassword)
+}
+
+func TestRegisterUserWithTooShortPassword(t *testing.T) {
+	password := strings.Repeat("A", handler.MinPwdLen/2)
+
+	r := registerUser(loginUsername, loginEmail, password)
+
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidPassword)
+}
+
+func TestRegisterUserWithIdenticalPassword(t *testing.T) {
+	password := strings.Repeat("A", handler.MinPwdLen)
+	login := password
+
+	r := registerUser(login, loginEmail, password)
+
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidPassword)
+}
+
+func TestRegisterUserWithEmptyUsername(t *testing.T) {
+	r := registerUser("", loginEmail, loginPassword)
+
+	checkErrorResponse(r, http.StatusBadRequest, handler.IncompleteCredentials)
+}
+
+func TestRegisterUserWithEmptyEmail(t *testing.T) {
+	r := registerUser(loginUsername, "", loginPassword)
+
+	checkErrorResponse(r, http.StatusBadRequest, handler.IncompleteCredentials)
+}
+
+func TestRegisterUserWithEmptyPassword(t *testing.T) {
+	r := registerUser(loginUsername, loginEmail, "")
+
+	checkErrorResponse(r, http.StatusBadRequest, handler.IncompleteCredentials)
+}
+
+func TestRegisterUserWithBadRequestBody(t *testing.T) {
+	message := `{bad request body}`
+
+	request, err := http.NewRequest("GET", "http://"+Address+"/user/register", strings.NewReader(message))
+	if err != nil {
+		panic(fmt.Sprintf("Can not create request. Error: %s", err))
+	}
+	request.Header.Set("Content-Type", "application/json")
+
+	r, err := client.Do(request)
+	if err != nil {
+		panic(fmt.Sprintf("Can not send request. Error: %s", err))
+	}
+
+	checkErrorResponse(r, http.StatusBadRequest, handler.BadRequestBody)
+}
+
+// Log In tests
+
+func TestLoginUserWithEmail(t *testing.T) {
+	r := loginUser("", loginEmail, loginPassword)
+
+	bodyBytes, _ := ioutil.ReadAll(r.Body)
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	checkNiceResponse(r, http.StatusAccepted)
+
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	var response authResponse
+	decodeAuthResponse(r.Body, &response)
+
+	authToken = response.Body
+}
+
+func TestLoginUserWithUsername(t *testing.T) {
+	r := loginUser(loginUsername, "", loginPassword)
+
+	checkNiceResponse(r, http.StatusAccepted)
+}
+
+func TestLoginUserWithWrongUsername(t *testing.T) {
+	r := loginUser("abcd", "", loginPassword)
+
+	checkErrorResponse(r, http.StatusUnauthorized, handler.WrongCredentials)
+}
+
+func TestLoginUserWithWrongEmail(t *testing.T) {
+	r := loginUser("", "abcd@gmail.com", loginPassword)
+
+	checkErrorResponse(r, http.StatusUnauthorized, handler.WrongCredentials)
+}
+
+func TestLoginUserWithWrongPassword(t *testing.T) {
+	r := loginUser("", loginEmail, "abcd")
+
+	checkErrorResponse(r, http.StatusUnauthorized, handler.WrongCredentials)
+}
+
+func TestLoginUserWithEmptyLoginAndEmail(t *testing.T) {
+	r := loginUser("", "", "abcd")
+
+	checkErrorResponse(r, http.StatusBadRequest, handler.IncompleteCredentials)
+}
+
+func TestLoginUserWithEmptyPassword(t *testing.T) {
+	r := loginUser("", loginEmail, "")
+
+	checkErrorResponse(r, http.StatusBadRequest, handler.IncompleteCredentials)
+}
+
+// -----------
+// Posts handling tests
+
+// Helpful API for testing posts handling tests
+
 func getPost(postID string) *http.Response {
-	return sendMessage("GET", "http://"+Address+"/posts/"+postID, "")
+	return sendPostHandleMessage("GET", "http://"+Address+"/posts/"+postID, "")
 }
 
 func getPosts(page string, postsPerPage string) *http.Response {
 	if len(postsPerPage) != 0 {
-		return sendMessage("GET", "http://"+Address+"/posts?page="+page+"&posts-per-page="+postsPerPage, "")
+		return sendPostHandleMessage(
+			"GET", "http://"+Address+"/posts?page="+page+"&posts-per-page="+postsPerPage, "")
 	} else {
-		return sendMessage("GET", "http://"+Address+"/posts?page="+page, "")
+		return sendPostHandleMessage("GET", "http://"+Address+"/posts?page="+page, "")
 	}
 }
 
 func createPost(message interface{}) *http.Response {
-	return sendMessage("POST", "http://"+Address+"/posts", message)
+	return sendPostHandleMessage("POST", "http://"+Address+"/posts", message)
 }
 
 func updatePost(postID string, message interface{}) *http.Response {
-	return sendMessage("PUT", "http://"+Address+"/posts/"+postID, message)
+	return sendPostHandleMessage("PUT", "http://"+Address+"/posts/"+postID, message)
 }
 
 func deletePost(postID string) *http.Response {
-	return sendMessage("DELETE", "http://"+Address+"/posts/"+postID, "")
+	return sendPostHandleMessage("DELETE", "http://"+Address+"/posts/"+postID, "")
 }
 
-func sendMessage(method, address string, message interface{}) *http.Response {
+func sendPostHandleMessage(method, address string, message interface{}) *http.Response {
 	var response *http.Response
 
 	switch method {
@@ -105,10 +350,11 @@ func sendMessage(method, address string, message interface{}) *http.Response {
 		encodedMessage := encodeMessage(message)
 
 		request, err := http.NewRequest("POST", address, bytes.NewReader(encodedMessage))
-		request.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			panic(fmt.Sprintf("Can not create request. Error: %s", err))
 		}
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
 
 		response, err = client.Do(request)
 		if err != nil {
@@ -118,10 +364,11 @@ func sendMessage(method, address string, message interface{}) *http.Response {
 		encodedMessage := encodeMessage(message)
 
 		request, err := http.NewRequest("PUT", address, bytes.NewReader(encodedMessage))
-		request.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			panic(fmt.Sprintf("Can not create request. Error: %s", err))
 		}
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
 
 		response, err = client.Do(request)
 		if err != nil {
@@ -132,6 +379,7 @@ func sendMessage(method, address string, message interface{}) *http.Response {
 		if err != nil {
 			panic(fmt.Sprintf("Can not create request. Error: %s", err))
 		}
+		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
 
 		response, err = client.Do(request)
 		if err != nil {
@@ -141,6 +389,8 @@ func sendMessage(method, address string, message interface{}) *http.Response {
 
 	return response
 }
+
+// tests
 
 func TestHandlePostIntegrationTest(t *testing.T) {
 	var workingPost models.Post
@@ -176,11 +426,9 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 			t.Errorf("Created post content does not match source post one\nCreated post: %v\n Source post: %v",
 				workingPost.Content, sourcePost.Content)
 		}
-
-		log.Printf("Created post id: %s", workingPost.ID)
 	}
 
-	// Step 2: Get created post and compare it with created one
+	// Step 2: Get created post and compare it with returned in prev step one
 	{
 		var response Response
 
@@ -259,8 +507,6 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 
 	// Step 5: Delete updated post
 	{
-		var response Response
-
 		r := deletePost(workingPost.ID)
 		defer func() {
 			err := r.Body.Close()
@@ -268,8 +514,11 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 				panic(err)
 			}
 		}()
-		decodeResponse(r.Body, &response)
 		if r.StatusCode != http.StatusOK {
+			var response Response
+
+			decodeResponse(r.Body, &response)
+
 			t.Errorf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
 	}
@@ -335,7 +584,7 @@ func TestCreatePostWithTooLongTitle(t *testing.T) {
 	var response Response
 
 	message := map[string]interface{}{
-		"title":   strings.Repeat("a", 130),
+		"title":   strings.Repeat("a", handler.MaxPostTitleLen*2),
 		"content": "Content1 Content2 Content3",
 	}
 
@@ -448,7 +697,7 @@ func TestUpdatePostWithTooLongTitle(t *testing.T) {
 	var response Response
 
 	message := map[string]interface{}{
-		"title":   strings.Repeat("a", 130),
+		"title":   strings.Repeat("a", handler.MaxPostTitleLen*2),
 		"content": "Content1 Content2 Content3",
 	}
 
@@ -529,8 +778,6 @@ func TestUpdatePostWithInvalidID(t *testing.T) {
 }
 
 func TestDeletePostNonexistentPost(t *testing.T) {
-	var response Response
-
 	resp := deletePost("-1")
 	defer func() {
 		err := resp.Body.Close()
@@ -538,8 +785,11 @@ func TestDeletePostNonexistentPost(t *testing.T) {
 			panic(err)
 		}
 	}()
-	decodeResponse(resp.Body, &response)
 	if resp.StatusCode != http.StatusOK {
+		var response Response
+
+		decodeResponse(resp.Body, &response)
+
 		t.Errorf("Error %d. Error message: %s", resp.StatusCode, response.Error)
 	}
 }
@@ -582,7 +832,7 @@ func TestGetRangeOfPostsWithCustomPostsPerPage(t *testing.T) {
 		}
 
 		var response Response
-		resp := sendMessage("POST", "http://"+Address+"/posts", message)
+		resp := sendPostHandleMessage("POST", "http://"+Address+"/posts", message)
 		decodeResponse(resp.Body, &response)
 
 		workingPosts = append(workingPosts, response.Body)
@@ -610,7 +860,7 @@ func TestGetRangeOfPostsWithDefaultPostsPerPage(t *testing.T) {
 		}
 
 		var response Response
-		resp := sendMessage("POST", "http://"+Address+"/posts", message)
+		resp := sendPostHandleMessage("POST", "http://"+Address+"/posts", message)
 		decodeResponse(resp.Body, &response)
 
 		workingPosts = append(workingPosts, response.Body)
@@ -649,7 +899,7 @@ func TestGetRangeOfPostsWithNonNumberPage(t *testing.T) {
 }
 
 func TestGetRangeOfPostsWithTooLongPostsPerPage(t *testing.T) {
-	resp := getPosts("0", "100")
+	resp := getPosts("0", strconv.Itoa(handler.MaxPostsPerPage*2))
 
 	var response responseAllPosts
 	decodeResponseAllPosts(resp.Body, &response)
