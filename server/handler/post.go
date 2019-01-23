@@ -4,10 +4,15 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/blinky-z/Blog/server/models"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
+	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
+	"time"
 )
 
 var (
@@ -18,6 +23,9 @@ var (
 
 	// Db - database connection. This variable is set by main function
 	Db *sql.DB
+
+	// SigningKey - secret key for creating token
+	SigningKey string
 )
 
 // Response - behaves like Either Monad
@@ -26,6 +34,17 @@ var (
 type Response struct {
 	Error PostErrorCode `json:"error"`
 	Body  interface{}   `json:"body"`
+}
+
+type getPostsRangeParams struct {
+	page         int
+	postsPerPage int
+}
+
+type userCredentials struct {
+	login    string
+	email    string
+	password string
 }
 
 // PostErrorCode - represents error occurred while handling request
@@ -46,26 +65,63 @@ const (
 	NoSuchPost PostErrorCode = "NO_SUCH_POST"
 	// InvalidRange - user inputs invalid range of posts to get from database
 	InvalidRange PostErrorCode = "INVALID_POSTS_RANGE"
+	// WrongCredentials - user inputs wrong password or login or email while logging in
+	WrongCredentials PostErrorCode = "WRONG_CREDENTIALS"
+	// InvalidEmail - user inputs invalid email while registration or logging in
+	InvalidEmail PostErrorCode = "INVALID_EMAIL"
+	// InvalidLogin - user inputs invalid login while registration
+	InvalidLogin PostErrorCode = "INVALID_LOGIN"
+	// InvalidPassword - user inputs invalid password while registration
+	InvalidPassword PostErrorCode = "INVALID_PASSWORD"
 	// NoError - no error occurred while handling request
 	NoError PostErrorCode = ""
 
 	maxPostTitleLen int = 120
+
+	maxPostsPerPage int = 40
+
+	defaultMaxPostsPerPage string = "10"
+
+	minPwdLen int = 8
+	maxPwdLen int = 40
+
+	minLoginLen int = 6
+	maxLoginLen int = 20
+
+	postFields = "id, title, date, content"
 )
 
-func respondWithBody(w http.ResponseWriter, code int, payload interface{}) {
-	response, _ := json.Marshal(payload)
+func respond(w http.ResponseWriter, code int) {
+	w.WriteHeader(code)
+}
 
+func respondWithJSON(w http.ResponseWriter, code int, body []byte) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 
-	_, err := w.Write(response)
+	_, err := w.Write(body)
 	if err != nil {
 		LogError.Print(err)
 	}
 }
 
-func validateUserGetPostsParams(r *http.Request) (params map[string]int, validateError PostErrorCode) {
-	params = make(map[string]int)
+func respondWithError(w http.ResponseWriter, code int, errorCode PostErrorCode) {
+	var response Response
+	response.Error = errorCode
+	encodedResponse, _ := json.Marshal(response)
+
+	respondWithJSON(w, code, encodedResponse)
+}
+
+func respondWithBody(w http.ResponseWriter, code int, payload interface{}) {
+	var response Response
+	response.Body = payload
+	encodedResponse, _ := json.Marshal(response)
+
+	respondWithJSON(w, code, encodedResponse)
+}
+
+func validateUserGetPostsParams(r *http.Request) (params getPostsRangeParams, validateError PostErrorCode) {
 	validateError = NoError
 
 	var page int
@@ -82,18 +138,90 @@ func validateUserGetPostsParams(r *http.Request) (params map[string]int, validat
 		return
 	}
 
-	if len(r.FormValue("posts-per-page")) == 0 {
-		postsPerPage = 10
-	} else {
-		if postsPerPage, err = strconv.Atoi(r.FormValue("posts-per-page")); err != nil || postsPerPage < 0 ||
-			postsPerPage > 40 {
-			validateError = InvalidRange
+	postsPerPageAsString := r.FormValue("posts-per-page")
+	if len(postsPerPageAsString) == 0 {
+		postsPerPageAsString = defaultMaxPostsPerPage
+	}
+
+	postsPerPage, err = strconv.Atoi(postsPerPageAsString)
+	if err != nil {
+		validateError = InvalidRange
+		return
+	}
+
+	if postsPerPage < 0 || postsPerPage > maxPostsPerPage {
+		validateError = InvalidRange
+		return
+	}
+
+	params.page = page
+	params.postsPerPage = postsPerPage
+
+	return
+}
+
+func validateUserRegistrationCredentials(r *http.Request) (credentials userCredentials, validateError PostErrorCode) {
+	validateError = NoError
+
+	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
+		if err != nil {
+			validateError = BadRequestBody
 			return
 		}
 	}
 
-	params["page"] = page
-	params["posts-per-page"] = postsPerPage
+	login := credentials.login
+	password := credentials.password
+	email := credentials.email
+
+	if len(login) == 0 || len(password) == 0 || len(email) == 0 {
+		validateError = BadRequestBody
+		return
+	}
+
+	if !checkEmail(email) {
+		validateError = InvalidEmail
+		return
+	}
+
+	pwdLen := len(password)
+	if pwdLen < minPwdLen || pwdLen > maxPwdLen || !strings.Contains(password, "[A-Z]") {
+		validateError = InvalidPassword
+		return
+	}
+
+	loginLen := len(login)
+	if loginLen < minLoginLen || loginLen > maxLoginLen {
+		validateError = InvalidLogin
+		return
+	}
+
+	return
+}
+
+func validateUserLoginCredentials(r *http.Request) (credentials userCredentials, validateError PostErrorCode) {
+	validateError = NoError
+
+	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
+		if err != nil {
+			validateError = BadRequestBody
+			return
+		}
+	}
+
+	login := credentials.login
+	password := credentials.password
+	email := credentials.email
+
+	if (len(login) == 0 && len(email) == 0) || len(password) == 0 {
+		validateError = BadRequestBody
+		return
+	}
+
+	if len(email) != 0 && !checkEmail(email) {
+		validateError = InvalidEmail
+		return
+	}
 
 	return
 }
@@ -119,6 +247,13 @@ func validateUserPost(r *http.Request) (post models.Post, validateError PostErro
 	return
 }
 
+func checkEmail(email string) bool {
+	re := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?" +
+		"(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+
+	return re.MatchString(email)
+}
+
 func validateUserID(r *http.Request) (id string, validateError PostErrorCode) {
 	validateError = NoError
 	vars := mux.Vars(r)
@@ -134,12 +269,9 @@ func validateUserID(r *http.Request) (id string, validateError PostErrorCode) {
 
 // CreatePost - create post http handler
 func CreatePost(w http.ResponseWriter, r *http.Request) {
-	var response Response
-
 	post, validatePostError := validateUserPost(r)
 	if validatePostError != NoError {
-		response.Error = validatePostError
-		respondWithBody(w, http.StatusBadRequest, response)
+		respondWithError(w, http.StatusBadRequest, validatePostError)
 		return
 	}
 
@@ -147,102 +279,111 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 
 	var createdPost models.Post
 
-	_, _ = Db.Exec("BEGIN TRANSACTION")
-	err := Db.QueryRow("insert into posts(title, content) values($1, $2) RETURNING id, title, date, content",
-		post.Title, post.Content).Scan(&createdPost.ID, &createdPost.Title, &createdPost.Date, &createdPost.Content)
-	_, _ = Db.Exec("END TRANSACTION")
-	if err != nil {
-		response.Error = TechnicalError
+	if _, err := Db.Exec("BEGIN TRANSACTION"); err != nil {
 		LogError.Print(err)
-		respondWithBody(w, http.StatusInternalServerError, response)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		return
+	}
+	if err := Db.QueryRow("insert into posts(title, content) values($1, $2) RETURNING $3",
+		post.Title, post.Content, postFields).
+		Scan(&createdPost.ID, &createdPost.Title, &createdPost.Date, &createdPost.Content); err != nil {
+		LogError.Print(err)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		return
+	}
+	if _, err := Db.Exec("END TRANSACTION"); err != nil {
+		LogError.Print(err)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
 	LogInfo.Printf("Created new post: %v", createdPost)
 
-	response.Body = createdPost
-	respondWithBody(w, http.StatusCreated, response)
+	respondWithBody(w, http.StatusCreated, createdPost)
 }
 
 // UpdatePost - update post http handler
 func UpdatePost(w http.ResponseWriter, r *http.Request) {
-	var response Response
-
 	id, validateIDError := validateUserID(r)
 	if validateIDError != NoError {
-		response.Error = validateIDError
-		respondWithBody(w, http.StatusBadRequest, response)
+		respondWithBody(w, http.StatusBadRequest, validateIDError)
 		return
 	}
 
 	post, validatePostError := validateUserPost(r)
 	if validatePostError != NoError {
-		response.Error = validatePostError
-		respondWithBody(w, http.StatusBadRequest, response)
+		respondWithError(w, http.StatusBadRequest, validatePostError)
 		return
 	}
 
 	LogInfo.Printf("Got new post update job. New post: %v", post)
 
-	err := Db.QueryRow("select from posts where id = $1", id).Scan()
-	if err != nil {
+	if err := Db.QueryRow("select from posts where id = $1", id).Scan(); err != nil {
 		if err == sql.ErrNoRows {
-			response.Error = NoSuchPost
-			respondWithBody(w, http.StatusNotFound, response)
+			respondWithError(w, http.StatusNotFound, NoSuchPost)
 			return
 		}
 
-		response.Error = TechnicalError
 		LogError.Print(err)
-		respondWithBody(w, http.StatusInternalServerError, response)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
 	var updatedPost models.Post
 
-	_, _ = Db.Exec("BEGIN TRANSACTION")
-	err = Db.QueryRow("UPDATE posts SET title = $1, content = $2 WHERE id = $3 RETURNING id, title, date, content",
-		post.Title, post.Content, id).Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Date, &updatedPost.Content)
-	_, _ = Db.Exec("END TRANSACTION")
-	if err != nil {
-		response.Error = TechnicalError
+	if _, err := Db.Exec("BEGIN TRANSACTION"); err != nil {
 		LogError.Print(err)
-		respondWithBody(w, http.StatusInternalServerError, response)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		return
+	}
+	if err := Db.QueryRow("UPDATE posts SET title = $1, content = $2 WHERE id = $3 RETURNING id, title, date, content",
+		post.Title, post.Content, id).Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Date, &updatedPost.Content); err != nil {
+		if err != nil {
+			LogError.Print(err)
+			respondWithError(w, http.StatusInternalServerError, TechnicalError)
+			return
+		}
+	}
+	if _, err := Db.Exec("END TRANSACTION"); err != nil {
+		LogError.Print(err)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
 	LogInfo.Printf("Updated post: %v", updatedPost)
 
-	response.Body = updatedPost
-	respondWithBody(w, http.StatusOK, response)
+	respondWithBody(w, http.StatusOK, updatedPost)
 }
 
 // DeletePost - delete post http handler
 func DeletePost(w http.ResponseWriter, r *http.Request) {
-	var response Response
-
 	id, validateIDError := validateUserID(r)
 	if validateIDError != NoError {
-		response.Error = validateIDError
-		respondWithBody(w, http.StatusBadRequest, response)
+		respondWithError(w, http.StatusBadRequest, validateIDError)
 		return
 	}
 
 	LogInfo.Printf("Got new post deletion job. Post id: %s", id)
 
-	_, _ = Db.Exec("BEGIN TRANSACTION")
-	_, err := Db.Exec("DELETE FROM posts WHERE id = $1", id)
-	_, _ = Db.Exec("END TRANSACTION")
-	if err != nil {
-		response.Error = TechnicalError
+	if _, err := Db.Exec("BEGIN TRANSACTION"); err != nil {
 		LogError.Print(err)
-		respondWithBody(w, http.StatusInternalServerError, response)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		return
+	}
+	if _, err := Db.Exec("DELETE FROM posts WHERE id = $1", id); err != nil {
+		LogError.Print(err)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		return
+	}
+	if _, err := Db.Exec("END TRANSACTION"); err != nil {
+		LogError.Print(err)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
 	LogInfo.Printf("Post with id %s deleted", id)
 
-	respondWithBody(w, http.StatusOK, response)
+	respond(w, http.StatusOK)
 }
 
 // GetCertainPost - get single post from database http handler
@@ -253,25 +394,21 @@ func GetCertainPost(w http.ResponseWriter, r *http.Request) {
 
 	id, validateIDError := validateUserID(r)
 	if validateIDError != NoError {
-		response.Error = validateIDError
-		respondWithBody(w, http.StatusBadRequest, response)
+		respondWithError(w, http.StatusBadRequest, validateIDError)
 		return
 	}
 
 	LogInfo.Printf("Got new get certain post job. Post id: %s", id)
 
-	err := Db.QueryRow("select id, title, date, content from posts where id = $1", id).Scan(
-		&post.ID, &post.Title, &post.Date, &post.Content)
-	if err != nil {
+	if err := Db.QueryRow("select $1 from posts where id = $2", postFields, id).Scan(
+		&post.ID, &post.Title, &post.Date, &post.Content); err != nil {
 		if err == sql.ErrNoRows {
-			response.Error = NoSuchPost
-			respondWithBody(w, http.StatusNotFound, response)
+			respondWithError(w, http.StatusBadRequest, NoSuchPost)
 			return
 		}
 
-		response.Error = TechnicalError
 		LogError.Print(err)
-		respondWithBody(w, http.StatusInternalServerError, response)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
@@ -287,34 +424,30 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 
 	params, validateError := validateUserGetPostsParams(r)
 	if validateError != NoError {
-		response.Error = validateError
-		respondWithBody(w, http.StatusBadRequest, response)
+		respondWithError(w, http.StatusBadRequest, validateError)
 		return
 	}
 
-	page := params["page"]
-	postsPerPage := params["posts-per-page"]
+	page := params.page
+	postsPerPage := params.postsPerPage
 
 	var posts []models.Post
 
 	LogInfo.Printf("Got new get range of posts job. Page: %d. Posts per page: %d", page, postsPerPage)
 
-	rows, err := Db.Query("select id, title, date, content from posts order by id DESC offset $1 limit $2",
-		page*postsPerPage, postsPerPage)
+	rows, err := Db.Query("select $1 from posts order by id DESC offset $2 limit $3",
+		postFields, page*postsPerPage, postsPerPage)
 	if err != nil {
-		response.Error = TechnicalError
 		LogError.Print(err)
-		respondWithBody(w, http.StatusInternalServerError, response)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
 	for rows.Next() {
 		var currentPost models.Post
-		err = rows.Scan(&currentPost.ID, &currentPost.Title, &currentPost.Date, &currentPost.Content)
-		if err != nil {
-			response.Error = TechnicalError
+		if err = rows.Scan(&currentPost.ID, &currentPost.Title, &currentPost.Date, &currentPost.Content); err != nil {
 			LogError.Print(err)
-			respondWithBody(w, http.StatusInternalServerError, response)
+			respondWithError(w, http.StatusInternalServerError, TechnicalError)
 			return
 		}
 		posts = append(posts, currentPost)
@@ -324,4 +457,106 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 
 	response.Body = posts
 	respondWithBody(w, 200, response)
+}
+
+// RegisterUserHandler - checks user registration credentials and inserts login and password into database
+func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
+	credentials, validateError := validateUserRegistrationCredentials(r)
+	if validateError != NoError {
+		respondWithError(w, http.StatusBadRequest, validateError)
+		return
+	}
+
+	login := credentials.login
+	email := credentials.email
+	password := []byte(credentials.password)
+
+	hashedPassword, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
+	if err != nil {
+		LogError.Print(err)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		return
+	}
+
+	if _, err = Db.Exec("BEGIN TRANSACTION"); err != nil {
+		LogError.Print(err)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		return
+	}
+	_, err = Db.Exec("insert into users (login, email, password) values($1, $2, $3)",
+		login, email, string(hashedPassword))
+	if err != nil {
+		LogError.Print(err)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		return
+	}
+	if _, err := Db.Exec("END TRANSACTION"); err != nil {
+		LogError.Print(err)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		return
+	}
+
+	respond(w, http.StatusOK)
+}
+
+func getToken(credentials userCredentials) (string, error) {
+	token := jwt.New(jwt.SigningMethodHS256)
+
+	claims := token.Claims.(jwt.MapClaims)
+
+	claims["name"] = credentials.login
+	claims["exp"] = time.Now().Add(1 * time.Hour).Unix()
+
+	tokenString, err := token.SignedString(SigningKey)
+
+	return tokenString, err
+}
+
+// LoginUserHandler - checks user credentials and returns authorization token
+func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
+	credentials, validateError := validateUserLoginCredentials(r)
+	if validateError != NoError {
+		respondWithError(w, http.StatusBadRequest, validateError)
+		return
+	}
+
+	login := credentials.login
+	email := credentials.email
+	password := credentials.password
+
+	var hashedPassword string
+
+	var identifierField string
+	var identifierFieldValue string
+	if len(email) != 0 {
+		identifierField = "email"
+		identifierFieldValue = email
+	} else {
+		identifierField = "login"
+		identifierFieldValue = login
+	}
+
+	if err := Db.QueryRow("select password from users where $1 = $2", identifierField, identifierFieldValue).
+		Scan(&hashedPassword); err != nil {
+		if err == sql.ErrNoRows {
+			respondWithError(w, http.StatusUnauthorized, WrongCredentials)
+			return
+		}
+		LogError.Print(err)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
+		respondWithError(w, http.StatusUnauthorized, WrongCredentials)
+		return
+	}
+
+	token, err := getToken(credentials)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		return
+	}
+
+	respondWithBody(w, http.StatusAccepted, token)
 }

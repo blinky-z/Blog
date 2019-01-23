@@ -3,13 +3,16 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"github.com/auth0/go-jwt-middleware"
 	"github.com/blinky-z/Blog/server/handler"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 	"github.com/spf13/viper"
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 var (
@@ -30,7 +33,29 @@ var (
 
 	// Db - database connection
 	Db *sql.DB
+
+	signingKey string
+
+	jwtMiddleware = jwtmiddleware.New(jwtmiddleware.Options{
+		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+			return signingKey, nil
+		},
+		SigningMethod: jwt.SigningMethodHS256,
+	})
 )
+
+func getTokenHandler(w http.ResponseWriter, r *http.Request) {
+	token := jwt.New(jwt.SigningMethodHS256)
+
+	claims := token.Claims.(jwt.MapClaims)
+
+	claims["name"] = "Dmitry"
+	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
+
+	tokenString, _ := token.SignedString(signingKey)
+
+	_, _ = w.Write([]byte(tokenString))
+}
 
 // RunServer - run server function. Config file name and path should be passed
 func RunServer(configName, configPath string) {
@@ -44,6 +69,7 @@ func RunServer(configName, configPath string) {
 	user = viper.GetString("user")
 	password = viper.GetString("password")
 	dbName = viper.GetString("db_name")
+	signingKey = viper.GetString("secretKey")
 
 	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s",
 		user, password, dbName)
@@ -63,17 +89,23 @@ func RunServer(configName, configPath string) {
 	handler.Db = Db
 	handler.LogInfo = logInfo
 	handler.LogError = logError
+	handler.SigningKey = signingKey
 
 	router := mux.NewRouter()
 
-	router.HandleFunc("/posts", handler.GetPosts).Methods("GET")
-	router.HandleFunc("/posts", handler.CreatePost).Methods("POST")
+	router.HandleFunc("/posts", handler.GetPosts).Queries("page", "{page}",
+		"posts-per-page", "{posts-per-page}").Methods("GET")
+	router.HandleFunc("/posts", handler.GetPosts).Queries("page", "{page}").Methods("GET")
 	router.HandleFunc("/posts/{id}", handler.GetCertainPost).Methods("GET")
-	router.HandleFunc("/posts/{id}", handler.UpdatePost).Methods("PUT")
-	router.HandleFunc("/posts/{id}", handler.DeletePost).Methods("DELETE")
+	router.Handle("/posts", jwtMiddleware.Handler(http.HandlerFunc(handler.CreatePost))).Methods("POST")
+	router.Handle("/posts/{id}", jwtMiddleware.Handler(http.HandlerFunc(handler.UpdatePost))).Methods("PUT")
+	router.Handle("/posts/{id}", jwtMiddleware.Handler(http.HandlerFunc(handler.DeletePost))).Methods("DELETE")
+	router.HandleFunc("/get-token", getTokenHandler).Methods("GET")
 	router.HandleFunc("/hc", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Methods("GET")
+	router.HandleFunc("/user/register", handler.RegisterUserHandler).Methods("GET")
+	router.HandleFunc("/user/login", handler.LoginUserHandler).Methods("GET")
 
 	logInfo.Printf("listening on address %s", Address)
 	logError.Fatal(http.ListenAndServe(Address, router))
