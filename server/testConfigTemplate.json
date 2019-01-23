@@ -1,6 +1,6 @@
 {
-  "user": "",
-  "password": "",
-  "db_name": "",
-  "secretKey": ""
+  "user": "testUsername",
+  "password": "testPassword",
+  "db_name": "testdb",
+  "jwtSecretKey": "testSecret"
 }
