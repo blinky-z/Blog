@@ -4,50 +4,15 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/blinky-z/Blog/server/models"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
-	"golang.org/x/crypto/bcrypt"
-	"log"
 	"net/http"
-	"regexp"
 	"strconv"
-	"time"
 )
-
-var (
-	// LogInfo - log for writing+ messages
-	LogInfo *log.Logger
-	// LogError - log for writing server errors
-	LogError *log.Logger
-
-	// Db - database connection. This variable is set by main function
-	Db *sql.DB
-
-	// SigningKey - secret key for creating token
-	SigningKey []byte
-)
-
-// Response - behaves like Either Monad
-// 'Error' field is set while error occurred.
-// Otherwise 'Body' field is used to return post from database
-type Response struct {
-	Error PostErrorCode `json:"error"`
-	Body  interface{}   `json:"body"`
-}
 
 type getPostsRangeParams struct {
 	page         int
 	postsPerPage int
 }
-
-type userCredentials struct {
-	Login    string `json:"login"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-// PostErrorCode - represents error occurred while handling request
-type PostErrorCode string
 
 const (
 	// TechnicalError - server error
@@ -64,18 +29,6 @@ const (
 	NoSuchPost PostErrorCode = "NO_SUCH_POST"
 	// InvalidRange - user inputs invalid range of posts to get from database
 	InvalidRange PostErrorCode = "INVALID_POSTS_RANGE"
-	// WrongCredentials - user inputs wrong password or login or email while logging in
-	WrongCredentials PostErrorCode = "WRONG_CREDENTIALS"
-	// InvalidEmail - user inputs invalid email while registration or logging in
-	InvalidEmail PostErrorCode = "INVALID_EMAIL"
-	// InvalidLogin - user inputs invalid login while registration
-	InvalidLogin PostErrorCode = "INVALID_LOGIN"
-	// InvalidPassword - user inputs invalid password while registration
-	InvalidPassword PostErrorCode = "INVALID_PASSWORD"
-	// AlreadyRegistered - user trying to register account while already registered
-	AlreadyRegistered PostErrorCode = "ALREADY_REGISTERED"
-	// IncompleteCredentials - user do not input full credentials: login, email, password
-	IncompleteCredentials PostErrorCode = "INCOMPLETE_CREDENTIALS"
 	// NoError - no error occurred while handling request
 	NoError PostErrorCode = ""
 
@@ -86,49 +39,9 @@ const (
 	MaxPostsPerPage int = 40
 
 	defaultMaxPostsPerPage string = "10"
-
-	// MinPwdLen - minimum length of user password
-	MinPwdLen int = 8
-	// MaxPwdLen - maximum length of user password
-	MaxPwdLen int = 38
-
-	// MinLoginLen - minimum length of user login
-	MinLoginLen int = 6
-	// MaxLoginLen - maximum length of user login
-	MaxLoginLen int = 36
 )
 
-func respond(w http.ResponseWriter, code int) {
-	w.WriteHeader(code)
-}
-
-func respondWithJSON(w http.ResponseWriter, code int, body []byte) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-
-	_, err := w.Write(body)
-	if err != nil {
-		LogError.Print(err)
-	}
-}
-
-func respondWithError(w http.ResponseWriter, code int, errorCode PostErrorCode) {
-	var response Response
-	response.Error = errorCode
-	encodedResponse, _ := json.Marshal(response)
-
-	respondWithJSON(w, code, encodedResponse)
-}
-
-func respondWithBody(w http.ResponseWriter, code int, payload interface{}) {
-	var response Response
-	response.Body = payload
-	encodedResponse, _ := json.Marshal(response)
-
-	respondWithJSON(w, code, encodedResponse)
-}
-
-func validateUserGetPostsParams(r *http.Request) (params getPostsRangeParams, validateError PostErrorCode) {
+func validateGetPostsParams(r *http.Request) (params getPostsRangeParams, validateError PostErrorCode) {
 	validateError = NoError
 
 	var page int
@@ -167,73 +80,7 @@ func validateUserGetPostsParams(r *http.Request) (params getPostsRangeParams, va
 	return
 }
 
-func validateUserRegistrationCredentials(r *http.Request) (credentials userCredentials, validateError PostErrorCode) {
-	validateError = NoError
-
-	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
-		if err != nil {
-			validateError = BadRequestBody
-			return
-		}
-	}
-
-	login := credentials.Login
-	password := credentials.Password
-	email := credentials.Email
-
-	if len(login) == 0 || len(email) == 0 || len(password) == 0 {
-		validateError = IncompleteCredentials
-		return
-	}
-
-	if !checkEmail(email) {
-		validateError = InvalidEmail
-		return
-	}
-
-	loginLen := len(login)
-	if loginLen < MinLoginLen || loginLen > MaxLoginLen {
-		validateError = InvalidLogin
-		return
-	}
-
-	passwordLen := len(password)
-	if passwordLen < MinPwdLen || passwordLen > MaxPwdLen || password == login {
-		validateError = InvalidPassword
-		return
-	}
-
-	return
-}
-
-func validateUserLoginCredentials(r *http.Request) (credentials userCredentials, validateError PostErrorCode) {
-	validateError = NoError
-
-	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
-		if err != nil {
-			validateError = BadRequestBody
-			return
-		}
-	}
-
-	login := credentials.Login
-	password := credentials.Password
-	email := credentials.Email
-
-	if (len(login) == 0 && len(email) == 0) || len(password) == 0 {
-		validateError = IncompleteCredentials
-		return
-	}
-
-	if len(email) != 0 && !checkEmail(email) {
-		validateError = InvalidEmail
-		return
-	}
-
-	return
-}
-
-func validateUserPost(r *http.Request) (post models.Post, validateError PostErrorCode) {
+func validatePost(r *http.Request) (post models.Post, validateError PostErrorCode) {
 	validateError = NoError
 	err := json.NewDecoder(r.Body).Decode(&post)
 	if err != nil {
@@ -254,14 +101,7 @@ func validateUserPost(r *http.Request) (post models.Post, validateError PostErro
 	return
 }
 
-func checkEmail(email string) bool {
-	re := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?" +
-		"(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
-
-	return re.MatchString(email)
-}
-
-func validateUserID(r *http.Request) (id string, validateError PostErrorCode) {
+func validatePostID(r *http.Request) (id string, validateError PostErrorCode) {
 	validateError = NoError
 	vars := mux.Vars(r)
 
@@ -276,7 +116,7 @@ func validateUserID(r *http.Request) (id string, validateError PostErrorCode) {
 
 // CreatePost - create post http handler
 func CreatePost(w http.ResponseWriter, r *http.Request) {
-	post, validatePostError := validateUserPost(r)
+	post, validatePostError := validatePost(r)
 	if validatePostError != NoError {
 		respondWithError(w, http.StatusBadRequest, validatePostError)
 		return
@@ -311,13 +151,13 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 
 // UpdatePost - update post http handler
 func UpdatePost(w http.ResponseWriter, r *http.Request) {
-	id, validateIDError := validateUserID(r)
+	id, validateIDError := validatePostID(r)
 	if validateIDError != NoError {
 		respondWithError(w, http.StatusBadRequest, validateIDError)
 		return
 	}
 
-	post, validatePostError := validateUserPost(r)
+	post, validatePostError := validatePost(r)
 	if validatePostError != NoError {
 		respondWithError(w, http.StatusBadRequest, validatePostError)
 		return
@@ -365,7 +205,7 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 
 // DeletePost - delete post http handler
 func DeletePost(w http.ResponseWriter, r *http.Request) {
-	id, validateIDError := validateUserID(r)
+	id, validateIDError := validatePostID(r)
 	if validateIDError != NoError {
 		respondWithError(w, http.StatusBadRequest, validateIDError)
 		return
@@ -398,7 +238,7 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 func GetCertainPost(w http.ResponseWriter, r *http.Request) {
 	var post models.Post
 
-	id, validateIDError := validateUserID(r)
+	id, validateIDError := validatePostID(r)
 	if validateIDError != NoError {
 		respondWithError(w, http.StatusBadRequest, validateIDError)
 		return
@@ -425,7 +265,7 @@ func GetCertainPost(w http.ResponseWriter, r *http.Request) {
 
 // GetPosts - get one page of posts from database http handler
 func GetPosts(w http.ResponseWriter, r *http.Request) {
-	params, validateError := validateUserGetPostsParams(r)
+	params, validateError := validateGetPostsParams(r)
 	if validateError != NoError {
 		respondWithError(w, http.StatusBadRequest, validateError)
 		return
@@ -459,142 +299,4 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 	LogInfo.Print("Posts arrived from database")
 
 	respondWithBody(w, 200, posts)
-}
-
-// RegisterUserHandler - checks user registration credentials and inserts login and password into database
-func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
-	LogInfo.Printf("Got new user registration job")
-
-	credentials, validateError := validateUserRegistrationCredentials(r)
-	if validateError != NoError {
-		respondWithError(w, http.StatusBadRequest, validateError)
-		return
-	}
-
-	login := credentials.Login
-	email := credentials.Email
-	password := []byte(credentials.Password)
-
-	var userExists bool
-	if err := Db.QueryRow("select exists(select from users where email = $1 or login = $2)", email, login).
-		Scan(&userExists); err != nil && err != sql.ErrNoRows {
-		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-
-	if userExists {
-		respondWithError(w, http.StatusBadRequest, AlreadyRegistered)
-		return
-	}
-
-	LogInfo.Print("All checks passed")
-	LogInfo.Print("Creating hashed password")
-
-	hashedPassword, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
-	if err != nil {
-		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-
-	LogInfo.Print("Hashed password created")
-	LogInfo.Print("Inserting credentials into database")
-
-	if _, err = Db.Exec("BEGIN TRANSACTION"); err != nil {
-		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-	_, err = Db.Exec("insert into users (login, email, password) values($1, $2, $3)",
-		login, email, string(hashedPassword))
-	if err != nil {
-		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-	if _, err := Db.Exec("END TRANSACTION"); err != nil {
-		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-
-	LogInfo.Print("Credentials successfully inserted into database")
-
-	respond(w, http.StatusOK)
-}
-
-func getToken(credentials userCredentials) (string, error) {
-	token := jwt.New(jwt.SigningMethodHS256)
-
-	claims := token.Claims.(jwt.MapClaims)
-
-	claims["name"] = credentials.Login
-	claims["exp"] = time.Now().Add(1 * time.Hour).Unix()
-
-	tokenString, err := token.SignedString(SigningKey)
-
-	return tokenString, err
-}
-
-// LoginUserHandler - checks user credentials and returns authorization token
-func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
-	LogInfo.Printf("Got new user logging in job")
-
-	credentials, validateError := validateUserLoginCredentials(r)
-	if validateError != NoError {
-		respondWithError(w, http.StatusBadRequest, validateError)
-		return
-	}
-
-	LogInfo.Print("All checks passed")
-
-	login := credentials.Login
-	email := credentials.Email
-	password := credentials.Password
-
-	var hashedPassword string
-
-	LogInfo.Printf("Getting user's password from database")
-
-	var err error
-	if len(email) != 0 {
-		err = Db.QueryRow("select password from users where email = $1", email).
-			Scan(&hashedPassword)
-	} else {
-		err = Db.QueryRow("select password from users where login = $1", login).
-			Scan(&hashedPassword)
-	}
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			LogInfo.Print("User does not exist. Sending error to user")
-			respondWithError(w, http.StatusUnauthorized, WrongCredentials)
-			return
-		}
-		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-
-	LogInfo.Print("User's password arrived from database. Comparing inputted password with hashed one")
-
-	if err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
-		LogInfo.Print("User's password does not match hashed one")
-		respondWithError(w, http.StatusUnauthorized, WrongCredentials)
-		return
-	}
-
-	LogInfo.Print("User's password match hashed one. Generating token...")
-
-	token, err := getToken(credentials)
-	if err != nil {
-		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-
-	LogInfo.Print("Token successfully generated")
-
-	respondWithBody(w, http.StatusAccepted, token)
 }
