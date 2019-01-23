@@ -12,7 +12,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 )
 
 var (
@@ -34,7 +33,7 @@ var (
 	// Db - database connection
 	Db *sql.DB
 
-	signingKey string
+	signingKey []byte
 
 	jwtMiddleware = jwtmiddleware.New(jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
@@ -43,19 +42,6 @@ var (
 		SigningMethod: jwt.SigningMethodHS256,
 	})
 )
-
-func getTokenHandler(w http.ResponseWriter, r *http.Request) {
-	token := jwt.New(jwt.SigningMethodHS256)
-
-	claims := token.Claims.(jwt.MapClaims)
-
-	claims["name"] = "Dmitry"
-	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
-
-	tokenString, _ := token.SignedString(signingKey)
-
-	_, _ = w.Write([]byte(tokenString))
-}
 
 // RunServer - run server function. Config file name and path should be passed
 func RunServer(configName, configPath string) {
@@ -69,7 +55,7 @@ func RunServer(configName, configPath string) {
 	user = viper.GetString("user")
 	password = viper.GetString("password")
 	dbName = viper.GetString("db_name")
-	signingKey = viper.GetString("secretKey")
+	signingKey = []byte(viper.GetString("secretKey"))
 
 	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s",
 		user, password, dbName)
@@ -100,7 +86,6 @@ func RunServer(configName, configPath string) {
 	router.Handle("/posts", jwtMiddleware.Handler(http.HandlerFunc(handler.CreatePost))).Methods("POST")
 	router.Handle("/posts/{id}", jwtMiddleware.Handler(http.HandlerFunc(handler.UpdatePost))).Methods("PUT")
 	router.Handle("/posts/{id}", jwtMiddleware.Handler(http.HandlerFunc(handler.DeletePost))).Methods("DELETE")
-	router.HandleFunc("/get-token", getTokenHandler).Methods("GET")
 	router.HandleFunc("/hc", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Methods("GET")
