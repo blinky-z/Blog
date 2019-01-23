@@ -227,23 +227,58 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 		updatedPost := response.Body
 		if updatedPost != newPost {
 			t.Errorf("Received post does not match proper post\nReceived post: %v\n Proper post: %v",
-				updatedPost, workingPost)
+				updatedPost, newPost)
 		}
 
 		workingPost = updatedPost
 	}
 
-	// Step 4: Delete updated post
+	// Step 4: Get Updated post
 	{
 		var response Response
 
-		r := deletePost(workingPost.ID)
+		r := getPost(workingPost.ID)
+		defer func() {
+			err := r.Body.Close()
+			if err != nil {
+				panic(err)
+			}
+		}()
 		decodeResponse(r.Body, &response)
 		if r.StatusCode != http.StatusOK {
 			t.Errorf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
 
-		r = getPost(workingPost.ID)
+		receivedPost := response.Body
+
+		if receivedPost != workingPost {
+			t.Errorf("Received post does not match updated post\nReceived post: %v\n Updated post: %v",
+				receivedPost, workingPost)
+		}
+	}
+
+	// Step 5: Delete updated post
+	{
+		var response Response
+
+		r := deletePost(workingPost.ID)
+		defer func() {
+			err := r.Body.Close()
+			if err != nil {
+				panic(err)
+			}
+		}()
+		decodeResponse(r.Body, &response)
+		if r.StatusCode != http.StatusOK {
+			t.Errorf("Error %d. Error message: %s", r.StatusCode, response.Error)
+		}
+	}
+
+	// Step 6: Get deleted post
+	{
+		var response Response
+
+		r := getPost(workingPost.ID)
 		defer func() {
 			err := r.Body.Close()
 			if err != nil {
@@ -553,7 +588,7 @@ func TestGetRangeOfPostsWithCustomPostsPerPage(t *testing.T) {
 		workingPosts = append(workingPosts, response.Body)
 	}
 
-	resp := sendMessage("GET", "http://"+Address+"/posts?page=0&posts-per-page=20", "")
+	resp := getPosts("0", "20")
 
 	var response responseAllPosts
 	decodeResponseAllPosts(resp.Body, &response)
@@ -581,7 +616,7 @@ func TestGetRangeOfPostsWithDefaultPostsPerPage(t *testing.T) {
 		workingPosts = append(workingPosts, response.Body)
 	}
 
-	resp := sendMessage("GET", "http://"+Address+"/posts?page=0", "")
+	resp := getPosts("0", "")
 
 	var response responseAllPosts
 	decodeResponseAllPosts(resp.Body, &response)
@@ -592,7 +627,7 @@ func TestGetRangeOfPostsWithDefaultPostsPerPage(t *testing.T) {
 }
 
 func TestGetRangeOfPostsWithNegativePage(t *testing.T) {
-	resp := sendMessage("GET", "http://"+Address+"/posts?page=-1", "")
+	resp := getPosts("-1", "")
 
 	var response responseAllPosts
 	decodeResponseAllPosts(resp.Body, &response)
@@ -603,7 +638,7 @@ func TestGetRangeOfPostsWithNegativePage(t *testing.T) {
 }
 
 func TestGetRangeOfPostsWithNonNumberPage(t *testing.T) {
-	resp := sendMessage("GET", "http://"+Address+"/posts?page=asdsa", "")
+	resp := getPosts("adasdf", "")
 
 	var response responseAllPosts
 	decodeResponseAllPosts(resp.Body, &response)
@@ -614,7 +649,7 @@ func TestGetRangeOfPostsWithNonNumberPage(t *testing.T) {
 }
 
 func TestGetRangeOfPostsWithTooLongPostsPerPage(t *testing.T) {
-	resp := sendMessage("GET", "http://"+Address+"/posts?page=0&posts-per-page=100", "")
+	resp := getPosts("0", "100")
 
 	var response responseAllPosts
 	decodeResponseAllPosts(resp.Body, &response)
@@ -625,7 +660,7 @@ func TestGetRangeOfPostsWithTooLongPostsPerPage(t *testing.T) {
 }
 
 func TestGetRangeOfPostsWithNonNumberPostsPerPage(t *testing.T) {
-	resp := sendMessage("GET", "http://"+Address+"/posts?page=0&posts-per-page=advsc", "")
+	resp := getPosts("0", "asddfa")
 
 	var response responseAllPosts
 	decodeResponseAllPosts(resp.Body, &response)
