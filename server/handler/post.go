@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -25,7 +24,7 @@ var (
 	Db *sql.DB
 
 	// SigningKey - secret key for creating token
-	SigningKey string
+	SigningKey []byte
 )
 
 // Response - behaves like Either Monad
@@ -42,9 +41,9 @@ type getPostsRangeParams struct {
 }
 
 type userCredentials struct {
-	login    string
-	email    string
-	password string
+	Login    string `json:"login"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 // PostErrorCode - represents error occurred while handling request
@@ -73,22 +72,30 @@ const (
 	InvalidLogin PostErrorCode = "INVALID_LOGIN"
 	// InvalidPassword - user inputs invalid password while registration
 	InvalidPassword PostErrorCode = "INVALID_PASSWORD"
+	// AlreadyRegistered - user trying to register account while already registered
+	AlreadyRegistered PostErrorCode = "ALREADY_REGISTERED"
+	// IncompleteCredentials - user do not input full credentials: login, email, password
+	IncompleteCredentials PostErrorCode = "INCOMPLETE_CREDENTIALS"
 	// NoError - no error occurred while handling request
 	NoError PostErrorCode = ""
 
-	maxPostTitleLen int = 120
+	// MaxPostTitleLen - maximum length of post title
+	MaxPostTitleLen int = 120
 
-	maxPostsPerPage int = 40
+	// MaxPostsPerPage - maximum posts can be displayed on one page
+	MaxPostsPerPage int = 40
 
 	defaultMaxPostsPerPage string = "10"
 
-	minPwdLen int = 8
-	maxPwdLen int = 40
+	// MinPwdLen - minimum length of user password
+	MinPwdLen int = 8
+	// MaxPwdLen - maximum length of user password
+	MaxPwdLen int = 38
 
-	minLoginLen int = 6
-	maxLoginLen int = 20
-
-	postFields = "id, title, date, content"
+	// MinLoginLen - minimum length of user login
+	MinLoginLen int = 6
+	// MaxLoginLen - maximum length of user login
+	MaxLoginLen int = 36
 )
 
 func respond(w http.ResponseWriter, code int) {
@@ -149,7 +156,7 @@ func validateUserGetPostsParams(r *http.Request) (params getPostsRangeParams, va
 		return
 	}
 
-	if postsPerPage < 0 || postsPerPage > maxPostsPerPage {
+	if postsPerPage < 0 || postsPerPage > MaxPostsPerPage {
 		validateError = InvalidRange
 		return
 	}
@@ -170,12 +177,12 @@ func validateUserRegistrationCredentials(r *http.Request) (credentials userCrede
 		}
 	}
 
-	login := credentials.login
-	password := credentials.password
-	email := credentials.email
+	login := credentials.Login
+	password := credentials.Password
+	email := credentials.Email
 
-	if len(login) == 0 || len(password) == 0 || len(email) == 0 {
-		validateError = BadRequestBody
+	if len(login) == 0 || len(email) == 0 || len(password) == 0 {
+		validateError = IncompleteCredentials
 		return
 	}
 
@@ -184,15 +191,15 @@ func validateUserRegistrationCredentials(r *http.Request) (credentials userCrede
 		return
 	}
 
-	pwdLen := len(password)
-	if pwdLen < minPwdLen || pwdLen > maxPwdLen || !strings.Contains(password, "[A-Z]") {
-		validateError = InvalidPassword
+	loginLen := len(login)
+	if loginLen < MinLoginLen || loginLen > MaxLoginLen {
+		validateError = InvalidLogin
 		return
 	}
 
-	loginLen := len(login)
-	if loginLen < minLoginLen || loginLen > maxLoginLen {
-		validateError = InvalidLogin
+	passwordLen := len(password)
+	if passwordLen < MinPwdLen || passwordLen > MaxPwdLen || password == login {
+		validateError = InvalidPassword
 		return
 	}
 
@@ -209,12 +216,12 @@ func validateUserLoginCredentials(r *http.Request) (credentials userCredentials,
 		}
 	}
 
-	login := credentials.login
-	password := credentials.password
-	email := credentials.email
+	login := credentials.Login
+	password := credentials.Password
+	email := credentials.Email
 
 	if (len(login) == 0 && len(email) == 0) || len(password) == 0 {
-		validateError = BadRequestBody
+		validateError = IncompleteCredentials
 		return
 	}
 
@@ -234,7 +241,7 @@ func validateUserPost(r *http.Request) (post models.Post, validateError PostErro
 		return
 	}
 
-	if len(post.Title) > maxPostTitleLen || len(post.Title) == 0 {
+	if len(post.Title) > MaxPostTitleLen || len(post.Title) == 0 {
 		validateError = InvalidTitle
 		return
 	}
@@ -284,8 +291,8 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
-	if err := Db.QueryRow("insert into posts(title, content) values($1, $2) RETURNING $3",
-		post.Title, post.Content, postFields).
+	if err := Db.QueryRow("insert into posts(title, content) values($1, $2) RETURNING id, title, date, content",
+		post.Title, post.Content).
 		Scan(&createdPost.ID, &createdPost.Title, &createdPost.Date, &createdPost.Content); err != nil {
 		LogError.Print(err)
 		respondWithError(w, http.StatusInternalServerError, TechnicalError)
@@ -306,7 +313,7 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	id, validateIDError := validateUserID(r)
 	if validateIDError != NoError {
-		respondWithBody(w, http.StatusBadRequest, validateIDError)
+		respondWithError(w, http.StatusBadRequest, validateIDError)
 		return
 	}
 
@@ -337,7 +344,8 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := Db.QueryRow("UPDATE posts SET title = $1, content = $2 WHERE id = $3 RETURNING id, title, date, content",
-		post.Title, post.Content, id).Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Date, &updatedPost.Content); err != nil {
+		post.Title, post.Content, id).
+		Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Date, &updatedPost.Content); err != nil {
 		if err != nil {
 			LogError.Print(err)
 			respondWithError(w, http.StatusInternalServerError, TechnicalError)
@@ -388,8 +396,6 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 
 // GetCertainPost - get single post from database http handler
 func GetCertainPost(w http.ResponseWriter, r *http.Request) {
-	var response Response
-
 	var post models.Post
 
 	id, validateIDError := validateUserID(r)
@@ -400,10 +406,10 @@ func GetCertainPost(w http.ResponseWriter, r *http.Request) {
 
 	LogInfo.Printf("Got new get certain post job. Post id: %s", id)
 
-	if err := Db.QueryRow("select $1 from posts where id = $2", postFields, id).Scan(
-		&post.ID, &post.Title, &post.Date, &post.Content); err != nil {
+	if err := Db.QueryRow("select id, title, date, content from posts where id = $1", id).
+		Scan(&post.ID, &post.Title, &post.Date, &post.Content); err != nil {
 		if err == sql.ErrNoRows {
-			respondWithError(w, http.StatusBadRequest, NoSuchPost)
+			respondWithError(w, http.StatusNotFound, NoSuchPost)
 			return
 		}
 
@@ -414,14 +420,11 @@ func GetCertainPost(w http.ResponseWriter, r *http.Request) {
 
 	LogInfo.Printf("Post with id %s arrived from database", id)
 
-	response.Body = post
-	respondWithBody(w, 200, response)
+	respondWithBody(w, 200, post)
 }
 
 // GetPosts - get one page of posts from database http handler
 func GetPosts(w http.ResponseWriter, r *http.Request) {
-	var response Response
-
 	params, validateError := validateUserGetPostsParams(r)
 	if validateError != NoError {
 		respondWithError(w, http.StatusBadRequest, validateError)
@@ -435,8 +438,8 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 
 	LogInfo.Printf("Got new get range of posts job. Page: %d. Posts per page: %d", page, postsPerPage)
 
-	rows, err := Db.Query("select $1 from posts order by id DESC offset $2 limit $3",
-		postFields, page*postsPerPage, postsPerPage)
+	rows, err := Db.Query("select id, title, date, content from posts order by id DESC offset $1 limit $2",
+		page*postsPerPage, postsPerPage)
 	if err != nil {
 		LogError.Print(err)
 		respondWithError(w, http.StatusInternalServerError, TechnicalError)
@@ -455,21 +458,38 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 
 	LogInfo.Print("Posts arrived from database")
 
-	response.Body = posts
-	respondWithBody(w, 200, response)
+	respondWithBody(w, 200, posts)
 }
 
 // RegisterUserHandler - checks user registration credentials and inserts login and password into database
 func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
+	LogInfo.Printf("Got new user registration job")
+
 	credentials, validateError := validateUserRegistrationCredentials(r)
 	if validateError != NoError {
 		respondWithError(w, http.StatusBadRequest, validateError)
 		return
 	}
 
-	login := credentials.login
-	email := credentials.email
-	password := []byte(credentials.password)
+	login := credentials.Login
+	email := credentials.Email
+	password := []byte(credentials.Password)
+
+	var userExists bool
+	if err := Db.QueryRow("select exists(select from users where email = $1 or login = $2)", email, login).
+		Scan(&userExists); err != nil && err != sql.ErrNoRows {
+		LogError.Print(err)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		return
+	}
+
+	if userExists {
+		respondWithError(w, http.StatusBadRequest, AlreadyRegistered)
+		return
+	}
+
+	LogInfo.Print("All checks passed")
+	LogInfo.Print("Creating hashed password")
 
 	hashedPassword, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
 	if err != nil {
@@ -477,6 +497,9 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
+
+	LogInfo.Print("Hashed password created")
+	LogInfo.Print("Inserting credentials into database")
 
 	if _, err = Db.Exec("BEGIN TRANSACTION"); err != nil {
 		LogError.Print(err)
@@ -496,6 +519,8 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	LogInfo.Print("Credentials successfully inserted into database")
+
 	respond(w, http.StatusOK)
 }
 
@@ -504,7 +529,7 @@ func getToken(credentials userCredentials) (string, error) {
 
 	claims := token.Claims.(jwt.MapClaims)
 
-	claims["name"] = credentials.login
+	claims["name"] = credentials.Login
 	claims["exp"] = time.Now().Add(1 * time.Hour).Unix()
 
 	tokenString, err := token.SignedString(SigningKey)
@@ -514,31 +539,36 @@ func getToken(credentials userCredentials) (string, error) {
 
 // LoginUserHandler - checks user credentials and returns authorization token
 func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
+	LogInfo.Printf("Got new user logging in job")
+
 	credentials, validateError := validateUserLoginCredentials(r)
 	if validateError != NoError {
 		respondWithError(w, http.StatusBadRequest, validateError)
 		return
 	}
 
-	login := credentials.login
-	email := credentials.email
-	password := credentials.password
+	LogInfo.Print("All checks passed")
+
+	login := credentials.Login
+	email := credentials.Email
+	password := credentials.Password
 
 	var hashedPassword string
 
-	var identifierField string
-	var identifierFieldValue string
+	LogInfo.Printf("Getting user's password from database")
+
+	var err error
 	if len(email) != 0 {
-		identifierField = "email"
-		identifierFieldValue = email
+		err = Db.QueryRow("select password from users where email = $1", email).
+			Scan(&hashedPassword)
 	} else {
-		identifierField = "login"
-		identifierFieldValue = login
+		err = Db.QueryRow("select password from users where login = $1", login).
+			Scan(&hashedPassword)
 	}
 
-	if err := Db.QueryRow("select password from users where $1 = $2", identifierField, identifierFieldValue).
-		Scan(&hashedPassword); err != nil {
+	if err != nil {
 		if err == sql.ErrNoRows {
+			LogInfo.Print("User does not exist. Sending error to user")
 			respondWithError(w, http.StatusUnauthorized, WrongCredentials)
 			return
 		}
@@ -547,16 +577,24 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
+	LogInfo.Print("User's password arrived from database. Comparing inputted password with hashed one")
+
+	if err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
+		LogInfo.Print("User's password does not match hashed one")
 		respondWithError(w, http.StatusUnauthorized, WrongCredentials)
 		return
 	}
 
+	LogInfo.Print("User's password match hashed one. Generating token...")
+
 	token, err := getToken(credentials)
 	if err != nil {
+		LogError.Print(err)
 		respondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
+
+	LogInfo.Print("Token successfully generated")
 
 	respondWithBody(w, http.StatusAccepted, token)
 }
