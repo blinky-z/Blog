@@ -116,15 +116,18 @@ func validatePostID(r *http.Request) (id string, validateError PostErrorCode) {
 
 // CreatePost - create post http handler
 func CreatePost(w http.ResponseWriter, r *http.Request) {
+	LogInfo.Print("Got new Post CREATE job")
+
 	post, validatePostError := validatePost(r)
 	if validatePostError != NoError {
+		LogInfo.Print("Can not create post: post is invalid")
 		respondWithError(w, http.StatusBadRequest, validatePostError)
 		return
 	}
 
-	LogInfo.Printf("Got new post creation job. New post: %v", post)
-
 	var createdPost models.Post
+
+	LogInfo.Printf("Inserting post with Title %s into database", post.Title)
 
 	if _, err := Db.Exec("BEGIN TRANSACTION"); err != nil {
 		LogError.Print(err)
@@ -144,29 +147,32 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	LogInfo.Printf("Created new post: %v", createdPost)
+	LogInfo.Printf("Post with Title %s successfully created", createdPost.Title)
 
 	respondWithBody(w, http.StatusCreated, createdPost)
 }
 
 // UpdatePost - update post http handler
 func UpdatePost(w http.ResponseWriter, r *http.Request) {
+	LogInfo.Print("Got new Post UPDATE job")
+
 	id, validateIDError := validatePostID(r)
 	if validateIDError != NoError {
+		LogInfo.Print("Can not UPDATE post: ID of Post to update is invalid")
 		respondWithError(w, http.StatusBadRequest, validateIDError)
 		return
 	}
 
 	post, validatePostError := validatePost(r)
 	if validatePostError != NoError {
+		LogInfo.Printf("Can not UPDATE post with ID %s : New Post is invalid", id)
 		respondWithError(w, http.StatusBadRequest, validatePostError)
 		return
 	}
 
-	LogInfo.Printf("Got new post update job. New post: %v", post)
-
 	if err := Db.QueryRow("select from posts where id = $1", id).Scan(); err != nil {
 		if err == sql.ErrNoRows {
+			LogInfo.Printf("Can not UPDATE post with ID %s : post does not exist", id)
 			respondWithError(w, http.StatusNotFound, NoSuchPost)
 			return
 		}
@@ -177,6 +183,8 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var updatedPost models.Post
+
+	LogInfo.Printf("Updating post with ID %s in database", id)
 
 	if _, err := Db.Exec("BEGIN TRANSACTION"); err != nil {
 		LogError.Print(err)
@@ -198,20 +206,23 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	LogInfo.Printf("Updated post: %v", updatedPost)
+	LogInfo.Printf("Post with ID %s successfully updated", id)
 
 	respondWithBody(w, http.StatusOK, updatedPost)
 }
 
 // DeletePost - delete post http handler
 func DeletePost(w http.ResponseWriter, r *http.Request) {
+	LogInfo.Print("Got new Post DELETE job")
+
 	id, validateIDError := validatePostID(r)
 	if validateIDError != NoError {
+		LogInfo.Print("Can not DELETE post: post ID is invalid")
 		respondWithError(w, http.StatusBadRequest, validateIDError)
 		return
 	}
 
-	LogInfo.Printf("Got new post deletion job. Post id: %s", id)
+	LogInfo.Printf("Deleting post with ID %s from database", id)
 
 	if _, err := Db.Exec("BEGIN TRANSACTION"); err != nil {
 		LogError.Print(err)
@@ -229,26 +240,30 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	LogInfo.Printf("Post with id %s deleted", id)
+	LogInfo.Printf("Post with ID %s successfully deleted", id)
 
 	respond(w, http.StatusOK)
 }
 
 // GetCertainPost - get single post from database http handler
 func GetCertainPost(w http.ResponseWriter, r *http.Request) {
+	LogInfo.Print("Got new Post GET job")
+
 	var post models.Post
 
 	id, validateIDError := validatePostID(r)
 	if validateIDError != NoError {
+		LogInfo.Print("Can not GET post: post ID is invalid")
 		respondWithError(w, http.StatusBadRequest, validateIDError)
 		return
 	}
 
-	LogInfo.Printf("Got new get certain post job. Post id: %s", id)
+	LogInfo.Printf("Getting post with ID %s from database", id)
 
 	if err := Db.QueryRow("select id, title, date, content from posts where id = $1", id).
 		Scan(&post.ID, &post.Title, &post.Date, &post.Content); err != nil {
 		if err == sql.ErrNoRows {
+			LogInfo.Printf("Can not GET post with ID %s : post does not exist", id)
 			respondWithError(w, http.StatusNotFound, NoSuchPost)
 			return
 		}
@@ -258,15 +273,18 @@ func GetCertainPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	LogInfo.Printf("Post with id %s arrived from database", id)
+	LogInfo.Printf("Post with ID %s succesfully arrived from database", id)
 
 	respondWithBody(w, 200, post)
 }
 
 // GetPosts - get one page of posts from database http handler
 func GetPosts(w http.ResponseWriter, r *http.Request) {
+	LogInfo.Print("Got new Range of Posts GET job")
+
 	params, validateError := validateGetPostsParams(r)
 	if validateError != NoError {
+		LogInfo.Print("Can not GET range of posts : get posts Query params are invalid")
 		respondWithError(w, http.StatusBadRequest, validateError)
 		return
 	}
@@ -276,7 +294,8 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 
 	var posts []models.Post
 
-	LogInfo.Printf("Got new get range of posts job. Page: %d. Posts per page: %d", page, postsPerPage)
+	LogInfo.Printf("Getting Range of Posts with following params: (page: %d, posts per page: %d) from database",
+		page, postsPerPage)
 
 	rows, err := Db.Query("select id, title, date, content from posts order by id DESC offset $1 limit $2",
 		page*postsPerPage, postsPerPage)
@@ -296,7 +315,7 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 		posts = append(posts, currentPost)
 	}
 
-	LogInfo.Print("Posts arrived from database")
+	LogInfo.Print("Range of Posts successfully arrived from database")
 
 	respondWithBody(w, 200, posts)
 }

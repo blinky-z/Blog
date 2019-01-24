@@ -40,6 +40,7 @@ const (
 	// MaxLoginLen - maximum length of user login
 	MaxLoginLen int = 36
 
+	// MaxEmailLen - maximum length of email
 	MaxEmailLen int = 255
 )
 
@@ -137,7 +138,7 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if userExists {
-		LogInfo.Printf("User with login %s and email %s already registered", login, email)
+		LogInfo.Printf("User with following credentials: (login: %s; email: %s) already registered", login, email)
 		respondWithError(w, http.StatusBadRequest, AlreadyRegistered)
 		return
 	}
@@ -149,7 +150,8 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	LogInfo.Printf("Inserting credentials of user with login %s and email %s into database", login, email)
+	LogInfo.Printf("Inserting credentials of user with following credentials: (login: %s; email: %s) into database",
+		login, email)
 
 	if _, err = Db.Exec("BEGIN TRANSACTION"); err != nil {
 		LogError.Print(err)
@@ -169,7 +171,7 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	LogInfo.Printf("User with login %s and email %s successfully registered", login, email)
+	LogInfo.Printf("User with following credentials: (login: %s; email: %s) successfully registered", login, email)
 
 	respond(w, http.StatusOK)
 }
@@ -204,7 +206,8 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	var hashedPassword string
 
-	LogInfo.Printf("Getting hashed password of user with login %s, email %s from database", login, email)
+	LogInfo.Printf("Getting hashed password from database of user with following credentials: (login: %s; email: %s)",
+		login, email)
 
 	var err error
 	if len(email) != 0 {
@@ -217,7 +220,8 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			LogInfo.Printf("Can not get password: user with login %s, email %s does not exist", login, email)
+			LogInfo.Printf("Can not get hashed password: user with following credentials: (login: %s; email: %s) "+
+				"does not exist", login, email)
 			respondWithError(w, http.StatusUnauthorized, WrongCredentials)
 			return
 		}
@@ -227,7 +231,9 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
-		LogInfo.Print("User's inputted password does not match hashed one")
+		LogInfo.Printf("Inputted password by user with following credentials: (login: %s; email: %s) "+
+			"does not match hashed one",
+			login, email)
 		respondWithError(w, http.StatusUnauthorized, WrongCredentials)
 		return
 	}
@@ -239,7 +245,8 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	LogInfo.Print("Token successfully generated. Sending token to user")
+	LogInfo.Printf("Token successfully generated. Sending token to user with following credentials: "+
+		"(login: %s; email: %s)", login, email)
 
 	respondWithBody(w, http.StatusAccepted, token)
 }
