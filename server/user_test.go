@@ -67,6 +67,14 @@ func loginUser(login, email, password string) *http.Response {
 
 // Registration tests
 
+func TestRegisterAlreadyRegisteredUser(t *testing.T) {
+	username := strings.Repeat("a", handler.MaxLoginLen*2)
+
+	r := registerUser(username, loginEmail, loginPassword)
+
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidLogin)
+}
+
 func TestRegisterUserWithTooLongUsername(t *testing.T) {
 	username := strings.Repeat("a", handler.MaxLoginLen*2)
 

@@ -32,7 +32,7 @@ type ResponseWithError struct {
 
 // API for matching status code and error message of responses
 
-// checkErrorResponse - check response that should return error
+// checkErrorResponse - check response that should return error message in response body
 func checkErrorResponse(r *http.Response, expectedStatusCode int, expectedErrorMessage handler.PostErrorCode) {
 	var response ResponseWithError
 	decodeErrorResponse(r.Body, &response)
@@ -43,14 +43,15 @@ func checkErrorResponse(r *http.Response, expectedStatusCode int, expectedErrorM
 	}
 }
 
-// checkErrorResponse - check response that should not return error
+// checkNiceResponse - check response that should return only status code
+// If received status code does not match expected status code, then get Error Message from response body and print it
 func checkNiceResponse(r *http.Response, expectedStatusCode int) {
 	if r.StatusCode != expectedStatusCode {
 		var response ResponseWithError
 		decodeErrorResponse(r.Body, &response)
 
-		panic(fmt.Sprintf("Test Error. Received Error code: %d\nExpected Error code: %d",
-			r.StatusCode, expectedStatusCode))
+		panic(fmt.Sprintf("Test Error. Received Error code: %d. Expected Error code: %d\nError message: %s",
+			r.StatusCode, expectedStatusCode, response.Error))
 	}
 }
 
@@ -60,16 +61,20 @@ func checkNiceResponse(r *http.Response, expectedStatusCode int) {
 func encodeMessage(message interface{}) []byte {
 	encodedMessage, err := json.Marshal(message)
 	if err != nil {
-		panic(fmt.Sprintf("Error encoding message. Error: %s", err))
+		panic(fmt.Sprintf("Error encoding message.\nMessage: %v\n. Error: %s", message, err))
 	}
 
 	return encodedMessage
 }
 
 func decodeErrorResponse(responseBody io.ReadCloser, resp *ResponseWithError) {
+	bodyBytes, _ := ioutil.ReadAll(responseBody)
+
+	responseBody = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
 	err := json.NewDecoder(responseBody).Decode(resp)
 	if err != nil {
-		panic(fmt.Sprintf("Error decoding received body. Error: %s", err))
+		panic(fmt.Sprintf("Error decoding received body.\nBody: %s\n. Error: %s", string(bodyBytes), err))
 	}
 }
 
