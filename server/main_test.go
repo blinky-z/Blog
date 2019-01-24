@@ -103,16 +103,11 @@ func TestRegisterUser(t *testing.T) {
 	checkNiceResponse(r, http.StatusOK)
 }
 
-// Log In with test user
+// Log In with registered in prev test test user
 func TestLoginUserWithEmail(t *testing.T) {
 	r := loginUser("", loginEmail, loginPassword)
 
-	bodyBytes, _ := ioutil.ReadAll(r.Body)
-	r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
-
 	checkNiceResponse(r, http.StatusAccepted)
-
-	r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	var response ResponseLogIn
 	decodeAuthResponse(r.Body, &response)
