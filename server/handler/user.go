@@ -7,7 +7,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
-	"regexp"
+	"strings"
 	"time"
 )
 
@@ -39,6 +39,8 @@ const (
 	MinLoginLen int = 6
 	// MaxLoginLen - maximum length of user login
 	MaxLoginLen int = 36
+
+	MaxEmailLen int = 255
 )
 
 func validateUserRegistrationCredentials(r *http.Request) (credentials models.User, validateError PostErrorCode) {
@@ -108,18 +110,16 @@ func validateUserLoginCredentials(r *http.Request) (credentials models.User, val
 }
 
 func checkEmail(email string) bool {
-	re := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?" +
-		"(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
-
-	return re.MatchString(email)
+	return strings.Count(email, "@") == 1 && len(email) <= MaxEmailLen && email[0] != '@' && email[len(email)-1] != '@'
 }
 
 // RegisterUserHandler - checks user registration credentials and inserts login and password into database
 func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
-	LogInfo.Printf("Got new user registration job")
+	LogInfo.Print("Got new user Registration job")
 
 	credentials, validateError := validateUserRegistrationCredentials(r)
 	if validateError != NoError {
+		LogInfo.Print("User Registration credentials are invalid")
 		respondWithError(w, http.StatusBadRequest, validateError)
 		return
 	}
@@ -137,12 +137,10 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if userExists {
+		LogInfo.Printf("User with login %s and email %s already registered", login, email)
 		respondWithError(w, http.StatusBadRequest, AlreadyRegistered)
 		return
 	}
-
-	LogInfo.Print("All checks passed")
-	LogInfo.Print("Creating hashed password")
 
 	hashedPassword, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
 	if err != nil {
@@ -151,8 +149,7 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	LogInfo.Print("Hashed password created")
-	LogInfo.Print("Inserting credentials into database")
+	LogInfo.Printf("Inserting credentials of user with login %s and email %s into database", login, email)
 
 	if _, err = Db.Exec("BEGIN TRANSACTION"); err != nil {
 		LogError.Print(err)
@@ -172,7 +169,7 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	LogInfo.Print("Credentials successfully inserted into database")
+	LogInfo.Printf("User with login %s and email %s successfully registered", login, email)
 
 	respond(w, http.StatusOK)
 }
@@ -192,15 +189,14 @@ func getToken(credentials models.User) (string, error) {
 
 // LoginUserHandler - checks user credentials and returns authorization token
 func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
-	LogInfo.Printf("Got new user logging in job")
+	LogInfo.Printf("Got new user Log In job")
 
 	credentials, validateError := validateUserLoginCredentials(r)
 	if validateError != NoError {
+		LogInfo.Print("User Log In credentials are invalid")
 		respondWithError(w, http.StatusBadRequest, validateError)
 		return
 	}
-
-	LogInfo.Print("All checks passed")
 
 	login := credentials.Login
 	email := credentials.Email
@@ -208,7 +204,7 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	var hashedPassword string
 
-	LogInfo.Printf("Getting user's password from database")
+	LogInfo.Printf("Getting hashed password of user with login %s, email %s from database", login, email)
 
 	var err error
 	if len(email) != 0 {
@@ -221,7 +217,7 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			LogInfo.Print("User does not exist. Sending error to user")
+			LogInfo.Printf("Can not get password: user with login %s, email %s does not exist", login, email)
 			respondWithError(w, http.StatusUnauthorized, WrongCredentials)
 			return
 		}
@@ -230,15 +226,11 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	LogInfo.Print("User's password arrived from database. Comparing inputted password with hashed one")
-
 	if err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
-		LogInfo.Print("User's password does not match hashed one")
+		LogInfo.Print("User's inputted password does not match hashed one")
 		respondWithError(w, http.StatusUnauthorized, WrongCredentials)
 		return
 	}
-
-	LogInfo.Print("User's password match hashed one. Generating token...")
 
 	token, err := getToken(credentials)
 	if err != nil {
@@ -247,7 +239,7 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	LogInfo.Print("Token successfully generated")
+	LogInfo.Print("Token successfully generated. Sending token to user")
 
 	respondWithBody(w, http.StatusAccepted, token)
 }
