@@ -8,10 +8,13 @@ import (
 	"fmt"
 	"github.com/blinky-z/Blog/server/handler"
 	"github.com/blinky-z/Blog/server/models"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/google/uuid"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 type ResponseLogIn struct {
@@ -68,11 +71,11 @@ func loginUser(login, email, password string) *http.Response {
 // Registration tests
 
 func TestRegisterAlreadyRegisteredUser(t *testing.T) {
-	username := strings.Repeat("a", handler.MaxLoginLen*2)
+	username := strings.Repeat("a", handler.MaxLoginLen)
 
 	r := registerUser(username, loginEmail, loginPassword)
 
-	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidLogin)
+	checkErrorResponse(r, http.StatusBadRequest, handler.AlreadyRegistered)
 }
 
 func TestRegisterUserWithTooLongUsername(t *testing.T) {
@@ -187,4 +190,177 @@ func TestLoginUserWithEmptyPassword(t *testing.T) {
 	r := loginUser("", loginEmail, "")
 
 	checkErrorResponse(r, http.StatusBadRequest, handler.IncompleteCredentials)
+}
+
+// Test JWT tokens
+// Test creating, updating, deleting posts with not admin role
+
+func TestRegisterNotAdmin(t *testing.T) {
+	loginUsername = uuid.New().String()
+	loginEmail = loginUsername + "@gmail.com"
+	loginPassword = uuid.New().String() + "Z"
+
+	r := registerUser(loginUsername, loginEmail, loginPassword)
+
+	checkNiceResponse(r, http.StatusOK)
+}
+
+func TestLoginNotAdmin(t *testing.T) {
+	r := loginUser("", loginEmail, loginPassword)
+
+	checkNiceResponse(r, http.StatusAccepted)
+
+	var response ResponseLogIn
+	decodeAuthResponse(r.Body, &response)
+
+	authToken = response.Body
+}
+
+func TestCreatePostWithNotAdminUser(t *testing.T) {
+	var post models.Post
+	post.Title = "Title1"
+	post.Content = "Content1 Content2 Content3"
+
+	r := createPost(post)
+	defer func() {
+		err := r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	checkErrorResponse(r, http.StatusForbidden, handler.NoPermissions)
+}
+
+func TestUpdatePostWithNotAdminUser(t *testing.T) {
+	var newPost models.Post
+	newPost.Title = "Title1"
+	newPost.Content = "Content1 Content2 Content3"
+
+	r := updatePost("1", newPost)
+	defer func() {
+		err := r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	checkErrorResponse(r, http.StatusForbidden, handler.NoPermissions)
+}
+
+func TestDeletePostWithNotAdminUser(t *testing.T) {
+	r := deletePost("1")
+	defer func() {
+		err := r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	checkErrorResponse(r, http.StatusForbidden, handler.NoPermissions)
+}
+
+func TestCreateInvalidJwtToken(t *testing.T) {
+	var claims models.TokenClaims
+	claims.ExpiresAt = time.Now().Add(1 * time.Hour).Unix()
+	claims.Role = "admin"
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	tokenString, err := token.SignedString([]byte("wrongSigningKey"))
+	if err != nil {
+		t.Fatalf("Error creating invalid JWT Token. Error: %v", err)
+		return
+	}
+
+	authToken = tokenString
+}
+
+func TestCreatePostWithInvalidJwtToken(t *testing.T) {
+	var post models.Post
+	post.Title = "Title1"
+	post.Content = "Content1 Content2 Content3"
+
+	r := createPost(post)
+	defer func() {
+		err := r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	checkErrorResponse(r, http.StatusUnauthorized, handler.InvalidToken)
+}
+
+func TestUpdatePostWithInvalidJwtToken(t *testing.T) {
+	var post models.Post
+	post.Title = "Title1"
+	post.Content = "Content1 Content2 Content3"
+
+	r := updatePost("1", post)
+	defer func() {
+		err := r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	checkErrorResponse(r, http.StatusUnauthorized, handler.InvalidToken)
+}
+
+func TestDeletePostWithInvalidJwtToken(t *testing.T) {
+	r := deletePost("1")
+	defer func() {
+		err := r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	checkErrorResponse(r, http.StatusUnauthorized, handler.InvalidToken)
+}
+
+func TestCreatePostWithMissingToken(t *testing.T) {
+	authToken = ""
+
+	var post models.Post
+	post.Title = "Title1"
+	post.Content = "Content1 Content2 Content3"
+
+	r := createPost(post)
+	defer func() {
+		err := r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	checkErrorResponse(r, http.StatusUnauthorized, handler.InvalidToken)
+}
+
+func TestCreatePostWithMissingAuthorizationHeader(t *testing.T) {
+	var post models.Post
+	post.Title = "Title1"
+	post.Content = "Content1 Content2 Content3"
+
+	encodedMessage := encodeMessage(post)
+
+	request, err := http.NewRequest("POST", "http://"+Address+"/posts", bytes.NewReader(encodedMessage))
+	if err != nil {
+		panic(fmt.Sprintf("Can not create request. Error: %s", err))
+	}
+	request.Header.Set("Content-Type", "application/json")
+
+	r, err := client.Do(request)
+	if err != nil {
+		panic(fmt.Sprintf("Can not send request. Error: %s", err))
+	}
+	defer func() {
+		err := r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	checkErrorResponse(r, http.StatusUnauthorized, handler.MissingToken)
 }

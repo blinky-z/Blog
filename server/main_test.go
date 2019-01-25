@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/blinky-z/Blog/server/handler"
+	"github.com/blinky-z/Blog/server/models"
 	"github.com/google/uuid"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 )
@@ -26,6 +28,10 @@ var (
 type ResponseWithError struct {
 	Error handler.PostErrorCode
 	Body  interface{}
+}
+
+type AdminsConfig struct {
+	Admins []models.User `json:"admins"`
 }
 
 // helpful API for testing
@@ -82,6 +88,22 @@ func decodeErrorResponse(responseBody io.ReadCloser, resp *ResponseWithError) {
 // Tests
 
 func TestRunServer(t *testing.T) {
+	loginUsername = uuid.New().String()
+	loginEmail = loginUsername + "@gmail.com"
+	loginPassword = uuid.New().String() + "Z"
+
+	admins := &AdminsConfig{Admins: []models.User{{Login: loginUsername, Email: loginEmail}}}
+	encodedAdmins := encodeMessage(admins)
+
+	adminsConfigFile, err := os.OpenFile("admins.json", os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
+	if err != nil {
+		panic("Error opening admins config file")
+	}
+	_, err = adminsConfigFile.Write(encodedAdmins)
+	if err != nil {
+		panic("Error writing new test admin to admins config file")
+	}
+
 	go RunServer("testConfig", ".")
 	for {
 		resp, err := http.Get("http://" + Address + "/hc")
@@ -93,18 +115,14 @@ func TestRunServer(t *testing.T) {
 }
 
 // Register test user
-func TestRegisterUser(t *testing.T) {
-	loginUsername = uuid.New().String()
-	loginEmail = loginUsername + "@gmail.com"
-	loginPassword = uuid.New().String() + "Z"
-
+func TestRegisterAdmin(t *testing.T) {
 	r := registerUser(loginUsername, loginEmail, loginPassword)
 
 	checkNiceResponse(r, http.StatusOK)
 }
 
 // Log In with registered in prev test test user
-func TestLoginUserWithEmail(t *testing.T) {
+func TestLoginAdminWithEmail(t *testing.T) {
 	r := loginUser("", loginEmail, loginPassword)
 
 	checkNiceResponse(r, http.StatusAccepted)

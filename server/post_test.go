@@ -30,15 +30,15 @@ type ResponseRangePosts struct {
 
 // API for encoding and decoding messages
 
-func decodeSinglePostResponse(responseBody io.ReadCloser, resp *ResponseSinglePost) {
-	err := json.NewDecoder(responseBody).Decode(resp)
+func decodeSinglePostResponse(responseBody io.ReadCloser, r *ResponseSinglePost) {
+	err := json.NewDecoder(responseBody).Decode(r)
 	if err != nil {
 		panic(fmt.Sprintf("Error decoding received body. Error: %s", err))
 	}
 }
 
-func decodeRangePostsResponse(responseBody io.ReadCloser, resp *ResponseRangePosts) {
-	err := json.NewDecoder(responseBody).Decode(resp)
+func decodeRangePostsResponse(responseBody io.ReadCloser, r *ResponseRangePosts) {
+	err := json.NewDecoder(responseBody).Decode(r)
 	if err != nil {
 		panic(fmt.Sprintf("Error decoding received body. Error: %s", err))
 	}
@@ -153,18 +153,18 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 		}()
 		decodeSinglePostResponse(r.Body, &response)
 		if r.StatusCode != http.StatusCreated {
-			t.Errorf("Error %d. Error message: %s", r.StatusCode, response.Error)
+			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
 
 		workingPost = response.Body
 
 		if workingPost.Title != sourcePost.Title {
-			t.Errorf("Created post title does not match source post one\nCreated post: %v\n Source post: %v",
+			t.Fatalf("Created post title does not match source post one\nCreated post: %v\n Source post: %v",
 				workingPost.Title, sourcePost.Title)
 		}
 
 		if workingPost.Content != sourcePost.Content {
-			t.Errorf("Created post content does not match source post one\nCreated post: %v\n Source post: %v",
+			t.Fatalf("Created post content does not match source post one\nCreated post: %v\n Source post: %v",
 				workingPost.Content, sourcePost.Content)
 		}
 	}
@@ -182,13 +182,13 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 		}()
 		decodeSinglePostResponse(r.Body, &response)
 		if r.StatusCode != http.StatusOK {
-			t.Errorf("Error %d. Error message: %s", r.StatusCode, response.Error)
+			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
 
 		receivedPost := response.Body
 
 		if receivedPost != workingPost {
-			t.Errorf("Received post does not match proper post\nReceived post: %v\n Proper post: %v",
+			t.Fatalf("Received post does not match proper post\nReceived post: %v\n Proper post: %v",
 				receivedPost, workingPost)
 		}
 	}
@@ -210,12 +210,12 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 		}()
 		decodeSinglePostResponse(r.Body, &response)
 		if r.StatusCode != http.StatusOK {
-			t.Errorf("Error %d. Error message: %s", r.StatusCode, response.Error)
+			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
 
 		updatedPost := response.Body
 		if updatedPost != newPost {
-			t.Errorf("Received post does not match proper post\nReceived post: %v\n Proper post: %v",
+			t.Fatalf("Received post does not match proper post\nReceived post: %v\n Proper post: %v",
 				updatedPost, newPost)
 		}
 
@@ -235,13 +235,13 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 		}()
 		decodeSinglePostResponse(r.Body, &response)
 		if r.StatusCode != http.StatusOK {
-			t.Errorf("Error %d. Error message: %s", r.StatusCode, response.Error)
+			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
 
 		receivedPost := response.Body
 
 		if receivedPost != workingPost {
-			t.Errorf("Received post does not match updated post\nReceived post: %v\n Updated post: %v",
+			t.Fatalf("Received post does not match updated post\nReceived post: %v\n Updated post: %v",
 				receivedPost, workingPost)
 		}
 	}
@@ -260,7 +260,7 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 
 			decodeSinglePostResponse(r.Body, &response)
 
-			t.Errorf("Error %d. Error message: %s", r.StatusCode, response.Error)
+			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
 	}
 
@@ -277,7 +277,7 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 		}()
 		decodeSinglePostResponse(r.Body, &response)
 		if r.StatusCode != http.StatusNotFound {
-			t.Errorf("Error %d. Error message: %s", r.StatusCode, response.Error)
+			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
 	}
 }
@@ -285,15 +285,15 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 func TestCreatePostWithInvalidRequestBody(t *testing.T) {
 	message := `{"bad request body"}`
 
-	resp := createPost(message)
+	r := createPost(message)
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusBadRequest, handler.BadRequestBody)
+	checkErrorResponse(r, http.StatusBadRequest, handler.BadRequestBody)
 }
 
 func TestCreatePostWithNullTitle(t *testing.T) {
@@ -302,15 +302,15 @@ func TestCreatePostWithNullTitle(t *testing.T) {
 		"content": "Content1 Content2 Content3",
 	}
 
-	resp := createPost(message)
+	r := createPost(message)
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusBadRequest, handler.InvalidTitle)
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidTitle)
 }
 
 func TestCreatePostWithTooLongTitle(t *testing.T) {
@@ -319,15 +319,15 @@ func TestCreatePostWithTooLongTitle(t *testing.T) {
 		"content": "Content1 Content2 Content3",
 	}
 
-	resp := createPost(message)
+	r := createPost(message)
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusBadRequest, handler.InvalidTitle)
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidTitle)
 }
 
 func TestCreatePostWithNullContent(t *testing.T) {
@@ -336,53 +336,53 @@ func TestCreatePostWithNullContent(t *testing.T) {
 		"content": "",
 	}
 
-	resp := createPost(message)
+	r := createPost(message)
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusBadRequest, handler.InvalidContent)
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidContent)
 }
 
 func TestGetPostWithInvalidID(t *testing.T) {
-	resp := getPost("post1")
+	r := getPost("post1")
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusBadRequest, handler.InvalidID)
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidID)
 }
 
 func TestGetNonexistentPost(t *testing.T) {
-	resp := getPost("-1")
+	r := getPost("-1")
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusNotFound, handler.NoSuchPost)
+	checkErrorResponse(r, http.StatusNotFound, handler.NoSuchPost)
 }
 
 func TestUpdatePostWithInvalidRequestBody(t *testing.T) {
 	message := `{"bad request body":"asd"}`
 
-	resp := updatePost("1", message)
+	r := updatePost("1", message)
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusBadRequest, handler.BadRequestBody)
+	checkErrorResponse(r, http.StatusBadRequest, handler.BadRequestBody)
 }
 
 func TestUpdatePostWithNullTitle(t *testing.T) {
@@ -391,15 +391,15 @@ func TestUpdatePostWithNullTitle(t *testing.T) {
 		"content": "Content1 Content2 Content3",
 	}
 
-	resp := updatePost("1", message)
+	r := updatePost("1", message)
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusBadRequest, handler.InvalidTitle)
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidTitle)
 }
 
 func TestUpdatePostWithTooLongTitle(t *testing.T) {
@@ -408,15 +408,15 @@ func TestUpdatePostWithTooLongTitle(t *testing.T) {
 		"content": "Content1 Content2 Content3",
 	}
 
-	resp := updatePost("1", message)
+	r := updatePost("1", message)
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusBadRequest, handler.InvalidTitle)
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidTitle)
 }
 
 func TestUpdatePostWithNullContent(t *testing.T) {
@@ -425,15 +425,15 @@ func TestUpdatePostWithNullContent(t *testing.T) {
 		"content": "",
 	}
 
-	resp := updatePost("1", message)
+	r := updatePost("1", message)
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusBadRequest, handler.InvalidContent)
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidContent)
 }
 
 func TestUpdatePostNonexistentPost(t *testing.T) {
@@ -442,15 +442,15 @@ func TestUpdatePostNonexistentPost(t *testing.T) {
 		"content": "Content1 Content2 Content3",
 	}
 
-	resp := updatePost("-1", message)
+	r := updatePost("-1", message)
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusNotFound, handler.NoSuchPost)
+	checkErrorResponse(r, http.StatusNotFound, handler.NoSuchPost)
 }
 
 func TestUpdatePostWithInvalidID(t *testing.T) {
@@ -459,39 +459,39 @@ func TestUpdatePostWithInvalidID(t *testing.T) {
 		"content": "Content1 Content2 Content3",
 	}
 
-	resp := updatePost("post1", message)
+	r := updatePost("post1", message)
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusBadRequest, handler.InvalidID)
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidID)
 }
 
 func TestDeletePostNonexistentPost(t *testing.T) {
-	resp := deletePost("-1")
+	r := deletePost("-1")
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkNiceResponse(resp, http.StatusOK)
+	checkNiceResponse(r, http.StatusOK)
 }
 
 func TestDeletePostWithInvalidID(t *testing.T) {
-	resp := deletePost("post1")
+	r := deletePost("post1")
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusBadRequest, handler.InvalidID)
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidID)
 }
 
 func comparePosts(receivedPosts, properPosts []models.Post) {
@@ -516,16 +516,16 @@ func TestGetRangeOfPostsWithCustomPostsPerPage(t *testing.T) {
 		}
 
 		var response ResponseSinglePost
-		resp := sendPostHandleMessage("POST", "http://"+Address+"/posts", message)
-		decodeSinglePostResponse(resp.Body, &response)
+		r := sendPostHandleMessage("POST", "http://"+Address+"/posts", message)
+		decodeSinglePostResponse(r.Body, &response)
 
 		workingPosts = append(workingPosts, response.Body)
 	}
 
-	resp := getPosts("0", "20")
+	r := getPosts("0", "20")
 
 	var response ResponseRangePosts
-	decodeRangePostsResponse(resp.Body, &response)
+	decodeRangePostsResponse(r.Body, &response)
 
 	receivedPosts := response.Body
 
@@ -544,16 +544,16 @@ func TestGetRangeOfPostsWithDefaultPostsPerPage(t *testing.T) {
 		}
 
 		var response ResponseSinglePost
-		resp := sendPostHandleMessage("POST", "http://"+Address+"/posts", message)
-		decodeSinglePostResponse(resp.Body, &response)
+		r := sendPostHandleMessage("POST", "http://"+Address+"/posts", message)
+		decodeSinglePostResponse(r.Body, &response)
 
 		workingPosts = append(workingPosts, response.Body)
 	}
 
-	resp := getPosts("0", "")
+	r := getPosts("0", "")
 
 	var response ResponseRangePosts
-	decodeRangePostsResponse(resp.Body, &response)
+	decodeRangePostsResponse(r.Body, &response)
 
 	receivedPosts := response.Body
 
@@ -561,49 +561,49 @@ func TestGetRangeOfPostsWithDefaultPostsPerPage(t *testing.T) {
 }
 
 func TestGetRangeOfPostsWithNegativePage(t *testing.T) {
-	resp := getPosts("-1", "")
+	r := getPosts("-1", "")
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusBadRequest, handler.InvalidRange)
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidRange)
 }
 
 func TestGetRangeOfPostsWithNonNumberPage(t *testing.T) {
-	resp := getPosts("adasdf", "")
+	r := getPosts("adasdf", "")
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusBadRequest, handler.InvalidRange)
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidRange)
 }
 
 func TestGetRangeOfPostsWithTooLongPostsPerPage(t *testing.T) {
-	resp := getPosts("0", strconv.Itoa(handler.MaxPostsPerPage*2))
+	r := getPosts("0", strconv.Itoa(handler.MaxPostsPerPage*2))
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusBadRequest, handler.InvalidRange)
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidRange)
 }
 
 func TestGetRangeOfPostsWithNonNumberPostsPerPage(t *testing.T) {
-	resp := getPosts("0", "asddfa")
+	r := getPosts("0", "asddfa")
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	checkErrorResponse(resp, http.StatusBadRequest, handler.InvalidRange)
+	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidRange)
 }
