@@ -1,6 +1,6 @@
 CREATE TABLE Users
 (
-  LOGIN    CHARACTER VARYING(36) not null,
-  EMAIL    text                  not null,
-  PASSWORD text                  not null
+  LOGIN    CHARACTER VARYING(36)  not null,
+  EMAIL    CHARACTER VARYING(255) not null,
+  PASSWORD CHARACTER VARYING(255) not null
 );
