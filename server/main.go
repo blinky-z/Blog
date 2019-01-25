@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/auth0/go-jwt-middleware"
 	"github.com/blinky-z/Blog/server/handler"
+	"github.com/blinky-z/Blog/server/models"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
@@ -49,13 +50,25 @@ func RunServer(configName, configPath string) {
 	viper.AddConfigPath(configPath)
 	err := viper.ReadInConfig()
 	if err != nil {
-		logError.Fatalf("Fatal error config file: %s \n", err)
+		logError.Fatalf("Fatal error reading config file: %s \n", err)
 	}
 
 	user = viper.GetString("user")
 	password = viper.GetString("password")
 	dbName = viper.GetString("db_name")
 	signingKey = []byte(viper.GetString("secretKey"))
+
+	viper.SetConfigName("admins")
+	err = viper.ReadInConfig()
+	if err != nil {
+		logError.Fatalf("Fatal error reading config file: %s \n", err)
+	}
+
+	var admins []models.User
+	err = viper.UnmarshalKey("admins", &admins)
+	if err != nil {
+		logError.Fatalf("Fatal error unmarshaling admins: %s \n", err)
+	}
 
 	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s",
 		user, password, dbName)
@@ -76,6 +89,7 @@ func RunServer(configName, configPath string) {
 	handler.LogInfo = logInfo
 	handler.LogError = logError
 	handler.SigningKey = signingKey
+	handler.Admins = admins
 
 	router := mux.NewRouter()
 
@@ -83,9 +97,9 @@ func RunServer(configName, configPath string) {
 		"posts-per-page", "{posts-per-page}").Methods("GET")
 	router.HandleFunc("/posts", handler.GetPosts).Queries("page", "{page}").Methods("GET")
 	router.HandleFunc("/posts/{id}", handler.GetCertainPost).Methods("GET")
-	router.Handle("/posts", jwtMiddleware.Handler(http.HandlerFunc(handler.CreatePost))).Methods("POST")
-	router.Handle("/posts/{id}", jwtMiddleware.Handler(http.HandlerFunc(handler.UpdatePost))).Methods("PUT")
-	router.Handle("/posts/{id}", jwtMiddleware.Handler(http.HandlerFunc(handler.DeletePost))).Methods("DELETE")
+	router.Handle("/posts", handler.JwtAuthentication(http.HandlerFunc(handler.CreatePost))).Methods("POST")
+	router.Handle("/posts/{id}", handler.JwtAuthentication(http.HandlerFunc(handler.UpdatePost))).Methods("PUT")
+	router.Handle("/posts/{id}", handler.JwtAuthentication(http.HandlerFunc(handler.DeletePost))).Methods("DELETE")
 	router.HandleFunc("/hc", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Methods("GET")
