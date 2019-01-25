@@ -7,6 +7,7 @@ import (
 	"github.com/blinky-z/Blog/server/handler"
 	"github.com/blinky-z/Blog/server/models"
 	"github.com/google/uuid"
+	"github.com/spf13/viper"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -95,11 +96,20 @@ func TestRunServer(t *testing.T) {
 	admins := &AdminsConfig{Admins: []models.User{{Login: loginUsername, Email: loginEmail}}}
 	encodedAdmins := encodeMessage(admins)
 
-	adminsConfigFile, err := os.OpenFile("testAdmins.json", os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
+	viper.SetConfigName("testConfig")
+	viper.AddConfigPath(".")
+	err := viper.ReadInConfig()
+	if err != nil {
+		logError.Fatalf("Fatal error reading config file: %s \n", err)
+	}
+
+	adminsConfigFile := viper.GetString("adminsConfigFile")
+
+	f, err := os.OpenFile(adminsConfigFile+".json", os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
 	if err != nil {
 		panic("Error opening admins config file")
 	}
-	_, err = adminsConfigFile.Write(encodedAdmins)
+	_, err = f.Write(encodedAdmins)
 	if err != nil {
 		panic("Error writing new test admin to admins config file")
 	}
