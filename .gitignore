@@ -1,3 +1,4 @@
 .idea
 server/testConfig.json
 server/config.json
+server/admins.json
