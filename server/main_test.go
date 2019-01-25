@@ -95,7 +95,7 @@ func TestRunServer(t *testing.T) {
 	admins := &AdminsConfig{Admins: []models.User{{Login: loginUsername, Email: loginEmail}}}
 	encodedAdmins := encodeMessage(admins)
 
-	adminsConfigFile, err := os.OpenFile("admins.json", os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
+	adminsConfigFile, err := os.OpenFile("testAdmins.json", os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
 	if err != nil {
 		panic("Error opening admins config file")
 	}

@@ -49,7 +49,8 @@ func RunServer(configName, configPath string) {
 	dbName = viper.GetString("db_name")
 	signingKey = []byte(viper.GetString("secretKey"))
 
-	viper.SetConfigName("admins")
+	testAdminsFile := viper.GetString("adminsConfigFile")
+	viper.SetConfigName(testAdminsFile)
 	err = viper.ReadInConfig()
 	if err != nil {
 		logError.Fatalf("Fatal error reading config file: %s \n", err)

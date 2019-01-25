@@ -2,5 +2,6 @@
   "user": "username",
   "password": "password",
   "db_name": "serverdb",
-  "jwtSecretKey": "secret"
+  "jwtSecretKey": "secret",
+  "adminsConfigFile": "admins"
 }

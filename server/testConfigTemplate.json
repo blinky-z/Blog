@@ -2,5 +2,6 @@
   "user": "testUsername",
   "password": "testPassword",
   "db_name": "testdb",
-  "jwtSecretKey": "testSecret"
+  "jwtSecretKey": "testSecret",
+  "adminsConfigFile": "testAdmins"
 }
