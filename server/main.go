@@ -3,10 +3,8 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"github.com/auth0/go-jwt-middleware"
 	"github.com/blinky-z/Blog/server/handler"
 	"github.com/blinky-z/Blog/server/models"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 	"github.com/spf13/viper"
@@ -35,13 +33,6 @@ var (
 	Db *sql.DB
 
 	signingKey []byte
-
-	jwtMiddleware = jwtmiddleware.New(jwtmiddleware.Options{
-		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
-			return signingKey, nil
-		},
-		SigningMethod: jwt.SigningMethodHS256,
-	})
 )
 
 // RunServer - run server function. Config file name and path should be passed
