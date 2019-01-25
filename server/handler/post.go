@@ -15,8 +15,6 @@ type getPostsRangeParams struct {
 }
 
 const (
-	// TechnicalError - server error
-	TechnicalError PostErrorCode = "TECHNICAL_ERROR"
 	// InvalidTitle - incorrect user input - invalid title of post
 	InvalidTitle PostErrorCode = "INVALID_TITLE"
 	// InvalidID - incorrect user input - invalid id of post
@@ -29,8 +27,8 @@ const (
 	NoSuchPost PostErrorCode = "NO_SUCH_POST"
 	// InvalidRange - user inputs invalid range of posts to get from database
 	InvalidRange PostErrorCode = "INVALID_POSTS_RANGE"
-	// NoError - no error occurred while handling request
-	NoError PostErrorCode = ""
+	// NoPermissions - user doesn't permissions to create/update/delete post
+	NoPermissions PostErrorCode = "NO_PERMISSIONS"
 
 	// MaxPostTitleLen - maximum length of post title
 	MaxPostTitleLen int = 120
@@ -118,6 +116,13 @@ func validatePostID(r *http.Request) (id string, validateError PostErrorCode) {
 func CreatePost(w http.ResponseWriter, r *http.Request) {
 	LogInfo.Print("Got new Post CREATE job")
 
+	userRole := r.Context().Value(ctxKey).(string)
+	if userRole != "admin" {
+		LogInfo.Printf("User with role %s doesn't have permissions to CREATE post", userRole)
+		respondWithError(w, http.StatusForbidden, NoPermissions)
+		return
+	}
+
 	post, validatePostError := validatePost(r)
 	if validatePostError != NoError {
 		LogInfo.Print("Can not create post: post is invalid")
@@ -155,6 +160,13 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 // UpdatePost - update post http handler
 func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	LogInfo.Print("Got new Post UPDATE job")
+
+	userRole := r.Context().Value(ctxKey).(string)
+	if userRole != "admin" {
+		LogInfo.Printf("User with role %s doesn't have permissions to UPDATE post", userRole)
+		respondWithError(w, http.StatusForbidden, NoPermissions)
+		return
+	}
 
 	id, validateIDError := validatePostID(r)
 	if validateIDError != NoError {
@@ -214,6 +226,13 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 // DeletePost - delete post http handler
 func DeletePost(w http.ResponseWriter, r *http.Request) {
 	LogInfo.Print("Got new Post DELETE job")
+
+	userRole := r.Context().Value(ctxKey).(string)
+	if userRole != "admin" {
+		LogInfo.Printf("User with role %s doesn't have permissions to DELETE post", userRole)
+		respondWithError(w, http.StatusForbidden, NoPermissions)
+		return
+	}
 
 	id, validateIDError := validatePostID(r)
 	if validateIDError != NoError {

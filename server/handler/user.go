@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"github.com/blinky-z/Blog/server/models"
@@ -14,7 +15,14 @@ import (
 var (
 	// SigningKey - secret key for creating token
 	SigningKey []byte
+
+	// Admins - List of admins that own permissions to create, update, delete posts
+	Admins []models.User
+
+	ctxKey = ctxRoleKey("role")
 )
+
+type ctxRoleKey string
 
 const (
 	// WrongCredentials - user inputs wrong password or login or email while logging in
@@ -29,6 +37,10 @@ const (
 	AlreadyRegistered PostErrorCode = "ALREADY_REGISTERED"
 	// IncompleteCredentials - user do not input full credentials: login, email, password
 	IncompleteCredentials PostErrorCode = "INCOMPLETE_CREDENTIALS"
+	// MissingToken - user didn't provide authorization header
+	MissingToken PostErrorCode = "MISSING_TOKEN"
+	// InvalidToken - user provided non-authentic or malformed token
+	InvalidToken PostErrorCode = "INVALID_TOKEN"
 
 	// MinPwdLen - minimum length of user password
 	MinPwdLen int = 8
@@ -114,6 +126,42 @@ func checkEmail(email string) bool {
 	return strings.Count(email, "@") == 1 && len(email) <= MaxEmailLen && email[0] != '@' && email[len(email)-1] != '@'
 }
 
+// JwtAuthentication - middleware for checking JWT tokens
+var JwtAuthentication = func(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		LogInfo.Printf("Checking JWT Token")
+
+		tokenHeader := r.Header.Get("Authorization")
+
+		if tokenHeader == "" {
+			respondWithError(w, http.StatusUnauthorized, MissingToken)
+			return
+		}
+
+		splittedHeader := strings.Fields(tokenHeader)
+		if len(splittedHeader) != 2 {
+			respondWithError(w, http.StatusUnauthorized, InvalidToken)
+			return
+		}
+
+		tokenAsString := splittedHeader[1]
+
+		var claims models.TokenClaims
+		token, err := jwt.ParseWithClaims(tokenAsString, &claims, func(token *jwt.Token) (interface{}, error) {
+			return SigningKey, nil
+		})
+		if err != nil || !token.Valid {
+			LogInfo.Printf("Error checking JWT Token: Malformed or invalid JWT Token")
+			respondWithError(w, http.StatusUnauthorized, InvalidToken)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), ctxKey, claims.Role)
+		r = r.WithContext(ctx)
+		next.ServeHTTP(w, r)
+	})
+}
+
 // RegisterUserHandler - checks user registration credentials and inserts login and password into database
 func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	LogInfo.Print("Got new user Registration job")
@@ -176,13 +224,29 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK)
 }
 
+func isUserAdmin(username, email string) bool {
+	for _, currentAdmin := range Admins {
+		if currentAdmin.Login == username || currentAdmin.Email == email {
+			return true
+		}
+	}
+	return false
+}
+
 func getToken(credentials models.User) (string, error) {
-	token := jwt.New(jwt.SigningMethodHS256)
+	username := credentials.Login
+	email := credentials.Email
 
-	claims := token.Claims.(jwt.MapClaims)
+	var claims models.TokenClaims
+	claims.ExpiresAt = time.Now().Add(1 * time.Hour).Unix()
 
-	claims["name"] = credentials.Login
-	claims["exp"] = time.Now().Add(1 * time.Hour).Unix()
+	if isUserAdmin(username, email) {
+		claims.Role = "admin"
+	} else {
+		claims.Role = "user"
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	tokenString, err := token.SignedString(SigningKey)
 

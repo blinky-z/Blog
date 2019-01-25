@@ -17,6 +17,13 @@ var (
 	Db *sql.DB
 )
 
+const (
+	// TechnicalError - server error
+	TechnicalError PostErrorCode = "TECHNICAL_ERROR"
+	// NoError - no error occurred while handling request
+	NoError PostErrorCode = ""
+)
+
 // Response - behaves like Either Monad
 // 'Error' field is set while error occurred.
 // Otherwise 'Body' field is used to return post from database
