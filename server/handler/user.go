@@ -119,6 +119,18 @@ func validateUserLoginCredentials(r *http.Request) (credentials models.User, val
 		return
 	}
 
+	loginLen := len(login)
+	if loginLen != 0 && (loginLen < MinLoginLen || loginLen > MaxLoginLen) {
+		validateError = InvalidLogin
+		return
+	}
+
+	passwordLen := len(password)
+	if passwordLen < MinPwdLen || passwordLen > MaxPwdLen {
+		validateError = InvalidPassword
+		return
+	}
+
 	return
 }
 
@@ -224,23 +236,20 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK)
 }
 
-func isUserAdmin(username, email string) bool {
+func isUserAdmin(login string) bool {
 	for _, currentAdmin := range Admins {
-		if currentAdmin.Login == username || currentAdmin.Email == email {
+		if currentAdmin.Login == login {
 			return true
 		}
 	}
 	return false
 }
 
-func getToken(credentials models.User) (string, error) {
-	username := credentials.Login
-	email := credentials.Email
-
+func getToken(login string) (string, error) {
 	var claims models.TokenClaims
 	claims.ExpiresAt = time.Now().Add(1 * time.Hour).Unix()
 
-	if isUserAdmin(username, email) {
+	if isUserAdmin(login) {
 		claims.Role = "admin"
 	} else {
 		claims.Role = "user"
@@ -274,12 +283,10 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 		login, email)
 
 	var err error
-	if len(email) != 0 {
-		err = Db.QueryRow("select password from users where email = $1", email).
-			Scan(&hashedPassword)
+	if len(login) == 0 {
+		err = Db.QueryRow("select login, password from users where email = $1", email).Scan(&login, &hashedPassword)
 	} else {
-		err = Db.QueryRow("select password from users where login = $1", login).
-			Scan(&hashedPassword)
+		err = Db.QueryRow("select password from users where login = $1", login).Scan(&hashedPassword)
 	}
 
 	if err != nil {
@@ -302,7 +309,7 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := getToken(credentials)
+	token, err := getToken(login)
 	if err != nil {
 		LogError.Print(err)
 		respondWithError(w, http.StatusInternalServerError, TechnicalError)

@@ -93,7 +93,7 @@ func TestRunServer(t *testing.T) {
 	loginEmail = loginUsername + "@gmail.com"
 	loginPassword = uuid.New().String() + "Z"
 
-	admins := &AdminsConfig{Admins: []models.User{{Login: loginUsername, Email: loginEmail}}}
+	admins := &AdminsConfig{Admins: []models.User{{Login: loginUsername}}}
 	encodedAdmins := encodeMessage(admins)
 
 	viper.SetConfigName("testConfig")
