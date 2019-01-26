@@ -24,6 +24,7 @@ var (
 	loginPassword string
 
 	authToken string
+	ctxCookie *http.Cookie
 )
 
 type ResponseWithError struct {
@@ -36,6 +37,19 @@ type AdminsConfig struct {
 }
 
 // helpful API for testing
+
+func setNewAuthData(r *http.Response) {
+	var response ResponseLogIn
+	decodeAuthResponse(r.Body, &response)
+
+	authToken = response.Body
+	cookies := r.Cookies()
+	for _, currentCookie := range cookies {
+		if currentCookie.Name == "__Secure-Fgp" {
+			ctxCookie = currentCookie
+		}
+	}
+}
 
 // API for matching status code and error message of responses
 
@@ -137,8 +151,5 @@ func TestLoginAdminWithEmail(t *testing.T) {
 
 	checkNiceResponse(r, http.StatusAccepted)
 
-	var response ResponseLogIn
-	decodeAuthResponse(r.Body, &response)
-
-	authToken = response.Body
+	setNewAuthData(r)
 }

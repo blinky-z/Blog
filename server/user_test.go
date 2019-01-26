@@ -213,15 +213,12 @@ func TestRegisterNotAdmin(t *testing.T) {
 	checkNiceResponse(r, http.StatusOK)
 }
 
-func TestLoginNotAdmin(t *testing.T) {
+func TestLoginWithNotAdmin(t *testing.T) {
 	r := loginUser("", loginEmail, loginPassword)
 
 	checkNiceResponse(r, http.StatusAccepted)
 
-	var response ResponseLogIn
-	decodeAuthResponse(r.Body, &response)
-
-	authToken = response.Body
+	setNewAuthData(r)
 }
 
 func TestCreatePostWithNotAdminUser(t *testing.T) {
@@ -358,6 +355,7 @@ func TestCreatePostWithMissingAuthorizationHeader(t *testing.T) {
 		panic(fmt.Sprintf("Can not create request. Error: %s", err))
 	}
 	request.Header.Set("Content-Type", "application/json")
+	request.AddCookie(ctxCookie)
 
 	r, err := client.Do(request)
 	if err != nil {

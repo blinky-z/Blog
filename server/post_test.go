@@ -95,6 +95,7 @@ func sendPostHandleMessage(method, address string, message interface{}) *http.Re
 		}
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
+		request.AddCookie(ctxCookie)
 
 		response, err = client.Do(request)
 		if err != nil {
@@ -109,6 +110,7 @@ func sendPostHandleMessage(method, address string, message interface{}) *http.Re
 		}
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
+		request.AddCookie(ctxCookie)
 
 		response, err = client.Do(request)
 		if err != nil {
@@ -120,6 +122,7 @@ func sendPostHandleMessage(method, address string, message interface{}) *http.Re
 			panic(fmt.Sprintf("Can not create request. Error: %s", err))
 		}
 		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
+		request.AddCookie(ctxCookie)
 
 		response, err = client.Do(request)
 		if err != nil {

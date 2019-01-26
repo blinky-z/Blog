@@ -170,6 +170,21 @@ var JwtAuthentication = func(next http.Handler) http.Handler {
 			return
 		}
 
+		LogInfo.Printf("Checking fingerprint")
+
+		fingerprintCookie, err := r.Cookie("__Secure-Fgp")
+		if err != nil {
+			respondWithError(w, http.StatusUnauthorized, InvalidToken)
+			return
+		}
+		rawFingerprint := fingerprintCookie.Value
+
+		if err = bcrypt.CompareHashAndPassword([]byte(claims.Fingerprint), []byte(rawFingerprint)); err != nil {
+			LogInfo.Printf("Error checking fingeprint: raw fingerprint does not match fingeprint containing in JWT Token")
+			respondWithError(w, http.StatusUnauthorized, InvalidToken)
+			return
+		}
+
 		ctx := context.WithValue(r.Context(), ctxKey, claims.Role)
 		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
@@ -257,9 +272,10 @@ func isUserAdmin(login string) bool {
 	return false
 }
 
-func getToken(login string) (string, error) {
+func getToken(login, ctx string) (string, error) {
 	var claims models.TokenClaims
 	claims.ExpiresAt = time.Now().Add(1 * time.Hour).Unix()
+	claims.Fingerprint = ctx
 
 	if isUserAdmin(login) {
 		claims.Role = "admin"
@@ -321,7 +337,31 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := getToken(login)
+	LogInfo.Printf("Generating hashed fingerprint")
+
+	ctx, err := generateRandomContext()
+	if err != nil {
+		LogError.Print(err)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		return
+	}
+
+	// set raw fingerprint in cookie
+	ctxCookie := &http.Cookie{Name: "__Secure-Fgp", Value: ctx, SameSite: http.SameSiteStrictMode,
+		Secure: true, HttpOnly: true, Expires: time.Now().Add(time.Hour * 1)}
+	http.SetCookie(w, ctxCookie)
+
+	// generate hashed fingerprint
+	hashedCtx, err := bcrypt.GenerateFromPassword([]byte(ctx), bcrypt.DefaultCost)
+	if err != nil {
+		LogError.Print(err)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		return
+	}
+
+	LogInfo.Printf("Generating JWT Token with hashed fingerprint")
+
+	token, err := getToken(login, string(hashedCtx))
 	if err != nil {
 		LogError.Print(err)
 		respondWithError(w, http.StatusInternalServerError, TechnicalError)
@@ -331,15 +371,5 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 	LogInfo.Printf("Token successfully generated. Sending token to user with following credentials: "+
 		"(login: %s; email: %s)", login, email)
 
-	ctx, err := generateRandomContext()
-	if err != nil {
-		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-
-	ctxCookie := &http.Cookie{Name: "__Secure-Fgp", Value: ctx, SameSite: http.SameSiteStrictMode,
-		Secure: true, HttpOnly: true, Expires: time.Now().Add(time.Hour * 1)}
-	http.SetCookie(w, ctxCookie)
 	respondWithBody(w, http.StatusAccepted, token)
 }
