@@ -50,6 +50,7 @@
 
 [[constraint]]
   name = "golang.org/x/crypto"
+  revision = "057139ce5d2bdbe6fe73c53679e24e9cf007f637"
   source = "golang.org/x/crypto"
 
 [[constraint]]

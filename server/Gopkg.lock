@@ -144,7 +144,6 @@
   version = "v1.3.1"
 
 [[projects]]
-  branch = "master"
   digest = "1:1ecf2a49df33be51e757d0033d5d51d5f784f35f68e5a38f797b2d3f03357d71"
   name = "golang.org/x/crypto"
   packages = [
@@ -152,7 +151,7 @@
     "blowfish",
   ]
   pruneopts = "UT"
-  revision = "64072686203f69e3fd20143576b27200f18ab0fa"
+  revision = "057139ce5d2bdbe6fe73c53679e24e9cf007f637"
   source = "golang.org/x/crypto"
 
 [[projects]]
