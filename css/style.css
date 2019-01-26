@@ -227,12 +227,12 @@ li {
 }
 
 .footer {
+    width: 1000px;
     position: absolute;
     bottom: 0;
 }
 
 .footer-copyright {
-    width: 1000px;
     border-bottom: solid 2px #000000;
     text-align: center;
     font-size: 14px;
