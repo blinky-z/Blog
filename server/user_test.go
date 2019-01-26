@@ -163,7 +163,7 @@ func TestLoginUserWithUsername(t *testing.T) {
 }
 
 func TestLoginUserWithWrongUsername(t *testing.T) {
-	r := loginUser("abcd", "", loginPassword)
+	r := loginUser("abcdef", "", loginPassword)
 
 	checkErrorResponse(r, http.StatusUnauthorized, handler.WrongCredentials)
 }
@@ -175,7 +175,7 @@ func TestLoginUserWithWrongEmail(t *testing.T) {
 }
 
 func TestLoginUserWithWrongPassword(t *testing.T) {
-	r := loginUser("", loginEmail, "abcd")
+	r := loginUser("", loginEmail, "abcde1fZ")
 
 	checkErrorResponse(r, http.StatusUnauthorized, handler.WrongCredentials)
 }
