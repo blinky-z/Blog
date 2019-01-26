@@ -2,7 +2,9 @@ package handler
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"github.com/blinky-z/Blog/server/models"
 	"github.com/dgrijalva/jwt-go"
@@ -11,6 +13,8 @@ import (
 	"strings"
 	"time"
 )
+
+type ctxRoleKey string
 
 var (
 	// SigningKey - secret key for creating token
@@ -21,8 +25,6 @@ var (
 
 	ctxKey = ctxRoleKey("role")
 )
-
-type ctxRoleKey string
 
 const (
 	// WrongCredentials - user inputs wrong password or login or email while logging in
@@ -236,6 +238,16 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK)
 }
 
+func generateRandomContext() (string, error) {
+	bytes := make([]byte, 32)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+
+	return base64.URLEncoding.EncodeToString(bytes), nil
+}
+
 func isUserAdmin(login string) bool {
 	for _, currentAdmin := range Admins {
 		if currentAdmin.Login == login {
@@ -319,5 +331,15 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 	LogInfo.Printf("Token successfully generated. Sending token to user with following credentials: "+
 		"(login: %s; email: %s)", login, email)
 
+	ctx, err := generateRandomContext()
+	if err != nil {
+		LogError.Print(err)
+		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		return
+	}
+
+	ctxCookie := &http.Cookie{Name: "__Secure-Fgp", Value: ctx, SameSite: http.SameSiteStrictMode,
+		Secure: true, HttpOnly: true, Expires: time.Now().Add(time.Hour * 1)}
+	http.SetCookie(w, ctxCookie)
 	respondWithBody(w, http.StatusAccepted, token)
 }
