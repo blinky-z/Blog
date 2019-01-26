@@ -47,7 +47,7 @@ func RunServer(configName, configPath string) {
 	user = viper.GetString("user")
 	password = viper.GetString("password")
 	dbName = viper.GetString("db_name")
-	signingKey = []byte(viper.GetString("secretKey"))
+	signingKey = []byte(viper.GetString("jwtSecretKey"))
 
 	testAdminsFile := viper.GetString("adminsConfigFile")
 	viper.SetConfigName(testAdminsFile)
