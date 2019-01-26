@@ -70,10 +70,18 @@ func loginUser(login, email, password string) *http.Response {
 
 // Registration tests
 
-func TestRegisterAlreadyRegisteredUser(t *testing.T) {
-	username := strings.Repeat("a", handler.MaxLoginLen)
+func TestRegisterUserWithExistingEmail(t *testing.T) {
+	username := uuid.New().String()
 
 	r := registerUser(username, loginEmail, loginPassword)
+
+	checkErrorResponse(r, http.StatusBadRequest, handler.AlreadyRegistered)
+}
+
+func TestRegisterUserWithExistingLogin(t *testing.T) {
+	email := uuid.New().String() + "@gmail.com"
+
+	r := registerUser(loginUsername, email, loginPassword)
 
 	checkErrorResponse(r, http.StatusBadRequest, handler.AlreadyRegistered)
 }
@@ -110,7 +118,7 @@ func TestRegisterUserWithTooShortPassword(t *testing.T) {
 	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidPassword)
 }
 
-func TestRegisterUserWithIdenticalPassword(t *testing.T) {
+func TestRegisterUserWhereLoginIdenticalPassword(t *testing.T) {
 	password := strings.Repeat("A", handler.MinPwdLen)
 	login := password
 
