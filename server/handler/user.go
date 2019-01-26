@@ -191,7 +191,7 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	var userExists bool
 	if err := Db.QueryRow("select exists(select from users where email = $1 or login = $2)", email, login).
-		Scan(&userExists); err != nil && err != sql.ErrNoRows {
+		Scan(&userExists); err != nil {
 		LogError.Print(err)
 		respondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
