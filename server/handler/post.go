@@ -119,14 +119,14 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 	userRole := r.Context().Value(ctxKey).(string)
 	if userRole != "admin" {
 		LogInfo.Printf("User with role %s doesn't have permissions to CREATE post", userRole)
-		respondWithError(w, http.StatusForbidden, NoPermissions)
+		RespondWithError(w, http.StatusForbidden, NoPermissions)
 		return
 	}
 
 	post, validatePostError := validatePost(r)
 	if validatePostError != NoError {
 		LogInfo.Print("Can not create post: post is invalid")
-		respondWithError(w, http.StatusBadRequest, validatePostError)
+		RespondWithError(w, http.StatusBadRequest, validatePostError)
 		return
 	}
 
@@ -136,25 +136,25 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := Db.Exec("BEGIN TRANSACTION"); err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 	if err := Db.QueryRow("insert into posts(title, content) values($1, $2) RETURNING id, title, date, content",
 		post.Title, post.Content).
 		Scan(&createdPost.ID, &createdPost.Title, &createdPost.Date, &createdPost.Content); err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 	if _, err := Db.Exec("END TRANSACTION"); err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
 	LogInfo.Printf("Post with Title %s successfully created", createdPost.Title)
 
-	respondWithBody(w, http.StatusCreated, createdPost)
+	RespondWithBody(w, http.StatusCreated, createdPost)
 }
 
 // UpdatePost - update post http handler
@@ -164,33 +164,33 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	userRole := r.Context().Value(ctxKey).(string)
 	if userRole != "admin" {
 		LogInfo.Printf("User with role %s doesn't have permissions to UPDATE post", userRole)
-		respondWithError(w, http.StatusForbidden, NoPermissions)
+		RespondWithError(w, http.StatusForbidden, NoPermissions)
 		return
 	}
 
 	id, validateIDError := validatePostID(r)
 	if validateIDError != NoError {
 		LogInfo.Print("Can not UPDATE post: ID of Post to update is invalid")
-		respondWithError(w, http.StatusBadRequest, validateIDError)
+		RespondWithError(w, http.StatusBadRequest, validateIDError)
 		return
 	}
 
 	post, validatePostError := validatePost(r)
 	if validatePostError != NoError {
 		LogInfo.Printf("Can not UPDATE post with ID %s : New Post is invalid", id)
-		respondWithError(w, http.StatusBadRequest, validatePostError)
+		RespondWithError(w, http.StatusBadRequest, validatePostError)
 		return
 	}
 
 	if err := Db.QueryRow("select from posts where id = $1", id).Scan(); err != nil {
 		if err == sql.ErrNoRows {
 			LogInfo.Printf("Can not UPDATE post with ID %s : post does not exist", id)
-			respondWithError(w, http.StatusNotFound, NoSuchPost)
+			RespondWithError(w, http.StatusNotFound, NoSuchPost)
 			return
 		}
 
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
@@ -200,7 +200,7 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := Db.Exec("BEGIN TRANSACTION"); err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 	if err := Db.QueryRow("UPDATE posts SET title = $1, content = $2 WHERE id = $3 RETURNING id, title, date, content",
@@ -208,19 +208,19 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 		Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Date, &updatedPost.Content); err != nil {
 		if err != nil {
 			LogError.Print(err)
-			respondWithError(w, http.StatusInternalServerError, TechnicalError)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 			return
 		}
 	}
 	if _, err := Db.Exec("END TRANSACTION"); err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
 	LogInfo.Printf("Post with ID %s successfully updated", id)
 
-	respondWithBody(w, http.StatusOK, updatedPost)
+	RespondWithBody(w, http.StatusOK, updatedPost)
 }
 
 // DeletePost - delete post http handler
@@ -230,14 +230,14 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 	userRole := r.Context().Value(ctxKey).(string)
 	if userRole != "admin" {
 		LogInfo.Printf("User with role %s doesn't have permissions to DELETE post", userRole)
-		respondWithError(w, http.StatusForbidden, NoPermissions)
+		RespondWithError(w, http.StatusForbidden, NoPermissions)
 		return
 	}
 
 	id, validateIDError := validatePostID(r)
 	if validateIDError != NoError {
 		LogInfo.Print("Can not DELETE post: post ID is invalid")
-		respondWithError(w, http.StatusBadRequest, validateIDError)
+		RespondWithError(w, http.StatusBadRequest, validateIDError)
 		return
 	}
 
@@ -245,17 +245,17 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := Db.Exec("BEGIN TRANSACTION"); err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 	if _, err := Db.Exec("DELETE FROM posts WHERE id = $1", id); err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 	if _, err := Db.Exec("END TRANSACTION"); err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
@@ -273,7 +273,7 @@ func GetCertainPost(w http.ResponseWriter, r *http.Request) {
 	id, validateIDError := validatePostID(r)
 	if validateIDError != NoError {
 		LogInfo.Print("Can not GET post: post ID is invalid")
-		respondWithError(w, http.StatusBadRequest, validateIDError)
+		RespondWithError(w, http.StatusBadRequest, validateIDError)
 		return
 	}
 
@@ -283,18 +283,18 @@ func GetCertainPost(w http.ResponseWriter, r *http.Request) {
 		Scan(&post.ID, &post.Title, &post.Date, &post.Content); err != nil {
 		if err == sql.ErrNoRows {
 			LogInfo.Printf("Can not GET post with ID %s : post does not exist", id)
-			respondWithError(w, http.StatusNotFound, NoSuchPost)
+			RespondWithError(w, http.StatusNotFound, NoSuchPost)
 			return
 		}
 
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
 	LogInfo.Printf("Post with ID %s succesfully arrived from database", id)
 
-	respondWithBody(w, 200, post)
+	RespondWithBody(w, 200, post)
 }
 
 // GetPosts - get one page of posts from database http handler
@@ -304,7 +304,7 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 	params, validateError := validateGetPostsParams(r)
 	if validateError != NoError {
 		LogInfo.Print("Can not GET range of posts : get posts Query params are invalid")
-		respondWithError(w, http.StatusBadRequest, validateError)
+		RespondWithError(w, http.StatusBadRequest, validateError)
 		return
 	}
 
@@ -320,7 +320,7 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 		page*postsPerPage, postsPerPage)
 	if err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
@@ -328,7 +328,7 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 		var currentPost models.Post
 		if err = rows.Scan(&currentPost.ID, &currentPost.Title, &currentPost.Date, &currentPost.Content); err != nil {
 			LogError.Print(err)
-			respondWithError(w, http.StatusInternalServerError, TechnicalError)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 			return
 		}
 		posts = append(posts, currentPost)
@@ -336,5 +336,5 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 
 	LogInfo.Print("Range of Posts successfully arrived from database")
 
-	respondWithBody(w, 200, posts)
+	RespondWithBody(w, 200, posts)
 }

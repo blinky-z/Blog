@@ -49,7 +49,8 @@ func respondWithJSON(w http.ResponseWriter, code int, body []byte) {
 	}
 }
 
-func respondWithError(w http.ResponseWriter, code int, errorCode PostErrorCode) {
+//RespondWithError - write error in response body and respond
+func RespondWithError(w http.ResponseWriter, code int, errorCode PostErrorCode) {
 	var response Response
 	response.Error = errorCode
 	encodedResponse, _ := json.Marshal(response)
@@ -57,7 +58,8 @@ func respondWithError(w http.ResponseWriter, code int, errorCode PostErrorCode) 
 	respondWithJSON(w, code, encodedResponse)
 }
 
-func respondWithBody(w http.ResponseWriter, code int, payload interface{}) {
+//RespondWithBody - write body in response body and respond
+func RespondWithBody(w http.ResponseWriter, code int, payload interface{}) {
 	var response Response
 	response.Body = payload
 	encodedResponse, _ := json.Marshal(response)
