@@ -39,8 +39,6 @@ const (
 	AlreadyRegistered PostErrorCode = "ALREADY_REGISTERED"
 	// IncompleteCredentials - user do not input full credentials: login, email, password
 	IncompleteCredentials PostErrorCode = "INCOMPLETE_CREDENTIALS"
-	// MissingToken - user didn't provide authorization header
-	MissingToken PostErrorCode = "MISSING_TOKEN"
 	// InvalidToken - user provided non-authentic or malformed token
 	InvalidToken PostErrorCode = "INVALID_TOKEN"
 
@@ -143,49 +141,32 @@ func checkEmail(email string) bool {
 // JwtAuthentication - middleware for checking JWT tokens
 var JwtAuthentication = func(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		LogInfo.Printf("Checking JWT Token")
-
-		tokenHeader := r.Header.Get("Authorization")
-
-		if tokenHeader == "" {
-			respondWithError(w, http.StatusUnauthorized, MissingToken)
-			return
-		}
-
-		splittedHeader := strings.Fields(tokenHeader)
-		if len(splittedHeader) != 2 {
-			respondWithError(w, http.StatusUnauthorized, InvalidToken)
-			return
-		}
-
-		tokenAsString := splittedHeader[1]
-
-		var claims models.TokenClaims
-		token, err := jwt.ParseWithClaims(tokenAsString, &claims, func(token *jwt.Token) (interface{}, error) {
-			return SigningKey, nil
-		})
-		if err != nil || !token.Valid {
-			LogInfo.Printf("Error checking JWT Token: Malformed or invalid JWT Token")
-			respondWithError(w, http.StatusUnauthorized, InvalidToken)
-			return
-		}
-
 		LogInfo.Printf("Checking fingerprint")
 
-		fingerprintCookie, err := r.Cookie("__Secure-Fgp")
+		token := r.Context().Value("user").(*jwt.Token)
+
+		fingerprintCookie, err := r.Cookie("Secure-Fgp")
 		if err != nil {
-			respondWithError(w, http.StatusUnauthorized, InvalidToken)
+			LogInfo.Printf("Request missing fingerprint")
+			RespondWithError(w, http.StatusUnauthorized, InvalidToken)
 			return
 		}
 		rawFingerprint := fingerprintCookie.Value
 
-		if err = bcrypt.CompareHashAndPassword([]byte(claims.Fingerprint), []byte(rawFingerprint)); err != nil {
+		claims := token.Claims.(jwt.MapClaims)
+		tokenFingerprint := claims["fingerprint"].(string)
+
+		if err = bcrypt.CompareHashAndPassword([]byte(tokenFingerprint), []byte(rawFingerprint)); err != nil {
 			LogInfo.Printf("Error checking fingeprint: raw fingerprint does not match fingeprint containing in JWT Token")
-			respondWithError(w, http.StatusUnauthorized, InvalidToken)
+			RespondWithError(w, http.StatusUnauthorized, InvalidToken)
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), ctxKey, claims.Role)
+		role := claims["role"].(string)
+
+		LogInfo.Printf("Fingerprint is valid. Serving next http handler")
+
+		ctx := context.WithValue(r.Context(), ctxKey, role)
 		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	})
@@ -198,7 +179,7 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	credentials, validateError := validateUserRegistrationCredentials(r)
 	if validateError != NoError {
 		LogInfo.Print("User Registration credentials are invalid")
-		respondWithError(w, http.StatusBadRequest, validateError)
+		RespondWithError(w, http.StatusBadRequest, validateError)
 		return
 	}
 
@@ -210,20 +191,20 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	if err := Db.QueryRow("select exists(select from users where email = $1 or login = $2)", email, login).
 		Scan(&userExists); err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
 	if userExists {
 		LogInfo.Printf("User with following credentials: (login: %s; email: %s) already registered", login, email)
-		respondWithError(w, http.StatusBadRequest, AlreadyRegistered)
+		RespondWithError(w, http.StatusBadRequest, AlreadyRegistered)
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
 	if err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
@@ -232,19 +213,19 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	if _, err = Db.Exec("BEGIN TRANSACTION"); err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 	_, err = Db.Exec("insert into users (login, email, password) values($1, $2, $3)",
 		login, email, string(hashedPassword))
 	if err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 	if _, err := Db.Exec("END TRANSACTION"); err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
@@ -297,7 +278,7 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 	credentials, validateError := validateUserLoginCredentials(r)
 	if validateError != NoError {
 		LogInfo.Print("User Log In credentials are invalid")
-		respondWithError(w, http.StatusBadRequest, validateError)
+		RespondWithError(w, http.StatusBadRequest, validateError)
 		return
 	}
 
@@ -316,24 +297,21 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		err = Db.QueryRow("select password from users where login = $1", login).Scan(&hashedPassword)
 	}
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			LogInfo.Printf("Can not get hashed password: user with following credentials: (login: %s; email: %s) "+
 				"does not exist", login, email)
-			respondWithError(w, http.StatusUnauthorized, WrongCredentials)
+			RespondWithError(w, http.StatusUnauthorized, WrongCredentials)
 			return
 		}
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
-		LogInfo.Printf("Inputted password by user with following credentials: (login: %s; email: %s) "+
-			"does not match hashed one",
-			login, email)
-		respondWithError(w, http.StatusUnauthorized, WrongCredentials)
+		LogInfo.Printf("Inputted password by user %s does not match hashed one", login)
+		RespondWithError(w, http.StatusUnauthorized, WrongCredentials)
 		return
 	}
 
@@ -342,20 +320,20 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, err := generateRandomContext()
 	if err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
 	// set raw fingerprint in cookie
-	ctxCookie := &http.Cookie{Name: "__Secure-Fgp", Value: ctx, SameSite: http.SameSiteStrictMode,
-		Secure: true, HttpOnly: true, Expires: time.Now().Add(time.Hour * 1)}
+	ctxCookie := &http.Cookie{Name: "Secure-Fgp", Value: ctx, SameSite: http.SameSiteStrictMode, HttpOnly: true,
+		Expires: time.Now().Add(time.Hour * 1), Path: "/"}
 	http.SetCookie(w, ctxCookie)
 
 	// generate hashed fingerprint
 	hashedCtx, err := bcrypt.GenerateFromPassword([]byte(ctx), bcrypt.DefaultCost)
 	if err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
@@ -364,12 +342,11 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 	token, err := getToken(login, string(hashedCtx))
 	if err != nil {
 		LogError.Print(err)
-		respondWithError(w, http.StatusInternalServerError, TechnicalError)
+		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 		return
 	}
 
-	LogInfo.Printf("Token successfully generated. Sending token to user with following credentials: "+
-		"(login: %s; email: %s)", login, email)
+	LogInfo.Printf("Token successfully generated. Sending token to user %s", login)
 
-	respondWithBody(w, http.StatusAccepted, token)
+	RespondWithBody(w, http.StatusAccepted, token)
 }

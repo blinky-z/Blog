@@ -45,7 +45,7 @@ func setNewAuthData(r *http.Response) {
 	authToken = response.Body
 	cookies := r.Cookies()
 	for _, currentCookie := range cookies {
-		if currentCookie.Name == "__Secure-Fgp" {
+		if currentCookie.Name == "Secure-Fgp" {
 			ctxCookie = currentCookie
 		}
 	}

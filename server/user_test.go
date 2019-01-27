@@ -39,7 +39,7 @@ func decodeAuthResponse(responseBody io.ReadCloser, response *ResponseLogIn) {
 func sendAuthUserMessage(address string, credentials models.User) *http.Response {
 	encodedCredentials := encodeMessage(credentials)
 
-	request, err := http.NewRequest("GET", address, bytes.NewReader(encodedCredentials))
+	request, err := http.NewRequest("POST", address, bytes.NewReader(encodedCredentials))
 	if err != nil {
 		panic(fmt.Sprintf("Can not create request. Error: %s", err))
 	}
@@ -148,7 +148,7 @@ func TestRegisterUserWithEmptyPassword(t *testing.T) {
 func TestRegisterUserWithBadRequestBody(t *testing.T) {
 	message := `{bad request body}`
 
-	request, err := http.NewRequest("GET", "http://"+Address+"/user/register", strings.NewReader(message))
+	request, err := http.NewRequest("POST", "http://"+Address+"/user/register", strings.NewReader(message))
 	if err != nil {
 		panic(fmt.Sprintf("Can not create request. Error: %s", err))
 	}
@@ -368,5 +368,5 @@ func TestCreatePostWithMissingAuthorizationHeader(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusUnauthorized, handler.MissingToken)
+	checkErrorResponse(r, http.StatusUnauthorized, handler.InvalidToken)
 }

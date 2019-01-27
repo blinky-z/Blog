@@ -3,14 +3,17 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"github.com/auth0/go-jwt-middleware"
 	"github.com/blinky-z/Blog/server/handler"
 	"github.com/blinky-z/Blog/server/models"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 	"github.com/spf13/viper"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 var (
@@ -33,7 +36,33 @@ var (
 	Db *sql.DB
 
 	signingKey []byte
+
+	jwtMiddleware = jwtmiddleware.New(jwtmiddleware.Options{
+		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+			return signingKey, nil
+		},
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err string) {
+			logInfo.Printf("Error checking JWT Token: Malformed or invalid JWT Token")
+			handler.RespondWithError(w, http.StatusUnauthorized, handler.InvalidToken)
+		},
+		SigningMethod: jwt.SigningMethodHS256,
+	})
 )
+
+var handleHTMLFile = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	currentURLPath := r.URL.Path
+	currentURLPath = strings.TrimSuffix(currentURLPath, ".html")
+
+	var fileName string
+	if currentURLPath == "" {
+		fileName = "index.html"
+	} else {
+		fileName = currentURLPath + ".html"
+	}
+
+	filePath := "../" + fileName
+	http.ServeFile(w, r, filePath)
+})
 
 // RunServer - run server function. Config file name and path should be passed
 func RunServer(configName, configPath string) {
@@ -89,14 +118,19 @@ func RunServer(configName, configPath string) {
 		"posts-per-page", "{posts-per-page}").Methods("GET")
 	router.HandleFunc("/posts", handler.GetPosts).Queries("page", "{page}").Methods("GET")
 	router.HandleFunc("/posts/{id}", handler.GetCertainPost).Methods("GET")
-	router.Handle("/posts", handler.JwtAuthentication(http.HandlerFunc(handler.CreatePost))).Methods("POST")
-	router.Handle("/posts/{id}", handler.JwtAuthentication(http.HandlerFunc(handler.UpdatePost))).Methods("PUT")
-	router.Handle("/posts/{id}", handler.JwtAuthentication(http.HandlerFunc(handler.DeletePost))).Methods("DELETE")
+	router.Handle("/posts", jwtMiddleware.Handler(handler.JwtAuthentication(http.HandlerFunc(handler.CreatePost)))).Methods("POST")
+	router.Handle("/posts/{id}", jwtMiddleware.Handler(handler.JwtAuthentication(http.HandlerFunc(handler.UpdatePost)))).Methods("PUT")
+	router.Handle("/posts/{id}", jwtMiddleware.Handler(handler.JwtAuthentication(http.HandlerFunc(handler.DeletePost)))).Methods("DELETE")
 	router.HandleFunc("/hc", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Methods("GET")
-	router.HandleFunc("/user/register", handler.RegisterUserHandler).Methods("GET")
-	router.HandleFunc("/user/login", handler.LoginUserHandler).Methods("GET")
+	router.HandleFunc("/user/register", handler.RegisterUserHandler).Methods("POST")
+	router.HandleFunc("/user/login", handler.LoginUserHandler).Methods("POST")
+
+	router.PathPrefix("/css").Handler(http.StripPrefix("/css", http.FileServer(http.Dir("../css"))))
+	router.PathPrefix("/scripts").Handler(http.StripPrefix("/scripts", http.FileServer(http.Dir("../scripts"))))
+	router.PathPrefix("/images").Handler(http.StripPrefix("/images", http.FileServer(http.Dir("../images"))))
+	router.PathPrefix("/").Handler(http.StripPrefix("/", handleHTMLFile))
 
 	logInfo.Printf("listening on address %s", Address)
 	logError.Fatal(http.ListenAndServe(Address, router))

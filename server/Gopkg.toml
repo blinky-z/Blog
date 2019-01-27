@@ -49,9 +49,14 @@
   source = "github.com/dgrijalva/jwt-go"
 
 [[constraint]]
+  name = "github.com/auth0/go-jwt-middleware"
+  revision = "5493cabe49f7bfa6e2ec444a09d334d90cd4e2bd"
+  source = "github.com/auth0/go-jwt-middleware"
+
+[[constraint]]
   name = "golang.org/x/crypto"
   revision = "057139ce5d2bdbe6fe73c53679e24e9cf007f637"
-  source = "golang.org/x/crypto"
+  source = "github.com/golang/crypto"
 
 [[constraint]]
   name = "github.com/google/uuid"

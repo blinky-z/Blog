@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  digest = "1:e4fd8a4041e47ec6cb6c38ad4baf4f1f37278c7ba23625905147a5823885787a"
+  name = "github.com/auth0/go-jwt-middleware"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "5493cabe49f7bfa6e2ec444a09d334d90cd4e2bd"
+  source = "github.com/auth0/go-jwt-middleware"
+
+[[projects]]
   digest = "1:76dc72490af7174349349838f2fe118996381b31ea83243812a97e5a0fd5ed55"
   name = "github.com/dgrijalva/jwt-go"
   packages = ["."]
@@ -152,7 +160,7 @@
   ]
   pruneopts = "UT"
   revision = "057139ce5d2bdbe6fe73c53679e24e9cf007f637"
-  source = "golang.org/x/crypto"
+  source = "github.com/golang/crypto"
 
 [[projects]]
   branch = "master"
@@ -189,6 +197,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/auth0/go-jwt-middleware",
     "github.com/dgrijalva/jwt-go",
     "github.com/google/uuid",
     "github.com/gorilla/mux",
