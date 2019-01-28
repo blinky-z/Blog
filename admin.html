@@ -5,10 +5,9 @@
     <title>Admin Panel</title>
     <link rel="stylesheet" href="css/reset.css">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/admin.css">
     <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Amatic+SC">
     <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Dosis'>
-
-    <script src="scripts/post.js"></script>
 </head>
 <body>
 <div class="container">
@@ -37,9 +36,50 @@
     </div>
     <!--Content-->
     <div>
-        <input type="text" placeholder="" id="titleInput"/>
-        <input type="text" placeholder="" id="contentInput"/>
-        <button onclick="post()">Post</button>
+        <div class="admin-posts">
+            <button onclick="window.location='http:localhost:8080/create-post'">Create new post</button>
+            <div class="admin-posts-list">
+                <div class="admin-post">
+                    <div class="admin-post-panel">
+                        <div class="post-info">
+                            <div class="admin-post-title"><a href="#post">Title1</a></div>
+                            <div class="admin-post-time-creation"><a href="#post">Jan 27 19:43</a></div>
+                            <div class="manage-post-navbar">
+                                <ul>
+                                    <li><a href="/edit-post">edit</a></li>
+                                    <li><a href="#post">view</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="admin-post-thumbnail has-image">
+                            <a href="#post">
+                                <img src="images/btemplates-aquarium-by-francisco-oliveros.jpg">
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="admin-post">
+                    <div class="admin-post-panel">
+                        <div class="post-info">
+                            <div class="admin-post-title"><a href="#post">Title2</a></div>
+                            <div class="admin-post-time-creation"><a href="#post">Jan 27 22:59</a></div>
+                            <div class="manage-post-navbar">
+                                <ul>
+                                    <li><a href="/edit-post">edit</a></li>
+                                    <li><a href="#post">view</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="admin-post-thumbnail">
+                            <a href="#post">
+                                <img src="images/btemplates-aquarium-by-francisco-oliveros.jpg">
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
     </div>
     <!--Footer-->
     <div class="footer">
