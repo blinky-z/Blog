@@ -1,0 +1,74 @@
+.post-editor {
+    margin: 30px auto;
+    width: 600px;
+    height: 500px;
+}
+
+.autoExpand {
+    display: block;
+    box-sizing: border-box;
+    overflow: hidden;
+
+    border: 0;
+    padding: 0;
+    outline: none;
+    width: 100%;
+    resize: none;
+
+    word-break: break-word;
+}
+
+.post-editor-title {
+    width: 100%;
+}
+
+.autoExpand.title-textarea {
+    padding: 10px 7px;
+    min-height: 64px;
+    font-family: 'Noto Serif';
+    font-weight: 600;
+    font-size: 32px;
+    line-height: 1;
+}
+
+.autoExpand.title-textarea:focus:hover {
+    outline: 2px solid #016087;
+}
+
+.post-editor-content {
+    width: 100%;
+    margin: 20px auto 30px auto;
+    height: calc(100% - 120px);
+}
+
+.autoExpand.content-textarea {
+    overflow: auto;
+    max-height: 100%;
+    font-family: 'Noto Serif';
+    font-weight: 300;
+    font-size: 24px;
+    line-height: 1.2;
+}
+
+.post-editor button {
+    width: 100%;
+    box-sizing: border-box;
+    height: 40px;
+    border-radius: 5px;
+    padding: 0;
+    background: #e74c3c;
+    border: none;
+    color: white;
+    font-size: 18px;
+    font-weight: 200;
+    cursor: pointer;
+    transition: box-shadow .4s ease;
+}
+
+.post-editor button:hover {
+    box-shadow: 1px 1px 5px #555;
+}
+
+.post-editor button:active {
+    box-shadow: 1px 1px 7px #222;
+}
