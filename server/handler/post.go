@@ -294,7 +294,7 @@ func GetCertainPost(w http.ResponseWriter, r *http.Request) {
 
 	LogInfo.Printf("Post with ID %s succesfully arrived from database", id)
 
-	RespondWithBody(w, 200, post)
+	RespondWithBody(w, http.StatusOK, post)
 }
 
 // GetPosts - get one page of posts from database http handler
@@ -336,5 +336,5 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 
 	LogInfo.Print("Range of Posts successfully arrived from database")
 
-	RespondWithBody(w, 200, posts)
+	RespondWithBody(w, http.StatusOK, posts)
 }
