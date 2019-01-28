@@ -94,8 +94,8 @@
     overflow: hidden;
 }
 
-.clearBoth {
-    clear: both;
+.admis-post-id {
+    display: none;
 }
 
 .manage-post-navbar {

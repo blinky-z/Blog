@@ -37,16 +37,17 @@
     <!--Content-->
     <div>
         <div class="admin-posts">
-            <button onclick="window.location='http:localhost:8080/create-post'">Create new post</button>
+            <button onclick="window.location='create-post'">Create new post</button>
             <div class="admin-posts-list">
                 <div class="admin-post">
                     <div class="admin-post-panel">
                         <div class="post-info">
                             <div class="admin-post-title"><a href="#post">Title1</a></div>
                             <div class="admin-post-time-creation"><a href="#post">Jan 27 19:43</a></div>
+                            <div class="admis-post-id" data-id="21"></div>
                             <div class="manage-post-navbar">
                                 <ul>
-                                    <li><a href="/edit-post">edit</a></li>
+                                    <li><a onclick="editPost(this)">edit</a></li>
                                     <li><a href="#post">view</a></li>
                                 </ul>
                             </div>
@@ -63,9 +64,10 @@
                         <div class="post-info">
                             <div class="admin-post-title"><a href="#post">Title2</a></div>
                             <div class="admin-post-time-creation"><a href="#post">Jan 27 22:59</a></div>
+                            <div class="admis-post-id" data-id="22"></div>
                             <div class="manage-post-navbar">
                                 <ul>
-                                    <li><a href="/edit-post">edit</a></li>
+                                    <li><a href="/create-post?id=22">edit</a></li>
                                     <li><a href="#post">view</a></li>
                                 </ul>
                             </div>

@@ -11,14 +11,14 @@ function post() {
     request.onreadystatechange = function () {
         if (this.readyState === 4) {
             var responseBody = JSON.parse(this.responseText);
-            if (this.status === 202) {
+            if (this.status === 201) {
                 var createdPost = responseBody.body;
 
-                console.log(createdPost);
+                alert("Post successfully created");
             } else {
                 var errorMessage = responseBody.error;
 
-                console.log(errorMessage);
+                alert(errorMessage);
             }
         }
     };
@@ -29,7 +29,7 @@ function post() {
     var token = sessionStorage.getItem("token");
 
     if (token === null || token === "") {
-        console.log("Please Log In first");
+        alert("Please Log In first");
         return
     }
     request.setRequestHeader("Authorization", "bearer " + token);
