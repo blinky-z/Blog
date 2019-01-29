@@ -32,7 +32,7 @@ function login() {
         }
     };
 
-    request.open("POST", "http://localhost:8080/user/login", true);
+    request.open("POST", "/user/login", true);
     request.setRequestHeader("Content-type", "application/json");
     request.send(encodedCredentials);
 }
