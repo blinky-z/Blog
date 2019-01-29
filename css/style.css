@@ -233,7 +233,7 @@ li {
     width: 100px;
 }
 
-.footer {
+#footer {
     width: 1000px;
     position: absolute;
     bottom: 0;
@@ -303,13 +303,13 @@ li {
     color: #000000;
 }
 
-.container {
+#container {
     width: 1000px;
     background-color: #ffffff;
     margin: 0 auto 0 auto;
 }
 
-.container > div {
+#container > div {
     background-color: rgba(255, 255, 255, 0);
     text-align: center;
     padding: 10px 0 10px 0;
