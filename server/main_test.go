@@ -3,16 +3,15 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/blinky-z/Blog/server/handler"
 	"github.com/blinky-z/Blog/server/models"
 	"github.com/google/uuid"
-	"github.com/spf13/viper"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"testing"
 	"time"
 )
 
@@ -39,7 +38,7 @@ type AdminsConfig struct {
 // helpful API for testing
 
 func setNewAuthData(r *http.Response) {
-	var response ResponseLogIn
+	var response ResponseLogin
 	decodeAuthResponse(r.Body, &response)
 
 	authToken = response.Body
@@ -102,7 +101,10 @@ func decodeErrorResponse(responseBody io.ReadCloser, resp *ResponseWithError) {
 // -----------
 // Tests
 
-func TestRunServer(t *testing.T) {
+func init() {
+	testConfigFile := flag.String("config", "configs/testConfig.json", "server config file for tests")
+	flag.Parse()
+
 	loginUsername = uuid.New().String()
 	loginEmail = loginUsername + "@gmail.com"
 	loginPassword = uuid.New().String() + "Z"
@@ -110,25 +112,17 @@ func TestRunServer(t *testing.T) {
 	admins := &AdminsConfig{Admins: []models.User{{Login: loginUsername}}}
 	encodedAdmins := encodeMessage(admins)
 
-	viper.SetConfigName("testConfig")
-	viper.AddConfigPath(".")
-	err := viper.ReadInConfig()
-	if err != nil {
-		logError.Fatalf("Fatal error reading config file: %s \n", err)
-	}
-
-	adminsConfigFile := viper.GetString("adminsConfigFile")
-
-	f, err := os.OpenFile(adminsConfigFile+".json", os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
+	testAdminsFile := "configs/testAdmins.json"
+	adminsFile, err := os.OpenFile(testAdminsFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
 	if err != nil {
 		panic("Error opening admins config file")
 	}
-	_, err = f.Write(encodedAdmins)
+	_, err = adminsFile.Write(encodedAdmins)
 	if err != nil {
-		panic("Error writing new test admin to admins config file")
+		panic("Error writing admin to tests admins config file")
 	}
 
-	go RunServer("testConfig", ".")
+	go RunServer(*testConfigFile, testAdminsFile)
 	for {
 		resp, err := http.Get("http://" + Address + "/hc")
 		if err == nil && resp.StatusCode == http.StatusOK {
@@ -136,20 +130,20 @@ func TestRunServer(t *testing.T) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-}
 
-// Register test user
-func TestRegisterAdmin(t *testing.T) {
-	r := registerUser(loginUsername, loginEmail, loginPassword)
+	// Register test user
+	{
+		r := registerUser(loginUsername, loginEmail, loginPassword)
 
-	checkNiceResponse(r, http.StatusOK)
-}
+		checkNiceResponse(r, http.StatusOK)
+	}
 
-// Log In with registered in prev test test user
-func TestLoginAdminWithEmail(t *testing.T) {
-	r := loginUser("", loginEmail, loginPassword)
+	// Log In with registered test user and save token and fingerprint
+	{
+		r := loginUser("", loginEmail, loginPassword)
 
-	checkNiceResponse(r, http.StatusAccepted)
+		checkNiceResponse(r, http.StatusAccepted)
 
-	setNewAuthData(r)
+		setNewAuthData(r)
+	}
 }

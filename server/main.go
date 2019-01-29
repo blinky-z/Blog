@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"flag"
 	"fmt"
 	"github.com/auth0/go-jwt-middleware"
 	"github.com/blinky-z/Blog/server/handler"
@@ -17,8 +18,8 @@ import (
 )
 
 var (
-	logInfoOutfile, _  = os.OpenFile("./logs/Info.log", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
-	logErrorOutfile, _ = os.OpenFile("./logs/Error.log", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	logInfoOutfile, _  = os.OpenFile("./logs/Info.log", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	logErrorOutfile, _ = os.OpenFile("./logs/Error.log", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 
 	logInfo  = log.New(logInfoOutfile, "INFO: ", log.Ltime)
 	logError = log.New(logErrorOutfile, "ERROR: ", log.Ltime)
@@ -28,9 +29,9 @@ var (
 	// Address - server address with port
 	Address = "localhost:" + Port
 
-	user     string
-	password string
-	dbName   string
+	dbUser     string
+	dbPassword string
+	dbName     string
 
 	// Db - database connection
 	Db *sql.DB
@@ -65,45 +66,43 @@ var handleHTMLFile = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 })
 
 // RunServer - run server function. Config file name and path should be passed
-func RunServer(configName, configPath string) {
-	viper.SetConfigName(configName)
-	viper.AddConfigPath(configPath)
+func RunServer(serverConfigPath, adminsConfigPath string) {
+	viper.SetConfigFile(serverConfigPath)
 	err := viper.ReadInConfig()
 	if err != nil {
-		logError.Fatalf("Fatal error reading config file: %s \n", err)
+		logError.Fatalf("Fatal error reading server config file: %s \n", err)
 	}
 
-	user = viper.GetString("user")
-	password = viper.GetString("password")
+	dbUser = viper.GetString("db_user")
+	dbPassword = viper.GetString("db_password")
 	dbName = viper.GetString("db_name")
 	signingKey = []byte(viper.GetString("jwtSecretKey"))
 
-	testAdminsFile := viper.GetString("adminsConfigFile")
-	viper.SetConfigName(testAdminsFile)
+	viper.SetConfigFile(adminsConfigPath)
 	err = viper.ReadInConfig()
 	if err != nil {
-		logError.Fatalf("Fatal error reading config file: %s \n", err)
+		logError.Fatalf("Fatal error reading admins list config file: %s", err)
 	}
 
 	var admins []models.User
 	err = viper.UnmarshalKey("admins", &admins)
 	if err != nil {
-		logError.Fatalf("Fatal error unmarshaling admins: %s \n", err)
+		logError.Fatalf("Fatal error unmarshaling admins list: %s", err)
 	}
 
 	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s",
-		user, password, dbName)
+		dbUser, dbPassword, dbName)
 
 	logInfo.Printf("Logging into postgres database with following credentials: %s", dbinfo)
 
 	Db, err = sql.Open("postgres", dbinfo)
 	if err != nil {
-		logError.Fatal(err)
+		logError.Fatalf("Error opening connection with database: %s", err)
 	}
 	defer func() {
 		err := Db.Close()
 		if err != nil {
-			panic(err)
+			logError.Fatalf("Error closing connection with database: %s", err)
 		}
 	}()
 	handler.Db = Db
@@ -118,9 +117,12 @@ func RunServer(configName, configPath string) {
 		"posts-per-page", "{posts-per-page}").Methods("GET")
 	router.HandleFunc("/posts", handler.GetPosts).Queries("page", "{page}").Methods("GET")
 	router.HandleFunc("/posts/{id}", handler.GetCertainPost).Methods("GET")
-	router.Handle("/posts", jwtMiddleware.Handler(handler.JwtAuthentication(http.HandlerFunc(handler.CreatePost)))).Methods("POST")
-	router.Handle("/posts/{id}", jwtMiddleware.Handler(handler.JwtAuthentication(http.HandlerFunc(handler.UpdatePost)))).Methods("PUT")
-	router.Handle("/posts/{id}", jwtMiddleware.Handler(handler.JwtAuthentication(http.HandlerFunc(handler.DeletePost)))).Methods("DELETE")
+	router.Handle("/posts",
+		jwtMiddleware.Handler(handler.JwtAuthentication(http.HandlerFunc(handler.CreatePost)))).Methods("POST")
+	router.Handle("/posts/{id}",
+		jwtMiddleware.Handler(handler.JwtAuthentication(http.HandlerFunc(handler.UpdatePost)))).Methods("PUT")
+	router.Handle("/posts/{id}",
+		jwtMiddleware.Handler(handler.JwtAuthentication(http.HandlerFunc(handler.DeletePost)))).Methods("DELETE")
 	router.HandleFunc("/hc", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Methods("GET")
@@ -137,5 +139,9 @@ func RunServer(configName, configPath string) {
 }
 
 func main() {
-	RunServer(os.Args[1], os.Args[2])
+	userConfigPath := flag.String("config", "configs/config.json", "config file path")
+	adminsListConfigPath := flag.String("admins", "configs/admins.json", "admins list")
+
+	flag.Parse()
+	RunServer(*userConfigPath, *adminsListConfigPath)
 }

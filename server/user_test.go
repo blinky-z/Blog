@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-type ResponseLogIn struct {
+type ResponseLogin struct {
 	Error handler.PostErrorCode
 	Body  string
 }
@@ -26,7 +26,7 @@ type ResponseLogIn struct {
 
 // API for encoding and decoding messages
 
-func decodeAuthResponse(responseBody io.ReadCloser, response *ResponseLogIn) {
+func decodeAuthResponse(responseBody io.ReadCloser, response *ResponseLogin) {
 	err := json.NewDecoder(responseBody).Decode(&response)
 	if err != nil {
 		panic(fmt.Sprintf("Error decoding received body. Error: %s", err))

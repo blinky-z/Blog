@@ -1,7 +1,0 @@
-{
-  "user": "username",
-  "password": "password",
-  "db_name": "serverdb",
-  "jwtSecretKey": "secret",
-  "adminsConfigFile": "admins"
-}
