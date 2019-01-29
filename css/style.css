@@ -196,7 +196,7 @@ li {
 }
 
 .blog-page-selector {
-    text-align: center;
+    width: 100%;
     font-size: 16px;
     font-weight: 500;
     margin-top: -10px;
@@ -212,15 +212,25 @@ li {
     text-decoration: underline;
 }
 
+.blog-page-selector-newer-posts {
+    text-align: left;
+    float: left;
+    width: 100px;
+}
+
+.blog-page-selector-newer-posts.has-no-prev-posts {
+    display: none;
+}
+
 .blog-page-selector-home {
-    margin-left: 100px; /*сдвинуть home влево на ширину older posts*/
-    text-align: center;
+    margin: 0 auto;
+    width: 100px;
 }
 
 .blog-page-selector-older-posts {
-    width: 100px;
-    float: right;
     text-align: right;
+    float: right;
+    width: 100px;
 }
 
 .footer {

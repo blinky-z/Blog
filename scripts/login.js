@@ -25,7 +25,7 @@ function login() {
             } else {
                 var errorMessage = responseBody.error;
 
-                console.log(errorMessage);
+                alert(errorMessage);
 
                 sessionStorage.removeItem("token")
             }

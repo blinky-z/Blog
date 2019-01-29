@@ -38,6 +38,11 @@
     <div>
         <div class="admin-posts">
             <button onclick="window.location='create-post'">Create new post</button>
+            <div class="page-navigation-bar">
+                <div class="page-navigation-bar-prev-posts has-no-posts"><a href="#">Newer Posts</a></div>
+                <div class="page-navigation-bar-next-posts"><a href="/admin?page=2">Older Posts</a></div>
+                <div id="page-navigation-bar-page-number"><a href="/admin?page=1">Page 1</a></div>
+            </div>
             <div class="admin-posts-list">
                 <div class="admin-post">
                     <div class="admin-post-panel">
@@ -67,7 +72,7 @@
                             <div class="admin-post-id" data-id="22"></div>
                             <div class="manage-post-navbar">
                                 <ul>
-                                    <li><a href="/create-post?id=22">edit</a></li>
+                                    <li><a onclick="editPost(this)">edit</a></li>
                                     <li><a href="#post">view</a></li>
                                 </ul>
                             </div>
@@ -78,7 +83,66 @@
                             </a>
                         </div>
                     </div>
-
+                </div>
+                <div class="admin-post">
+                    <div class="admin-post-panel">
+                        <div class="post-info">
+                            <div class="admin-post-title"><a href="#post">Title1</a></div>
+                            <div class="admin-post-time-creation"><a href="#post">Jan 27 19:43</a></div>
+                            <div class="admin-post-id" data-id="21"></div>
+                            <div class="manage-post-navbar">
+                                <ul>
+                                    <li><a onclick="editPost(this)">edit</a></li>
+                                    <li><a href="#post">view</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="admin-post-thumbnail has-image">
+                            <a href="#post">
+                                <img src="images/btemplates-aquarium-by-francisco-oliveros.jpg">
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="admin-post">
+                    <div class="admin-post-panel">
+                        <div class="post-info">
+                            <div class="admin-post-title"><a href="#post">Title1</a></div>
+                            <div class="admin-post-time-creation"><a href="#post">Jan 27 19:43</a></div>
+                            <div class="admin-post-id" data-id="21"></div>
+                            <div class="manage-post-navbar">
+                                <ul>
+                                    <li><a onclick="editPost(this)">edit</a></li>
+                                    <li><a href="#post">view</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="admin-post-thumbnail has-image">
+                            <a href="#post">
+                                <img src="images/btemplates-aquarium-by-francisco-oliveros.jpg">
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="admin-post">
+                    <div class="admin-post-panel">
+                        <div class="post-info">
+                            <div class="admin-post-title"><a href="#post">Title1</a></div>
+                            <div class="admin-post-time-creation"><a href="#post">Jan 27 19:43</a></div>
+                            <div class="admin-post-id" data-id="21"></div>
+                            <div class="manage-post-navbar">
+                                <ul>
+                                    <li><a onclick="editPost(this)">edit</a></li>
+                                    <li><a href="#post">view</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="admin-post-thumbnail has-image">
+                            <a href="#post">
+                                <img src="images/btemplates-aquarium-by-francisco-oliveros.jpg">
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

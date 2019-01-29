@@ -27,7 +27,8 @@
 }
 
 .admin-posts-list {
-    margin-top: 20px;
+    padding-top: 20px;
+    padding-bottom: 20px;
 }
 
 .admin-post {
@@ -123,4 +124,58 @@
 
 .manage-post-navbar li a:hover {
     color: #3498db;
+}
+
+.blog-page-selector-older-posts {
+    text-align: right;
+    float: right;
+    width: 100px;
+}
+
+.page-navigation-bar {
+    box-sizing: border-box;
+    height: 80px;
+    width: 100%;
+    margin: 16px 0;
+    background-color: #333;
+}
+
+.page-navigation-bar a {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    display: block;
+    text-decoration: none;
+    color: white;
+    padding: 14px 14px;
+}
+
+#page-navigation-bar-page-number {
+    text-align: center;
+    margin: 0 auto;
+    width: 100px;
+    height: 100%;
+    background-color: #4CAF50;
+}
+
+.page-navigation-bar-prev-posts {
+    text-align: left;
+    float: left;
+    width: 100px;
+    height: 100%;
+}
+
+.page-navigation-bar-prev-posts.has-no-posts {
+    display: none;
+}
+
+.page-navigation-bar-next-posts {
+    text-align: right;
+    float: right;
+    width: 100px;
+    height: 100%;
+}
+
+.page-navigation-bar-next-posts.has-no-posts {
+    display: none;
 }

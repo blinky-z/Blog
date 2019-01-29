@@ -46,6 +46,7 @@
 }
 
 .login-wrap .form a {
+    text-decoration: underline;
     text-align: center;
     font-size: 10px;
     color: #3498db;
