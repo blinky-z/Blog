@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/blinky-z/Blog/server/handler"
 	"github.com/blinky-z/Blog/server/models"
+	"gotest.tools/assert"
 	"io"
 	"log"
 	"net/http"
@@ -609,4 +610,15 @@ func TestGetRangeOfPostsWithNonNumberPostsPerPage(t *testing.T) {
 	}()
 
 	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidRange)
+}
+
+func TestGetRangeOfPostsGetEmptyPage(t *testing.T) {
+	r := getPosts("10000000", "")
+
+	var response ResponseRangePosts
+	decodeRangePostsResponse(r.Body, &response)
+
+	receivedPosts := response.Body
+
+	assert.Assert(t, len(receivedPosts) == 0)
 }
