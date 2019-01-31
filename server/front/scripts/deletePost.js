@@ -17,7 +17,6 @@ function deletePost(postID) {
                 xhr.setRequestHeader('Authorization', `bearer ${token}`);
             },
             success: function (data, textStatus, jqXHR) {
-                alert("Post successfully deleted");
                 location.reload();
             },
             error: function (data, textStatus, jqXHR) {

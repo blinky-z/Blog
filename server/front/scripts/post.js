@@ -21,7 +21,8 @@ function post() {
                 xhr.setRequestHeader('Authorization', `bearer ${token}`);
             },
             success: function (data, textStatus, jqXHR) {
-                var createdPost = jqXHR.body;
+                var response = JSON.parse(jqXHR.responseText);
+                var createdPost = response.body;
 
                 alert("Post successfully created");
                 var postID = createdPost.id;
