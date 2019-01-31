@@ -1,4 +1,4 @@
-function post() {
+function createPost() {
     var title = document.getElementById("titleInput").value;
     var content = document.getElementById("contentInput").value;
 

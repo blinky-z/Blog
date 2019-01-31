@@ -10,16 +10,16 @@ $(document).ready(function () {
 
         for (var currentPostNum = 0; currentPostNum < posts.length && currentPostNum < 10; currentPostNum++) {
             var post = posts[currentPostNum];
-            var data = {postHeader: '', postAuthor: '', postCreationTime: '', postSnippet: '', readMoreLink: ''};
+            var data = {postHeader: '', postAuthor: '', postCreationTime: '', postSnippet: '', postLink: ''};
             data.postHeader = post.title;
             data.postAuthor = 'Dmitry';
-            data.postCreationTime = post.date;
+            data.postCreationTime = new Date(post.date).toLocaleString();
             if (post.content.length < 160) {
                 data.postSnippet = post.content;
             } else {
                 data.postSnippet = post.content.substr(0, 160);
             }
-            data.readMoreLink = `/posts/${post.id}`;
+            data.postLink = `/posts/${post.id}`;
 
             var blogPostHTML = blogPostTemplate(data);
 

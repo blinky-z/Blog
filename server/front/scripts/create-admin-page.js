@@ -12,7 +12,7 @@ $(document).ready(function () {
             var post = posts[currentPostNum];
             var data = {postHeader: '', postCreationTime: '', postID: '', postLink: ''};
             data.postHeader = post.title;
-            data.postCreationTime = post.date;
+            data.postCreationTime = new Date(post.date).toLocaleString();
             data.postID = post.id;
             data.postLink = `/posts/${post.id}`;
 

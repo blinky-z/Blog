@@ -23,6 +23,8 @@
 }
 
 .autoExpand.title-textarea {
+    background: white;
+    color: black;
     padding: 10px 7px;
     min-height: 64px;
     font-family: 'Noto Serif';
@@ -37,11 +39,16 @@
 
 .post-editor-content {
     width: 100%;
-    margin: 20px auto 30px auto;
+    margin: 20px auto 10px auto;
     height: calc(100% - 120px);
 }
 
 .autoExpand.content-textarea {
+    box-sizing: border-box;
+    padding: 5px 10px;
+    border: 4px solid #111;
+    background: white;
+    color: black;
     overflow: auto;
     max-height: 100%;
     font-family: 'Noto Serif';

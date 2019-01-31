@@ -6,7 +6,7 @@ $(document).ready(function () {
         var data = {postHeader: '', postAuthor: '', postCreationTime: '', postContent: ''};
         data.postHeader = post.title;
         data.postAuthor = 'Dmitry';
-        data.postCreationTime = post.date;
+        data.postCreationTime = new Date(post.date).toLocaleString();
         data.postContent = post.content;
 
         postChild.innerHTML = postTemplate(data);

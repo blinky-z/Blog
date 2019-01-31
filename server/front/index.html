@@ -41,8 +41,9 @@
         <div id="posts-list">
             <div id="blog-post-template">
                 <div class="blog-post">
-                    <h1 class="blog-post-header">{{ postHeader }}</h1>
-                    <h3 class="blog-post-description">Written by <b>{{ postAuthor }}</b> on <b> {{postCreationTime }}</b></h3>
+                    <h1 class="blog-post-header"><a href="{{ postLink }}">{{ postHeader }}</a></h1>
+                    <h3 class="blog-post-description">Written by <b>{{ postAuthor }}</b> on
+                        <b> {{postCreationTime }}</b></h3>
                     <p class="blog-post-snippet">{{ postSnippet }}</p>
                     <div class="blog-post-share">
                         Share:
@@ -58,7 +59,7 @@
                         </div>
                     </div>
                     <div class="blog-post-read-more">
-                        <a href="{{ readMoreLink }}">Read More</a>
+                        <a href="{{ postLink }}">Read More</a>
                     </div>
                 </div>
             </div>
