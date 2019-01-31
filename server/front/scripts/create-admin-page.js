@@ -8,7 +8,7 @@ $(document).ready(function () {
             return;
         }
 
-        for (var currentPostNum = 0; currentPostNum < posts.length; currentPostNum++) {
+        for (var currentPostNum = 0; currentPostNum < posts.length && currentPostNum < 10; currentPostNum++) {
             var post = posts[currentPostNum];
             var data = {postHeader: '', postCreationTime: '', postID: '', postLink: ''};
             data.postHeader = post.title;
@@ -33,35 +33,20 @@ $(document).ready(function () {
             pageSelector.innerHTML = pageSelectorTemplate(data);
             return;
         } else {
-            data.olderPostsLink = `/admin?page=${currentPage + 1}`;
             data.newerPostsLink = `/admin?page=${currentPage - 1}`;
+            data.olderPostsLink = `/admin?page=${currentPage + 1}`;
             data.currentPageLink = document.documentURI;
             data.currentPageNumber = currentPage;
         }
 
         pageSelector.innerHTML = pageSelectorTemplate(data);
+
         if (currentPage === 0) {
             document.getElementById("page-navigation-bar-newer-posts").className = 'has-no-posts';
         }
-
-        $.ajax(
-            {
-                url: `/api/posts?page=${currentPage + 1}`,
-                type: 'GET',
-                success: function (data, textStatus, jqXHR) {
-                    var response = JSON.parse(jqXHR.responseText);
-                    var posts = response.body;
-
-                    if (posts == null) {
-                        document.getElementById("page-navigation-bar-older-posts").className = 'has-no-posts';
-                    }
-                },
-                error: function (data, textStatus, jqXHR) {
-                    var response = JSON.parse(jqXHR.responseText);
-                    console.log(response.error)
-                }
-            }
-        );
+        if (posts.length <= 10) {
+            document.getElementById("page-navigation-bar-older-posts").className = 'has-no-posts';
+        }
     }
 
     function generateAdminPage(posts) {
@@ -74,9 +59,10 @@ $(document).ready(function () {
     if (postsPage == null) {
         postsPage = '0';
     }
+
     $.ajax(
         {
-            url: `/api/posts?page=${postsPage}`,
+            url: `/api/posts?page=${postsPage}&posts-per-page=11`,
             type: 'GET',
             success: function (data, textStatus, jqXHR) {
                 var response = JSON.parse(jqXHR.responseText);

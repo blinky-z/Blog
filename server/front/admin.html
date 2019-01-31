@@ -12,6 +12,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="/scripts/handlebars-v4.0.12.js"></script>
     <script src="/scripts/create-admin-page.js"></script>
+    <script src="/scripts/deletePost.js"></script>
 </head>
 <body>
 <div id="container">
@@ -46,7 +47,8 @@
                 <div id="page-navigation-bar-template">
                     <div id="page-navigation-bar-newer-posts"><a href="{{newerPostsLink}}">Newer Posts</a></div>
                     <div id="page-navigation-bar-older-posts"><a href="{{olderPostsLink}}">Older Posts</a></div>
-                    <div id="page-navigation-bar-page-number"><a href="{{currentPageLink}}">Page {{currentPageNumber}}</a></div>
+                    <div id="page-navigation-bar-page-number"><a
+                                href="{{currentPageLink}}">Page {{currentPageNumber}}</a></div>
                 </div>
             </div>
             <div id="admin-posts-list">
@@ -54,14 +56,15 @@
                     <div class="admin-post">
                         <div class="admin-post-panel">
                             <div class="post-info">
-                                <div class="admin-post-title"><a href onclick="editPost(this)">{{postHeader}}</a></div>
-                                <div class="admin-post-time-creation"><a href
-                                                                         onclick="editPost(this)">{{postCreationTime}}</a>
+                                <div class="admin-post-title"><a href="/edit-post?id={{postID}}">{{postHeader}}</a>
                                 </div>
-                                <div class="admin-post-id" data-id="{{postID}}"></div>
+                                <div class="admin-post-time-creation"><a
+                                            href="/edit-post?id={{postID}}">{{postCreationTime}}</a>
+                                </div>
                                 <div class="manage-post-navbar">
                                     <ul>
-                                        <li><a href onclick="editPost(this)">edit</a></li>
+                                        <li><a href="/edit-post?id={{postID}}">edit</a></li>
+                                        <li><a href="javascript:deletePost({{postID}})">delete</a></li>
                                         <li><a href="{{postLink}}">view</a></li>
                                     </ul>
                                 </div>

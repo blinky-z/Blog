@@ -8,7 +8,7 @@ $(document).ready(function () {
             return;
         }
 
-        for (var currentPostNum = 0; currentPostNum < posts.length; currentPostNum++) {
+        for (var currentPostNum = 0; currentPostNum < posts.length && currentPostNum < 10; currentPostNum++) {
             var post = posts[currentPostNum];
             var data = {postHeader: '', postAuthor: '', postCreationTime: '', postSnippet: '', readMoreLink: ''};
             data.postHeader = post.title;
@@ -38,33 +38,17 @@ $(document).ready(function () {
             pageSelector.innerHTML = pageSelectorTemplate(data);
             return;
         } else {
-            data.olderPostsLink = `/?page=${currentPage + 1}`;
             data.newerPostsLink = `/?page=${currentPage - 1}`;
+            data.olderPostsLink = `/?page=${currentPage + 1}`;
         }
 
         pageSelector.innerHTML = pageSelectorTemplate(data);
         if (currentPage === 0) {
             document.getElementById("blog-page-selector-newer-posts").className = 'has-no-posts';
         }
-
-        $.ajax(
-            {
-                url: `/api/posts?page=${currentPage + 1}`,
-                type: 'GET',
-                success: function (data, textStatus, jqXHR) {
-                    var response = JSON.parse(jqXHR.responseText);
-                    var posts = response.body;
-
-                    if (posts == null) {
-                        document.getElementById("blog-page-selector-older-posts").className = 'has-no-posts';
-                    }
-                },
-                error: function (data, textStatus, jqXHR) {
-                    var response = JSON.parse(jqXHR.responseText);
-                    console.log(response.error)
-                }
-            }
-        );
+        if (posts.length <= 10) {
+            document.getElementById("blog-page-selector-older-posts").className = 'has-no-posts';
+        }
     }
 
     function generateIndexContent(posts) {
@@ -77,9 +61,10 @@ $(document).ready(function () {
     if (postsPage == null) {
         postsPage = '0';
     }
+
     $.ajax(
         {
-            url: `/api/posts?page=${postsPage}`,
+            url: `/api/posts?page=${postsPage}&posts-per-page=11`,
             type: 'GET',
             success: function (data, textStatus, jqXHR) {
                 var response = JSON.parse(jqXHR.responseText);

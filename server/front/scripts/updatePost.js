@@ -1,4 +1,6 @@
-function post() {
+function updatePost() {
+    var postID = new window.URLSearchParams(window.location.search).get('id');
+
     var title = document.getElementById("titleInput").value;
     var content = document.getElementById("contentInput").value;
 
@@ -13,19 +15,16 @@ function post() {
     }
     $.ajax(
         {
-            url: '/api/posts',
-            type: 'POST',
+            url: `/api/posts/${postID}`,
+            type: 'PUT',
             contentType: 'application/json',
             data: encodedPost,
             beforeSend: function (xhr) {
                 xhr.setRequestHeader('Authorization', `bearer ${token}`);
             },
             success: function (data, textStatus, jqXHR) {
-                var createdPost = jqXHR.body;
-
-                alert("Post successfully created");
-                var postID = createdPost.id;
-                window.location.replace(`/posts/${postID}`)
+                alert("Post successfully updated");
+                window.location.replace(`/posts/${postID}`);
             },
             error: function (data, textStatus, jqXHR) {
                 var response = JSON.parse(jqXHR.responseText);
