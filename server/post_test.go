@@ -49,28 +49,28 @@ func decodeRangePostsResponse(responseBody io.ReadCloser, r *ResponseRangePosts)
 // Helpful API for sending posts handling http requests
 
 func getPost(postID string) *http.Response {
-	return sendPostHandleMessage("GET", "http://"+Address+"/posts/"+postID, "")
+	return sendPostHandleMessage("GET", "http://"+Address+"/api/posts/"+postID, "")
 }
 
 func getPosts(page string, postsPerPage string) *http.Response {
 	if len(postsPerPage) != 0 {
 		return sendPostHandleMessage(
-			"GET", "http://"+Address+"/posts?page="+page+"&posts-per-page="+postsPerPage, "")
+			"GET", "http://"+Address+"/api/posts?page="+page+"&posts-per-page="+postsPerPage, "")
 	} else {
-		return sendPostHandleMessage("GET", "http://"+Address+"/posts?page="+page, "")
+		return sendPostHandleMessage("GET", "http://"+Address+"/api/posts?page="+page, "")
 	}
 }
 
 func createPost(message interface{}) *http.Response {
-	return sendPostHandleMessage("POST", "http://"+Address+"/posts", message)
+	return sendPostHandleMessage("POST", "http://"+Address+"/api/posts", message)
 }
 
 func updatePost(postID string, message interface{}) *http.Response {
-	return sendPostHandleMessage("PUT", "http://"+Address+"/posts/"+postID, message)
+	return sendPostHandleMessage("PUT", "http://"+Address+"/api/posts/"+postID, message)
 }
 
 func deletePost(postID string) *http.Response {
-	return sendPostHandleMessage("DELETE", "http://"+Address+"/posts/"+postID, "")
+	return sendPostHandleMessage("DELETE", "http://"+Address+"/api/posts/"+postID, "")
 }
 
 func sendPostHandleMessage(method, address string, message interface{}) *http.Response {
@@ -520,7 +520,7 @@ func TestGetRangeOfPostsWithCustomPostsPerPage(t *testing.T) {
 		}
 
 		var response ResponseSinglePost
-		r := sendPostHandleMessage("POST", "http://"+Address+"/posts", message)
+		r := sendPostHandleMessage("POST", "http://"+Address+"/api/posts", message)
 		decodeSinglePostResponse(r.Body, &response)
 
 		workingPosts = append(workingPosts, response.Body)
@@ -548,7 +548,7 @@ func TestGetRangeOfPostsWithDefaultPostsPerPage(t *testing.T) {
 		}
 
 		var response ResponseSinglePost
-		r := sendPostHandleMessage("POST", "http://"+Address+"/posts", message)
+		r := sendPostHandleMessage("POST", "http://"+Address+"/api/posts", message)
 		decodeSinglePostResponse(r.Body, &response)
 
 		workingPosts = append(workingPosts, response.Body)

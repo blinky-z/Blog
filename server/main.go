@@ -64,6 +64,12 @@ var handleHTMLFile = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	}
 
 	filePath := frontFolder + fileName
+
+	http.ServeFile(w, r, filePath)
+})
+
+var handleHTMLPost = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	filePath := frontFolder + "post.html"
 	http.ServeFile(w, r, filePath)
 })
 
@@ -115,25 +121,26 @@ func RunServer(serverConfigPath, adminsConfigPath string) {
 
 	router := mux.NewRouter()
 
-	router.HandleFunc("/posts", handler.GetPosts).Queries("page", "{page}",
+	router.HandleFunc("/api/posts", handler.GetPosts).Queries("page", "{page}",
 		"posts-per-page", "{posts-per-page}").Methods("GET")
-	router.HandleFunc("/posts", handler.GetPosts).Queries("page", "{page}").Methods("GET")
-	router.HandleFunc("/posts/{id}", handler.GetCertainPost).Methods("GET")
-	router.Handle("/posts",
+	router.HandleFunc("/api/posts", handler.GetPosts).Queries("page", "{page}").Methods("GET")
+	router.HandleFunc("/api/posts/{id}", handler.GetCertainPost).Methods("GET")
+	router.Handle("/api/posts",
 		jwtMiddleware.Handler(handler.JwtAuthentication(http.HandlerFunc(handler.CreatePost)))).Methods("POST")
-	router.Handle("/posts/{id}",
+	router.Handle("/api/posts/{id}",
 		jwtMiddleware.Handler(handler.JwtAuthentication(http.HandlerFunc(handler.UpdatePost)))).Methods("PUT")
-	router.Handle("/posts/{id}",
+	router.Handle("/api/posts/{id}",
 		jwtMiddleware.Handler(handler.JwtAuthentication(http.HandlerFunc(handler.DeletePost)))).Methods("DELETE")
-	router.HandleFunc("/hc", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/api/hc", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Methods("GET")
-	router.HandleFunc("/user/register", handler.RegisterUserHandler).Methods("POST")
-	router.HandleFunc("/user/login", handler.LoginUserHandler).Methods("POST")
+	router.HandleFunc("/api/user/register", handler.RegisterUserHandler).Methods("POST")
+	router.HandleFunc("/api/user/login", handler.LoginUserHandler).Methods("POST")
 
 	router.PathPrefix("/css").Handler(http.StripPrefix("/css", http.FileServer(http.Dir(frontFolder+"css"))))
 	router.PathPrefix("/scripts").Handler(http.StripPrefix("/scripts", http.FileServer(http.Dir(frontFolder+"scripts"))))
 	router.PathPrefix("/images").Handler(http.StripPrefix("/images", http.FileServer(http.Dir(frontFolder+"images"))))
+	router.PathPrefix("/posts/").Handler(handleHTMLPost)
 	router.PathPrefix("/").Handler(http.StripPrefix("/", handleHTMLFile))
 
 	logInfo.Printf("listening on address %s", Address)

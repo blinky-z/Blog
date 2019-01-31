@@ -124,7 +124,7 @@ func init() {
 
 	go RunServer(*testConfigFile, testAdminsFile)
 	for {
-		resp, err := http.Get("http://" + Address + "/hc")
+		resp, err := http.Get("http://" + Address + "/api/hc")
 		if err == nil && resp.StatusCode == http.StatusOK {
 			break
 		}

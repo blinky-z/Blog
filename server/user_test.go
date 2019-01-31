@@ -56,13 +56,13 @@ func sendAuthUserMessage(address string, credentials models.User) *http.Response
 func registerUser(login, email, password string) *http.Response {
 	registrationCredentials := models.User{Login: login, Email: email, Password: password}
 
-	return sendAuthUserMessage("http://"+Address+"/user/register", registrationCredentials)
+	return sendAuthUserMessage("http://"+Address+"/api/user/register", registrationCredentials)
 }
 
 func loginUser(login, email, password string) *http.Response {
 	loginCredentials := models.User{Login: login, Email: email, Password: password}
 
-	return sendAuthUserMessage("http://"+Address+"/user/login", loginCredentials)
+	return sendAuthUserMessage("http://"+Address+"/api/user/login", loginCredentials)
 }
 
 // -----------
@@ -148,7 +148,7 @@ func TestRegisterUserWithEmptyPassword(t *testing.T) {
 func TestRegisterUserWithBadRequestBody(t *testing.T) {
 	message := `{bad request body}`
 
-	request, err := http.NewRequest("POST", "http://"+Address+"/user/register", strings.NewReader(message))
+	request, err := http.NewRequest("POST", "http://"+Address+"/api/user/register", strings.NewReader(message))
 	if err != nil {
 		panic(fmt.Sprintf("Can not create request. Error: %s", err))
 	}
@@ -350,7 +350,7 @@ func TestCreatePostWithMissingAuthorizationHeader(t *testing.T) {
 
 	encodedMessage := encodeMessage(post)
 
-	request, err := http.NewRequest("POST", "http://"+Address+"/posts", bytes.NewReader(encodedMessage))
+	request, err := http.NewRequest("POST", "http://"+Address+"/api/posts", bytes.NewReader(encodedMessage))
 	if err != nil {
 		panic(fmt.Sprintf("Can not create request. Error: %s", err))
 	}
