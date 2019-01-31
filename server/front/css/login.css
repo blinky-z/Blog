@@ -21,6 +21,11 @@
     margin-top: 20px;
 }
 
+::placeholder {
+    opacity: 1;
+    color: grey;
+}
+
 .login-wrap .form input[type="text"],
 .login-wrap .form input[type="password"],
 .login-wrap .form button {
@@ -35,6 +40,8 @@
 
 .login-wrap .form input[type="text"],
 .login-wrap .form input[type="password"] {
+    color: black;
+    background: white;
     border: 1px solid #bbb;
     padding-left: 10px;
     font-size: 14px;

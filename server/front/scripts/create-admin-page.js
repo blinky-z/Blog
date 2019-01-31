@@ -1,7 +1,7 @@
 $(document).ready(function () {
     function generatePostsList(posts) {
-        var postsList = document.getElementById("posts-list");
-        var blogPostTemplate = Handlebars.compile(document.getElementById("blog-post-template").innerHTML);
+        var postsList = document.getElementById("admin-posts-list");
+        var adminPostTemplate = Handlebars.compile(document.getElementById("admin-post-template").innerHTML);
         postsList.innerHTML = '';
 
         if (posts == null) {
@@ -10,41 +10,38 @@ $(document).ready(function () {
 
         for (var currentPostNum = 0; currentPostNum < posts.length; currentPostNum++) {
             var post = posts[currentPostNum];
-            var data = {postHeader: '', postAuthor: '', postCreationTime: '', postSnippet: '', readMoreLink: ''};
+            var data = {postHeader: '', postCreationTime: '', postID: '', postLink: ''};
             data.postHeader = post.title;
-            data.postAuthor = 'Dmitry';
             data.postCreationTime = post.date;
-            if (post.content.length < 160) {
-                data.postSnippet = post.content;
-            } else {
-                data.postSnippet = post.content.substr(0, 160);
-            }
-            data.readMoreLink = `/posts/${post.id}`;
+            data.postID = post.id;
+            data.postLink = `/posts/${post.id}`;
 
-            var blogPostHTML = blogPostTemplate(data);
+            var blogPostHTML = adminPostTemplate(data);
 
             postsList.innerHTML += blogPostHTML;
         }
     }
 
     function generatePageSelector(currentPage, posts) {
-        var pageSelector = document.getElementById("blog-page-selector");
-        var pageSelectorTemplate = Handlebars.compile(document.getElementById("blog-page-selector-template").innerHTML);
+        var pageSelector = document.getElementById("page-navigation-bar");
+        var pageSelectorTemplate = Handlebars.compile(document.getElementById("page-navigation-bar-template").innerHTML);
 
-        var data = {newerPostsLink: '', olderPostsLink: ''};
+        var data = {newerPostsLink: '', olderPostsLink: '', currentPageLink: '', currentPageNumber: ''};
 
         if (posts == null) {
             pageSelector.className = 'has-no-posts';
             pageSelector.innerHTML = pageSelectorTemplate(data);
             return;
         } else {
-            data.olderPostsLink = `/?page=${currentPage + 1}`;
-            data.newerPostsLink = `/?page=${currentPage - 1}`;
+            data.olderPostsLink = `/admin?page=${currentPage + 1}`;
+            data.newerPostsLink = `/admin?page=${currentPage - 1}`;
+            data.currentPageLink = document.documentURI;
+            data.currentPageNumber = currentPage;
         }
 
         pageSelector.innerHTML = pageSelectorTemplate(data);
         if (currentPage === 0) {
-            document.getElementById("blog-page-selector-newer-posts").className = 'has-no-posts';
+            document.getElementById("page-navigation-bar-newer-posts").className = 'has-no-posts';
         }
 
         $.ajax(
@@ -56,7 +53,7 @@ $(document).ready(function () {
                     var posts = response.body;
 
                     if (posts == null) {
-                        document.getElementById("blog-page-selector-older-posts").className = 'has-no-posts';
+                        document.getElementById("page-navigation-bar-older-posts").className = 'has-no-posts';
                     }
                 },
                 error: function (data, textStatus, jqXHR) {
@@ -67,7 +64,7 @@ $(document).ready(function () {
         );
     }
 
-    function generateIndexContent(posts) {
+    function generateAdminPage(posts) {
         generatePostsList(posts);
 
         generatePageSelector(parseInt(postsPage), posts);
@@ -85,7 +82,7 @@ $(document).ready(function () {
                 var response = JSON.parse(jqXHR.responseText);
                 var posts = response.body;
 
-                generateIndexContent(posts);
+                generateAdminPage(posts);
             },
             error: function (data, textStatus, jqXHR) {
                 var response = JSON.parse(jqXHR.responseText);

@@ -15,6 +15,8 @@ function post() {
                 var createdPost = responseBody.body;
 
                 alert("Post successfully created");
+                var postID = createdPost.id;
+                window.location.replace(`/posts/${postID}`)
             } else {
                 var errorMessage = responseBody.error;
 
@@ -23,7 +25,7 @@ function post() {
         }
     };
 
-    request.open("POST", "/posts", true);
+    request.open("POST", "/api/posts", true);
     request.setRequestHeader("Content-type", "application/json");
 
     var token = sessionStorage.getItem("token");
@@ -31,6 +33,7 @@ function post() {
         alert("Please Log In first");
         return
     }
+
     request.setRequestHeader("Authorization", "bearer " + token);
     request.send(encodedPost);
 }

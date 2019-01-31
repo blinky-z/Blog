@@ -21,7 +21,8 @@ function login() {
                 var token = responseBody.body;
 
                 sessionStorage.setItem("token", token);
-                window.location.replace("/admin")
+
+                window.location.replace("/")
             } else {
                 var errorMessage = responseBody.error;
 
