@@ -22,7 +22,7 @@ function registerAccount() {
         }
     };
 
-    request.open("POST", "user/register", true);
+    request.open("POST", "/api/user/register", true);
     request.setRequestHeader("Content-type", "application/json");
     request.send(encodedCredentials);
 }

@@ -23,11 +23,10 @@ function post() {
         }
     };
 
-    request.open("POST", "http://localhost:8080/posts", true);
+    request.open("POST", "/posts", true);
     request.setRequestHeader("Content-type", "application/json");
 
     var token = sessionStorage.getItem("token");
-
     if (token === null || token === "") {
         alert("Please Log In first");
         return

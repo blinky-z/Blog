@@ -21,7 +21,7 @@ function login() {
                 var token = responseBody.body;
 
                 sessionStorage.setItem("token", token);
-                window.location.replace("http://localhost:8080/admin")
+                window.location.replace("/admin")
             } else {
                 var errorMessage = responseBody.error;
 
@@ -32,7 +32,7 @@ function login() {
         }
     };
 
-    request.open("POST", "/user/login", true);
+    request.open("POST", "/api/user/login", true);
     request.setRequestHeader("Content-type", "application/json");
     request.send(encodedCredentials);
 }

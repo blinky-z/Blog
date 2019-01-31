@@ -19,7 +19,7 @@ $(document).ready(function () {
             } else {
                 data.postSnippet = post.content.substr(0, 160);
             }
-            data.readMoreLink = `posts/${post.id}`;
+            data.readMoreLink = `/posts/${post.id}`;
 
             var blogPostHTML = blogPostTemplate(data);
 
@@ -36,9 +36,9 @@ $(document).ready(function () {
         if (posts == null) {
             pageSelector.className = 'has-no-posts';
         } else {
-            data.olderPostsLink = `?page=${currentPage + 1}`;
+            data.olderPostsLink = `/?page=${currentPage + 1}`;
             if (currentPage !== 0) {
-                data.newerPostsLink = `?page=${currentPage - 1}`;
+                data.newerPostsLink = `/?page=${currentPage - 1}`;
             }
         }
 
@@ -60,7 +60,7 @@ $(document).ready(function () {
     }
     $.ajax(
         {
-            url: `/posts?page=${postsPage}`,
+            url: `/api/posts?page=${postsPage}`,
             type: 'GET',
             success: function (data, textStatus, jqXHR) {
                 var response = JSON.parse(jqXHR.responseText);
