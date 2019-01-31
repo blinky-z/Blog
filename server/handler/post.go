@@ -116,7 +116,7 @@ func validatePostID(r *http.Request) (id string, validateError PostErrorCode) {
 func CreatePost(w http.ResponseWriter, r *http.Request) {
 	LogInfo.Print("Got new Post CREATE job")
 
-	userRole := r.Context().Value(ctxKey).(string)
+	userRole := r.Context().Value(CtxKey).(string)
 	if userRole != "admin" {
 		LogInfo.Printf("User with role %s doesn't have permissions to CREATE post", userRole)
 		RespondWithError(w, http.StatusForbidden, NoPermissions)
@@ -161,7 +161,7 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	LogInfo.Print("Got new Post UPDATE job")
 
-	userRole := r.Context().Value(ctxKey).(string)
+	userRole := r.Context().Value(CtxKey).(string)
 	if userRole != "admin" {
 		LogInfo.Printf("User with role %s doesn't have permissions to UPDATE post", userRole)
 		RespondWithError(w, http.StatusForbidden, NoPermissions)
@@ -227,7 +227,7 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 func DeletePost(w http.ResponseWriter, r *http.Request) {
 	LogInfo.Print("Got new Post DELETE job")
 
-	userRole := r.Context().Value(ctxKey).(string)
+	userRole := r.Context().Value(CtxKey).(string)
 	if userRole != "admin" {
 		LogInfo.Printf("User with role %s doesn't have permissions to DELETE post", userRole)
 		RespondWithError(w, http.StatusForbidden, NoPermissions)

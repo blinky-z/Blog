@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+// ctxRoleKey - type that represents context key type for getting user's role
 type ctxRoleKey string
 
 var (
@@ -23,7 +24,8 @@ var (
 	// Admins - List of admins that own permissions to create, update, delete posts
 	Admins []models.User
 
-	ctxKey = ctxRoleKey("role")
+	// CtxKey - context key for getting user's role
+	CtxKey = ctxRoleKey("role")
 )
 
 const (
@@ -166,7 +168,7 @@ var JwtAuthentication = func(next http.Handler) http.Handler {
 
 		LogInfo.Printf("Fingerprint is valid. Serving next http handler")
 
-		ctx := context.WithValue(r.Context(), ctxKey, role)
+		ctx := context.WithValue(r.Context(), CtxKey, role)
 		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	})

@@ -73,6 +73,34 @@ var handleHTMLPost = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	http.ServeFile(w, r, filePath)
 })
 
+var handleHTMLAdminPage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// TODO: реализовать доступ к админке только админам
+	// Пока это невозможно, так как я должен прикреплять к запросу токен. Сейчас у меня нет html элемента для входа
+	// в админку, чтобы при нажатии по нему срабатывал скрипт.
+	//userRole := r.Context().Value(handler.CtxKey).(string)
+	//if userRole != "admin" {
+	//	logInfo.Printf("User with role %s doesn't have access to admin page", userRole)
+	//	handler.RespondWithError(w, http.StatusForbidden, handler.NoPermissions)
+	//	return
+	//}
+
+	currentURLPath := r.URL.Path
+	currentURLPath = strings.TrimSuffix(currentURLPath, ".html")
+
+	var fileName string
+	if currentURLPath == "" {
+		fileName = "admin.html"
+	} else {
+		fileName = currentURLPath + ".html"
+	}
+
+	filePath := frontFolder + fileName
+
+	logInfo.Printf("Current admin page path: %s", filePath)
+
+	http.ServeFile(w, r, filePath)
+})
+
 // RunServer - run server function. Config file name and path should be passed
 func RunServer(serverConfigPath, adminsConfigPath string) {
 	viper.SetConfigFile(serverConfigPath)
@@ -141,6 +169,8 @@ func RunServer(serverConfigPath, adminsConfigPath string) {
 	router.PathPrefix("/scripts").Handler(http.StripPrefix("/scripts", http.FileServer(http.Dir(frontFolder+"scripts"))))
 	router.PathPrefix("/images").Handler(http.StripPrefix("/images", http.FileServer(http.Dir(frontFolder+"images"))))
 	router.PathPrefix("/posts/").Handler(handleHTMLPost)
+	//router.PathPrefix("/admin").Handler(http.StripPrefix("/admin",
+	//	jwtMiddleware.Handler(handler.JwtAuthentication(handleHTMLAdminPage))))
 	router.PathPrefix("/").Handler(http.StripPrefix("/", handleHTMLFile))
 
 	logInfo.Printf("listening on address %s", Address)
