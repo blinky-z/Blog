@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /create-post
+Disallow: /edit-post
+Disallow: /register
+Disallow: /login
+Disallow: /admin
