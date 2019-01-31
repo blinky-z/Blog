@@ -1,8 +1,12 @@
 $(document).ready(function () {
     function generatePostsList(posts) {
         var postsList = document.getElementById("posts-list");
-        var blogPostTemplate = Handlebars.compile(postsList.innerHTML);
+        var blogPostTemplate = Handlebars.compile(document.getElementById("blog-post-template").innerHTML);
         postsList.innerHTML = '';
+
+        if (posts == null) {
+            return;
+        }
 
         for (var currentPostNum = 0; currentPostNum < posts.length; currentPostNum++) {
             var post = posts[currentPostNum];
@@ -23,28 +27,31 @@ $(document).ready(function () {
         }
     }
 
-    function generatePageSelector(currentPage) {
+    function generatePageSelector(currentPage, posts) {
         var pageSelector = document.getElementById("blog-page-selector");
-        var pageSelectorTemplate = Handlebars.compile(pageSelector.innerHTML);
+        var pageSelectorTemplate = Handlebars.compile(document.getElementById("blog-page-selector-template").innerHTML);
 
-        var data = {newerPostsLink: '', hasNewerPosts: '', olderPostsLink: ''};
+        var data = {newerPostsLink: '', olderPostsLink: ''};
 
-        data.olderPostsLink = `/?page=${currentPage + 1}`;
-        if (postsPage === '0') {
-            data.hasNewerPosts = 'has-no-posts';
-            data.newerPostsLink = '';
+        if (posts == null) {
+            pageSelector.className = 'has-no-posts';
         } else {
-            data.hasNewerPosts = '';
-            data.newerPostsLink = `/?page=${currentPage - 1}`;
+            data.olderPostsLink = `?page=${currentPage + 1}`;
+            if (currentPage !== 0) {
+                data.newerPostsLink = `?page=${currentPage - 1}`;
+            }
         }
 
         pageSelector.innerHTML = pageSelectorTemplate(data);
+        if (currentPage === 0) {
+            document.getElementById("blog-page-selector-newer-posts").className = 'has-no-posts';
+        }
     }
 
     function generateIndexContent(posts) {
         generatePostsList(posts);
 
-        generatePageSelector(parseInt(postsPage));
+        generatePageSelector(parseInt(postsPage), posts);
     }
 
     var postsPage = new window.URLSearchParams(window.location.search).get('page');
