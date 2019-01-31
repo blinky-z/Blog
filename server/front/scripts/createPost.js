@@ -24,7 +24,6 @@ function createPost() {
                 var response = JSON.parse(jqXHR.responseText);
                 var createdPost = response.body;
 
-                alert("Post successfully created");
                 var postID = createdPost.id;
                 window.location.replace(`/posts/${postID}`)
             },

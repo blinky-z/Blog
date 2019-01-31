@@ -23,7 +23,6 @@ function updatePost() {
                 xhr.setRequestHeader('Authorization', `bearer ${token}`);
             },
             success: function (data, textStatus, jqXHR) {
-                alert("Post successfully updated");
                 window.location.replace(`/posts/${postID}`);
             },
             error: function (data, textStatus, jqXHR) {
