@@ -29,6 +29,8 @@ var (
 	// Address - server address with port
 	Address = "localhost:" + Port
 
+	frontFolder = "front/"
+
 	dbUser     string
 	dbPassword string
 	dbName     string
@@ -61,7 +63,7 @@ var handleHTMLFile = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		fileName = currentURLPath + ".html"
 	}
 
-	filePath := "../" + fileName
+	filePath := frontFolder + fileName
 	http.ServeFile(w, r, filePath)
 })
 
@@ -129,9 +131,9 @@ func RunServer(serverConfigPath, adminsConfigPath string) {
 	router.HandleFunc("/user/register", handler.RegisterUserHandler).Methods("POST")
 	router.HandleFunc("/user/login", handler.LoginUserHandler).Methods("POST")
 
-	router.PathPrefix("/css").Handler(http.StripPrefix("/css", http.FileServer(http.Dir("../css"))))
-	router.PathPrefix("/scripts").Handler(http.StripPrefix("/scripts", http.FileServer(http.Dir("../scripts"))))
-	router.PathPrefix("/images").Handler(http.StripPrefix("/images", http.FileServer(http.Dir("../images"))))
+	router.PathPrefix("/css").Handler(http.StripPrefix("/css", http.FileServer(http.Dir(frontFolder+"css"))))
+	router.PathPrefix("/scripts").Handler(http.StripPrefix("/scripts", http.FileServer(http.Dir(frontFolder+"scripts"))))
+	router.PathPrefix("/images").Handler(http.StripPrefix("/images", http.FileServer(http.Dir(frontFolder+"images"))))
 	router.PathPrefix("/").Handler(http.StripPrefix("/", handleHTMLFile))
 
 	logInfo.Printf("listening on address %s", Address)
