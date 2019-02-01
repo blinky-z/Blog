@@ -32,12 +32,16 @@ $(document).ready(function () {
             pageSelector.className = 'has-no-posts';
             pageSelector.innerHTML = pageSelectorTemplate(data);
             return;
-        } else {
-            data.newerPostsLink = `/admin?page=${currentPage - 1}`;
-            data.olderPostsLink = `/admin?page=${currentPage + 1}`;
-            data.currentPageLink = document.documentURI;
-            data.currentPageNumber = currentPage;
         }
+
+        if (currentPage !== 0) {
+            data.newerPostsLink = `/admin?page=${currentPage - 1}`;
+        }
+        if (posts.length > 10) {
+            data.olderPostsLink = `/admin?page=${currentPage + 1}`;
+        }
+        data.currentPageLink = document.documentURI;
+        data.currentPageNumber = currentPage;
 
         pageSelector.innerHTML = pageSelectorTemplate(data);
 

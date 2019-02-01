@@ -37,12 +37,17 @@ $(document).ready(function () {
             pageSelector.className = 'has-no-posts';
             pageSelector.innerHTML = pageSelectorTemplate(data);
             return;
-        } else {
+        }
+
+        if (currentPage !== 0) {
             data.newerPostsLink = `/?page=${currentPage - 1}`;
+        }
+        if (posts.length > 10) {
             data.olderPostsLink = `/?page=${currentPage + 1}`;
         }
 
         pageSelector.innerHTML = pageSelectorTemplate(data);
+
         if (currentPage === 0) {
             document.getElementById("blog-page-selector-newer-posts").className = 'has-no-posts';
         }
