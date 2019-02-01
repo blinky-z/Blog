@@ -3,7 +3,7 @@ package handler
 import (
 	"database/sql"
 	"encoding/json"
-	"github.com/blinky-z/Blog/server/models"
+	"github.com/blinky-z/Blog/models"
 	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"

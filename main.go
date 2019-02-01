@@ -5,8 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/auth0/go-jwt-middleware"
-	"github.com/blinky-z/Blog/server/handler"
-	"github.com/blinky-z/Blog/server/models"
+	"github.com/blinky-z/Blog/handler"
+	"github.com/blinky-z/Blog/models"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
@@ -165,9 +165,9 @@ func RunServer(serverConfigPath, adminsConfigPath string) {
 	router.HandleFunc("/api/user/register", handler.RegisterUserHandler).Methods("POST")
 	router.HandleFunc("/api/user/login", handler.LoginUserHandler).Methods("POST")
 
-	router.PathPrefix("/css").Handler(http.StripPrefix("/css", http.FileServer(http.Dir(frontFolder+"css"))))
-	router.PathPrefix("/scripts").Handler(http.StripPrefix("/scripts", http.FileServer(http.Dir(frontFolder+"scripts"))))
-	router.PathPrefix("/images").Handler(http.StripPrefix("/images", http.FileServer(http.Dir(frontFolder+"images"))))
+	router.PathPrefix("/css").Handler(http.StripPrefix("/css", http.FileServer(http.Dir(frontFolder+"/css"))))
+	router.PathPrefix("/scripts").Handler(http.StripPrefix("/scripts", http.FileServer(http.Dir(frontFolder+"/scripts"))))
+	router.PathPrefix("/images").Handler(http.StripPrefix("/images", http.FileServer(http.Dir(frontFolder+"/images"))))
 	router.PathPrefix("/posts/").Handler(handleHTMLPost)
 	//router.PathPrefix("/admin").Handler(http.StripPrefix("/admin",
 	//	jwtMiddleware.Handler(handler.JwtAuthentication(handleHTMLAdminPage))))

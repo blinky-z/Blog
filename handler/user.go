@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/blinky-z/Blog/server/models"
+	"github.com/blinky-z/Blog/models"
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"

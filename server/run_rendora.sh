@@ -1,1 +1,0 @@
-rendora --config /home/twite/go/src/github.com/blinky-z/Blog/server/rendoraConfig.yaml
