@@ -38,32 +38,33 @@ const (
 	// MaxPostsPerPage - maximum posts can be displayed on one page
 	MaxPostsPerPage int = 40
 
-	defaultMaxPostsPerPage string = "10"
+	defaultPostsPerPage string = "10"
 
 	roleAdmin = "admin"
 	roleUser  = "user"
 )
 
-func validateGetPostsParams(r *http.Request) (params GetPostsRangeParams, validateError PostErrorCode) {
+// ValidateGetPostsParams - validate query params of get posts request
+func ValidateGetPostsParams(r *http.Request) (params GetPostsRangeParams, validateError PostErrorCode) {
 	validateError = NoError
 
 	var page int
 	var postsPerPage int
 	var err error
 
-	if len(r.FormValue("page")) == 0 {
-		validateError = InvalidRange
-		return
+	pageAsString := r.FormValue("page")
+	if len(pageAsString) == 0 {
+		pageAsString = "0"
 	}
 
-	if page, err = strconv.Atoi(r.FormValue("page")); err != nil || page < 0 {
+	if page, err = strconv.Atoi(pageAsString); err != nil || page < 0 {
 		validateError = InvalidRange
 		return
 	}
 
 	postsPerPageAsString := r.FormValue("posts-per-page")
 	if len(postsPerPageAsString) == 0 {
-		postsPerPageAsString = defaultMaxPostsPerPage
+		postsPerPageAsString = defaultPostsPerPage
 	}
 
 	postsPerPage, err = strconv.Atoi(postsPerPageAsString)
@@ -104,7 +105,7 @@ func validatePost(r *http.Request) (post models.Post, validateError PostErrorCod
 	return
 }
 
-func validatePostID(r *http.Request) (id string, validateError PostErrorCode) {
+func ValidatePostID(r *http.Request) (id string, validateError PostErrorCode) {
 	validateError = NoError
 	vars := mux.Vars(r)
 
@@ -176,7 +177,7 @@ func UpdatePost(env *models.Env) http.Handler {
 			return
 		}
 
-		id, validateIDError := validatePostID(r)
+		id, validateIDError := ValidatePostID(r)
 		if validateIDError != NoError {
 			env.LogInfo.Print("Can not UPDATE post: ID of Post to update is invalid")
 			RespondWithError(w, http.StatusBadRequest, validateIDError, env.LogError)
@@ -244,7 +245,7 @@ func DeletePost(env *models.Env) http.Handler {
 			return
 		}
 
-		id, validateIDError := validatePostID(r)
+		id, validateIDError := ValidatePostID(r)
 		if validateIDError != NoError {
 			env.LogInfo.Print("Can not DELETE post: post ID is invalid")
 			RespondWithError(w, http.StatusBadRequest, validateIDError, env.LogError)
@@ -278,7 +279,7 @@ func DeletePost(env *models.Env) http.Handler {
 // GetCertainPost - get single post from database http handler
 func GetCertainPost(env *models.Env) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		id, validateIDError := validatePostID(r)
+		id, validateIDError := ValidatePostID(r)
 		if validateIDError != NoError {
 			env.LogInfo.Print("Can not GET post: post ID is invalid")
 			RespondWithError(w, http.StatusBadRequest, validateIDError, env.LogError)
@@ -302,7 +303,7 @@ func GetCertainPost(env *models.Env) http.Handler {
 // GetPosts - get one page of posts from database http handler
 func GetPosts(env *models.Env) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		params, validateError := validateGetPostsParams(r)
+		params, validateError := ValidateGetPostsParams(r)
 		if validateError != NoError {
 			env.LogInfo.Print("Can not GET range of posts : get posts Query params are invalid")
 			RespondWithError(w, http.StatusBadRequest, validateError, env.LogError)

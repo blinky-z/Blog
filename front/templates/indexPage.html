@@ -1,0 +1,63 @@
+{{define "indexPage"}}
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Blog</title>
+
+        <link rel="stylesheet" href="/css/reset.css">
+        <link rel="stylesheet" href="/css/style.css">
+        <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Amatic+SC">
+        <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Dosis'>
+    </head>
+    <body>
+    <div id="container">
+        {{template "header"}}
+        <div id="content">
+            <div id="posts-list">
+                {{range .Posts}}
+                    <div class="blog-post">
+                        <h1 class="blog-post-header"><a href="{{.PostLink}}">{{.PostTitle}}</a></h1>
+                        <h3 class="blog-post-description">Written by <b>{{.PostAuthor}}</b> on
+                            <b> {{.PostCreationTime }}</b></h3>
+                        <p class="blog-post-snippet">{{.PostSnippet}}</p>
+                        <div class="blog-post-share">
+                            Share:
+                            <div class="blog-post-share-socials">
+                                <ul>
+                                    <li><a href="https://vk.com" target="_blank"><img src="/images/vk-icon.png"
+                                                                                      width="18"
+                                                                                      height="18"
+                                                                                      title="VK"></a></li>
+                                    <li><a href="https://facebook.com" target="_blank"><img
+                                                    src="/images/facebook-icon.png"
+                                                    width="18" height="18"
+                                                    title="Facebook"></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="blog-post-read-more">
+                            <a href="{{.PostLink}}">Read More</a>
+                        </div>
+                    </div>
+                {{end}}
+            </div>
+            <div id="blog-page-selector">
+                {{if .HasNewerPosts}}
+                    <div id="blog-page-selector-newer-posts"><a href="{{.NewerPostsLink}}">Newer Posts</a></div>
+                {{else}}
+                    <div id="blog-page-selector-newer-posts" class="has-no-posts"></div>
+                {{end}}
+                {{if .HasOlderPosts}}
+                    <div id="blog-page-selector-older-posts"><a href="{{.OlderPostsLink}}">Older Posts</a></div>
+                {{else}}
+                    <div id="blog-page-selector-older-posts" class="has-no-posts"></div>
+                {{end}}
+                <div id="blog-page-selector-home"><a href="/">Home</a></div>
+            </div>
+        </div>
+        {{template "footer"}}
+    </div>
+    </body>
+    </html>
+{{end}}
