@@ -5,6 +5,8 @@ import (
 	"github.com/blinky-z/Blog/models"
 )
 
+// GetCertainPost - return post as models.Post. Used for sending post back to user using http with following client-side
+// rendering and also for server-side rendering of /posts/{id} page
 func GetCertainPost(env *models.Env, id string) (models.Post, error) {
 	env.LogInfo.Print("Got new Post GET job")
 
@@ -28,6 +30,8 @@ func GetCertainPost(env *models.Env, id string) (models.Post, error) {
 	return post, nil
 }
 
+// GetPosts - return posts list as models.Post array. Used for sending posts back to user using http with following client-side
+// rendering and also for server-side rendering of index page
 func GetPosts(env *models.Env, page, postsPerPage int) ([]models.Post, error) {
 	env.LogInfo.Print("Got new Range of Posts GET job")
 

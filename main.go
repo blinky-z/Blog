@@ -48,6 +48,7 @@ var (
 	})
 )
 
+// BlogPost - represents blog post on index and /posts/{id} pages
 type BlogPost struct {
 	PostLink         string
 	PostTitle        string
@@ -57,10 +58,12 @@ type BlogPost struct {
 	PostContent      string
 }
 
+// PostsList - represents posts list on index page
 type PostsList struct {
 	Posts []BlogPost
 }
 
+// PageSelector - represents page selector on index page
 type PageSelector struct {
 	HasNewerPosts  bool
 	NewerPostsLink string
@@ -68,15 +71,18 @@ type PageSelector struct {
 	HasOlderPosts  bool
 }
 
+// IndexPage - represents index page
 type IndexPage struct {
 	PostsList
 	PageSelector
 }
 
+// PostPage - represents /posts/{id} page
 type PostPage struct {
 	BlogPost
 }
 
+// GeneratePostPage - handler for server-side rendering /posts/{id} page
 func GeneratePostPage(w http.ResponseWriter, r *http.Request) {
 	logInfo.Printf("Rendering post page")
 
@@ -125,6 +131,7 @@ func GeneratePostPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GenerateIndexPage - handler for server-side rendering index page
 func GenerateIndexPage(w http.ResponseWriter, r *http.Request) {
 	logInfo.Printf("Rendering index page")
 

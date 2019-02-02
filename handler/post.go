@@ -105,6 +105,7 @@ func validatePost(r *http.Request) (post models.Post, validateError PostErrorCod
 	return
 }
 
+// ValidatePostID - validates post id on posts/{id} endpoint
 func ValidatePostID(r *http.Request) (id string, validateError PostErrorCode) {
 	validateError = NoError
 	vars := mux.Vars(r)
