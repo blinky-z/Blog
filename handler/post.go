@@ -4,14 +4,16 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/blinky-z/Blog/models"
+	"github.com/blinky-z/Blog/postService"
 	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"
 )
 
-type getPostsRangeParams struct {
-	page         int
-	postsPerPage int
+// GetPostsRangeParams - structure for storing query params of get posts request
+type GetPostsRangeParams struct {
+	Page         int
+	PostsPerPage int
 }
 
 const (
@@ -37,9 +39,12 @@ const (
 	MaxPostsPerPage int = 40
 
 	defaultMaxPostsPerPage string = "10"
+
+	roleAdmin = "admin"
+	roleUser  = "user"
 )
 
-func validateGetPostsParams(r *http.Request) (params getPostsRangeParams, validateError PostErrorCode) {
+func validateGetPostsParams(r *http.Request) (params GetPostsRangeParams, validateError PostErrorCode) {
 	validateError = NoError
 
 	var page int
@@ -72,8 +77,8 @@ func validateGetPostsParams(r *http.Request) (params getPostsRangeParams, valida
 		return
 	}
 
-	params.page = page
-	params.postsPerPage = postsPerPage
+	params.Page = page
+	params.PostsPerPage = postsPerPage
 
 	return
 }
@@ -113,228 +118,205 @@ func validatePostID(r *http.Request) (id string, validateError PostErrorCode) {
 }
 
 // CreatePost - create post http handler
-func CreatePost(w http.ResponseWriter, r *http.Request) {
-	LogInfo.Print("Got new Post CREATE job")
+func CreatePost(env *models.Env) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		env.LogInfo.Print("Got new Post CREATE job")
 
-	userRole := r.Context().Value(CtxKey).(string)
-	if userRole != "admin" {
-		LogInfo.Printf("User with role %s doesn't have permissions to CREATE post", userRole)
-		RespondWithError(w, http.StatusForbidden, NoPermissions)
-		return
-	}
+		userRole := r.Context().Value(CtxKey).(string)
+		if userRole != roleAdmin {
+			env.LogInfo.Printf("User with role %s doesn't have permissions to CREATE post", userRole)
+			RespondWithError(w, http.StatusForbidden, NoPermissions, env.LogError)
+			return
+		}
 
-	post, validatePostError := validatePost(r)
-	if validatePostError != NoError {
-		LogInfo.Print("Can not create post: post is invalid")
-		RespondWithError(w, http.StatusBadRequest, validatePostError)
-		return
-	}
+		post, validatePostError := validatePost(r)
+		if validatePostError != NoError {
+			env.LogInfo.Print("Can not create post: post is invalid")
+			RespondWithError(w, http.StatusBadRequest, validatePostError, env.LogError)
+			return
+		}
 
-	var createdPost models.Post
+		var createdPost models.Post
 
-	LogInfo.Printf("Inserting post with Title %s into database", post.Title)
+		env.LogInfo.Printf("Inserting post with Title %s into database", post.Title)
 
-	if _, err := Db.Exec("BEGIN TRANSACTION"); err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-	if err := Db.QueryRow("insert into posts(title, content) values($1, $2) RETURNING id, title, date, content",
-		post.Title, post.Content).
-		Scan(&createdPost.ID, &createdPost.Title, &createdPost.Date, &createdPost.Content); err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-	if _, err := Db.Exec("END TRANSACTION"); err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
+		if _, err := env.Db.Exec("BEGIN TRANSACTION"); err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
+		if err := env.Db.QueryRow("insert into posts(title, content) values($1, $2) RETURNING id, title, date, content",
+			post.Title, post.Content).
+			Scan(&createdPost.ID, &createdPost.Title, &createdPost.Date, &createdPost.Content); err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
+		if _, err := env.Db.Exec("END TRANSACTION"); err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
 
-	LogInfo.Printf("Post with Title %s successfully created", createdPost.Title)
+		env.LogInfo.Printf("Post with Title %s successfully created", createdPost.Title)
 
-	RespondWithBody(w, http.StatusCreated, createdPost)
+		RespondWithBody(w, http.StatusCreated, createdPost, env.LogError)
+	})
 }
 
 // UpdatePost - update post http handler
-func UpdatePost(w http.ResponseWriter, r *http.Request) {
-	LogInfo.Print("Got new Post UPDATE job")
+func UpdatePost(env *models.Env) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		env.LogInfo.Print("Got new Post UPDATE job")
 
-	userRole := r.Context().Value(CtxKey).(string)
-	if userRole != "admin" {
-		LogInfo.Printf("User with role %s doesn't have permissions to UPDATE post", userRole)
-		RespondWithError(w, http.StatusForbidden, NoPermissions)
-		return
-	}
-
-	id, validateIDError := validatePostID(r)
-	if validateIDError != NoError {
-		LogInfo.Print("Can not UPDATE post: ID of Post to update is invalid")
-		RespondWithError(w, http.StatusBadRequest, validateIDError)
-		return
-	}
-
-	post, validatePostError := validatePost(r)
-	if validatePostError != NoError {
-		LogInfo.Printf("Can not UPDATE post with ID %s : New Post is invalid", id)
-		RespondWithError(w, http.StatusBadRequest, validatePostError)
-		return
-	}
-
-	if err := Db.QueryRow("select from posts where id = $1", id).Scan(); err != nil {
-		if err == sql.ErrNoRows {
-			LogInfo.Printf("Can not UPDATE post with ID %s : post does not exist", id)
-			RespondWithError(w, http.StatusNotFound, NoSuchPost)
+		userRole := r.Context().Value(CtxKey).(string)
+		if userRole != roleAdmin {
+			env.LogInfo.Printf("User with role %s doesn't have permissions to UPDATE post", userRole)
+			RespondWithError(w, http.StatusForbidden, NoPermissions, env.LogError)
 			return
 		}
 
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-
-	var updatedPost models.Post
-
-	LogInfo.Printf("Updating post with ID %s in database", id)
-
-	if _, err := Db.Exec("BEGIN TRANSACTION"); err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-	if err := Db.QueryRow("UPDATE posts SET title = $1, content = $2 WHERE id = $3 RETURNING id, title, date, content",
-		post.Title, post.Content, id).
-		Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Date, &updatedPost.Content); err != nil {
-		if err != nil {
-			LogError.Print(err)
-			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
+		id, validateIDError := validatePostID(r)
+		if validateIDError != NoError {
+			env.LogInfo.Print("Can not UPDATE post: ID of Post to update is invalid")
+			RespondWithError(w, http.StatusBadRequest, validateIDError, env.LogError)
 			return
 		}
-	}
-	if _, err := Db.Exec("END TRANSACTION"); err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
 
-	LogInfo.Printf("Post with ID %s successfully updated", id)
+		post, validatePostError := validatePost(r)
+		if validatePostError != NoError {
+			env.LogInfo.Printf("Can not UPDATE post with ID %s : New Post is invalid", id)
+			RespondWithError(w, http.StatusBadRequest, validatePostError, env.LogError)
+			return
+		}
 
-	RespondWithBody(w, http.StatusOK, updatedPost)
+		if err := env.Db.QueryRow("select from posts where id = $1", id).Scan(); err != nil {
+			if err == sql.ErrNoRows {
+				env.LogInfo.Printf("Can not UPDATE post with ID %s : post does not exist", id)
+				RespondWithError(w, http.StatusNotFound, NoSuchPost, env.LogError)
+				return
+			}
+
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
+
+		var updatedPost models.Post
+
+		env.LogInfo.Printf("Updating post with ID %s in database", id)
+
+		if _, err := env.Db.Exec("BEGIN TRANSACTION"); err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
+		if err := env.Db.QueryRow("UPDATE posts SET title = $1, content = $2 WHERE id = $3 RETURNING id, title, date, content",
+			post.Title, post.Content, id).
+			Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Date, &updatedPost.Content); err != nil {
+			if err != nil {
+				env.LogError.Print(err)
+				RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+				return
+			}
+		}
+		if _, err := env.Db.Exec("END TRANSACTION"); err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
+
+		env.LogInfo.Printf("Post with ID %s successfully updated", id)
+
+		RespondWithBody(w, http.StatusOK, updatedPost, env.LogError)
+	})
 }
 
 // DeletePost - delete post http handler
-func DeletePost(w http.ResponseWriter, r *http.Request) {
-	LogInfo.Print("Got new Post DELETE job")
+func DeletePost(env *models.Env) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		env.LogInfo.Print("Got new Post DELETE job")
 
-	userRole := r.Context().Value(CtxKey).(string)
-	if userRole != "admin" {
-		LogInfo.Printf("User with role %s doesn't have permissions to DELETE post", userRole)
-		RespondWithError(w, http.StatusForbidden, NoPermissions)
-		return
-	}
+		userRole := r.Context().Value(CtxKey).(string)
+		if userRole != roleAdmin {
+			env.LogInfo.Printf("User with role %s doesn't have permissions to DELETE post", userRole)
+			RespondWithError(w, http.StatusForbidden, NoPermissions, env.LogError)
+			return
+		}
 
-	id, validateIDError := validatePostID(r)
-	if validateIDError != NoError {
-		LogInfo.Print("Can not DELETE post: post ID is invalid")
-		RespondWithError(w, http.StatusBadRequest, validateIDError)
-		return
-	}
+		id, validateIDError := validatePostID(r)
+		if validateIDError != NoError {
+			env.LogInfo.Print("Can not DELETE post: post ID is invalid")
+			RespondWithError(w, http.StatusBadRequest, validateIDError, env.LogError)
+			return
+		}
 
-	LogInfo.Printf("Deleting post with ID %s from database", id)
+		env.LogInfo.Printf("Deleting post with ID %s from database", id)
 
-	if _, err := Db.Exec("BEGIN TRANSACTION"); err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-	if _, err := Db.Exec("DELETE FROM posts WHERE id = $1", id); err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-	if _, err := Db.Exec("END TRANSACTION"); err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
+		if _, err := env.Db.Exec("BEGIN TRANSACTION"); err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
+		if _, err := env.Db.Exec("DELETE FROM posts WHERE id = $1", id); err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
+		if _, err := env.Db.Exec("END TRANSACTION"); err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
 
-	LogInfo.Printf("Post with ID %s successfully deleted", id)
+		env.LogInfo.Printf("Post with ID %s successfully deleted", id)
 
-	respond(w, http.StatusOK)
+		respond(w, http.StatusOK)
+	})
 }
 
 // GetCertainPost - get single post from database http handler
-func GetCertainPost(w http.ResponseWriter, r *http.Request) {
-	LogInfo.Print("Got new Post GET job")
-
-	var post models.Post
-
-	id, validateIDError := validatePostID(r)
-	if validateIDError != NoError {
-		LogInfo.Print("Can not GET post: post ID is invalid")
-		RespondWithError(w, http.StatusBadRequest, validateIDError)
-		return
-	}
-
-	LogInfo.Printf("Getting post with ID %s from database", id)
-
-	if err := Db.QueryRow("select id, title, date, content from posts where id = $1", id).
-		Scan(&post.ID, &post.Title, &post.Date, &post.Content); err != nil {
-		if err == sql.ErrNoRows {
-			LogInfo.Printf("Can not GET post with ID %s : post does not exist", id)
-			RespondWithError(w, http.StatusNotFound, NoSuchPost)
+func GetCertainPost(env *models.Env) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, validateIDError := validatePostID(r)
+		if validateIDError != NoError {
+			env.LogInfo.Print("Can not GET post: post ID is invalid")
+			RespondWithError(w, http.StatusBadRequest, validateIDError, env.LogError)
 			return
 		}
 
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
+		post, err := postService.GetCertainPost(env, id)
+		if err != nil {
+			switch err {
+			case sql.ErrNoRows:
+				RespondWithError(w, http.StatusNotFound, NoSuchPost, env.LogError)
+			default:
+				RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			}
+		}
 
-	LogInfo.Printf("Post with ID %s succesfully arrived from database", id)
-
-	RespondWithBody(w, http.StatusOK, post)
+		RespondWithBody(w, http.StatusOK, post, env.LogError)
+	})
 }
 
 // GetPosts - get one page of posts from database http handler
-func GetPosts(w http.ResponseWriter, r *http.Request) {
-	LogInfo.Print("Got new Range of Posts GET job")
-
-	params, validateError := validateGetPostsParams(r)
-	if validateError != NoError {
-		LogInfo.Print("Can not GET range of posts : get posts Query params are invalid")
-		RespondWithError(w, http.StatusBadRequest, validateError)
-		return
-	}
-
-	page := params.page
-	postsPerPage := params.postsPerPage
-
-	var posts []models.Post
-
-	LogInfo.Printf("Getting Range of Posts with following params: (page: %d, posts per page: %d) from database",
-		page, postsPerPage)
-
-	rows, err := Db.Query("select id, title, date, content from posts order by id DESC offset $1 limit $2",
-		page*postsPerPage, postsPerPage)
-	if err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-
-	for rows.Next() {
-		var currentPost models.Post
-		if err = rows.Scan(&currentPost.ID, &currentPost.Title, &currentPost.Date, &currentPost.Content); err != nil {
-			LogError.Print(err)
-			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
+func GetPosts(env *models.Env) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		params, validateError := validateGetPostsParams(r)
+		if validateError != NoError {
+			env.LogInfo.Print("Can not GET range of posts : get posts Query params are invalid")
+			RespondWithError(w, http.StatusBadRequest, validateError, env.LogError)
 			return
 		}
-		posts = append(posts, currentPost)
-	}
 
-	LogInfo.Print("Range of Posts successfully arrived from database")
+		page := params.Page
+		postsPerPage := params.PostsPerPage
 
-	RespondWithBody(w, http.StatusOK, posts)
+		posts, err := postService.GetPosts(env, page, postsPerPage)
+		if err != nil {
+			RespondWithError(w, http.StatusBadRequest, TechnicalError, env.LogError)
+		}
+
+		RespondWithBody(w, http.StatusOK, posts, env.LogError)
+	})
 }

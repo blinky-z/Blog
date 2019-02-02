@@ -18,12 +18,6 @@ import (
 type ctxRoleKey string
 
 var (
-	// SigningKey - secret key for creating token
-	SigningKey []byte
-
-	// Admins - List of admins that own permissions to create, update, delete posts
-	Admins []models.User
-
 	// CtxKey - context key for getting user's role
 	CtxKey = ctxRoleKey("role")
 )
@@ -141,16 +135,16 @@ func checkEmail(email string) bool {
 }
 
 // JwtAuthentication - middleware for checking JWT tokens
-var JwtAuthentication = func(next http.Handler) http.Handler {
+func JwtAuthentication(env *models.Env, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		LogInfo.Printf("Checking fingerprint")
+		env.LogInfo.Printf("Checking fingerprint")
 
 		token := r.Context().Value("user").(*jwt.Token)
 
 		fingerprintCookie, err := r.Cookie("Secure-Fgp")
 		if err != nil {
-			LogInfo.Printf("Request missing fingerprint")
-			RespondWithError(w, http.StatusUnauthorized, InvalidToken)
+			env.LogInfo.Printf("Request missing fingerprint")
+			RespondWithError(w, http.StatusUnauthorized, InvalidToken, env.LogError)
 			return
 		}
 		rawFingerprint := fingerprintCookie.Value
@@ -159,14 +153,14 @@ var JwtAuthentication = func(next http.Handler) http.Handler {
 		tokenFingerprint := claims["fingerprint"].(string)
 
 		if err = bcrypt.CompareHashAndPassword([]byte(tokenFingerprint), []byte(rawFingerprint)); err != nil {
-			LogInfo.Printf("Error checking fingeprint: raw fingerprint does not match fingeprint containing in JWT Token")
-			RespondWithError(w, http.StatusUnauthorized, InvalidToken)
+			env.LogInfo.Printf("Error checking fingeprint: raw fingerprint does not match fingeprint containing in JWT Token")
+			RespondWithError(w, http.StatusUnauthorized, InvalidToken, env.LogError)
 			return
 		}
 
 		role := claims["role"].(string)
 
-		LogInfo.Printf("Fingerprint is valid. Serving next http handler")
+		env.LogInfo.Printf("Fingerprint is valid. Serving next http handler")
 
 		ctx := context.WithValue(r.Context(), CtxKey, role)
 		r = r.WithContext(ctx)
@@ -175,65 +169,67 @@ var JwtAuthentication = func(next http.Handler) http.Handler {
 }
 
 // RegisterUserHandler - checks user registration credentials and inserts login and password into database
-func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
-	LogInfo.Print("Got new user Registration job")
+func RegisterUserHandler(env *models.Env) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		env.LogInfo.Print("Got new user Registration job")
 
-	credentials, validateError := validateUserRegistrationCredentials(r)
-	if validateError != NoError {
-		LogInfo.Print("User Registration credentials are invalid")
-		RespondWithError(w, http.StatusBadRequest, validateError)
-		return
-	}
+		credentials, validateError := validateUserRegistrationCredentials(r)
+		if validateError != NoError {
+			env.LogInfo.Print("User Registration credentials are invalid")
+			RespondWithError(w, http.StatusBadRequest, validateError, env.LogError)
+			return
+		}
 
-	login := credentials.Login
-	email := credentials.Email
-	password := []byte(credentials.Password)
+		login := credentials.Login
+		email := credentials.Email
+		password := []byte(credentials.Password)
 
-	var userExists bool
-	if err := Db.QueryRow("select exists(select from users where email = $1 or login = $2)", email, login).
-		Scan(&userExists); err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
+		var userExists bool
+		if err := env.Db.QueryRow("select exists(select from users where email = $1 or login = $2)", email, login).
+			Scan(&userExists); err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
 
-	if userExists {
-		LogInfo.Printf("User with following credentials: (login: %s; email: %s) already registered", login, email)
-		RespondWithError(w, http.StatusBadRequest, AlreadyRegistered)
-		return
-	}
+		if userExists {
+			env.LogInfo.Printf("User with following credentials: (login: %s; email: %s) already registered", login, email)
+			RespondWithError(w, http.StatusBadRequest, AlreadyRegistered, env.LogError)
+			return
+		}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
-	if err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
+		hashedPassword, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
+		if err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
 
-	LogInfo.Printf("Inserting credentials of user with following credentials: (login: %s; email: %s) into database",
-		login, email)
+		env.LogInfo.Printf("Inserting credentials of user with following credentials: (login: %s; email: %s) into database",
+			login, email)
 
-	if _, err = Db.Exec("BEGIN TRANSACTION"); err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-	_, err = Db.Exec("insert into users (login, email, password) values($1, $2, $3)",
-		login, email, string(hashedPassword))
-	if err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
-	if _, err := Db.Exec("END TRANSACTION"); err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
+		if _, err = env.Db.Exec("BEGIN TRANSACTION"); err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
+		_, err = env.Db.Exec("insert into users (login, email, password) values($1, $2, $3)",
+			login, email, string(hashedPassword))
+		if err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
+		if _, err := env.Db.Exec("END TRANSACTION"); err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
 
-	LogInfo.Printf("User with following credentials: (login: %s; email: %s) successfully registered", login, email)
+		env.LogInfo.Printf("User with following credentials: (login: %s; email: %s) successfully registered", login, email)
 
-	respond(w, http.StatusOK)
+		respond(w, http.StatusOK)
+	})
 }
 
 func generateRandomContext() (string, error) {
@@ -246,8 +242,8 @@ func generateRandomContext() (string, error) {
 	return base64.URLEncoding.EncodeToString(bytes), nil
 }
 
-func isUserAdmin(login string) bool {
-	for _, currentAdmin := range Admins {
+func isUserAdmin(login string, admins []models.User) bool {
+	for _, currentAdmin := range admins {
 		if currentAdmin.Login == login {
 			return true
 		}
@@ -255,100 +251,102 @@ func isUserAdmin(login string) bool {
 	return false
 }
 
-func getToken(login, ctx string) (string, error) {
+func getToken(login, ctx string, env *models.Env) (string, error) {
 	var claims models.TokenClaims
 	claims.ExpiresAt = time.Now().Add(1 * time.Hour).Unix()
 	claims.Fingerprint = ctx
 
-	if isUserAdmin(login) {
-		claims.Role = "admin"
+	if isUserAdmin(login, env.Admins) {
+		claims.Role = roleAdmin
 	} else {
-		claims.Role = "user"
+		claims.Role = roleUser
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	tokenString, err := token.SignedString(SigningKey)
+	tokenString, err := token.SignedString(env.SigningKey)
 
 	return tokenString, err
 }
 
 // LoginUserHandler - checks user credentials and returns authorization token
-func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
-	LogInfo.Printf("Got new user Log In job")
+func LoginUserHandler(env *models.Env) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		env.LogInfo.Printf("Got new user Log In job")
 
-	credentials, validateError := validateUserLoginCredentials(r)
-	if validateError != NoError {
-		LogInfo.Print("User Log In credentials are invalid")
-		RespondWithError(w, http.StatusBadRequest, validateError)
-		return
-	}
-
-	login := credentials.Login
-	email := credentials.Email
-	password := credentials.Password
-
-	var hashedPassword string
-
-	LogInfo.Printf("Getting hashed password from database of user with following credentials: (login: %s; email: %s)",
-		login, email)
-
-	var err error
-	if len(login) == 0 {
-		err = Db.QueryRow("select login, password from users where email = $1", email).Scan(&login, &hashedPassword)
-	} else {
-		err = Db.QueryRow("select password from users where login = $1", login).Scan(&hashedPassword)
-	}
-	if err != nil {
-		if err == sql.ErrNoRows {
-			LogInfo.Printf("Can not get hashed password: user with following credentials: (login: %s; email: %s) "+
-				"does not exist", login, email)
-			RespondWithError(w, http.StatusUnauthorized, WrongCredentials)
+		credentials, validateError := validateUserLoginCredentials(r)
+		if validateError != NoError {
+			env.LogInfo.Print("User Log In credentials are invalid")
+			RespondWithError(w, http.StatusBadRequest, validateError, env.LogError)
 			return
 		}
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
 
-	if err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
-		LogInfo.Printf("Inputted password by user %s does not match hashed one", login)
-		RespondWithError(w, http.StatusUnauthorized, WrongCredentials)
-		return
-	}
+		login := credentials.Login
+		email := credentials.Email
+		password := credentials.Password
 
-	LogInfo.Printf("Generating hashed fingerprint")
+		var hashedPassword string
 
-	ctx, err := generateRandomContext()
-	if err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
+		env.LogInfo.Printf("Getting hashed password from database of user with following credentials: (login: %s; email: %s)",
+			login, email)
 
-	// set raw fingerprint in cookie
-	ctxCookie := &http.Cookie{Name: "Secure-Fgp", Value: ctx, SameSite: http.SameSiteStrictMode, HttpOnly: true,
-		Expires: time.Now().Add(time.Hour * 1), Path: "/"}
-	http.SetCookie(w, ctxCookie)
+		var err error
+		if len(login) == 0 {
+			err = env.Db.QueryRow("select login, password from users where email = $1", email).Scan(&login, &hashedPassword)
+		} else {
+			err = env.Db.QueryRow("select password from users where login = $1", login).Scan(&hashedPassword)
+		}
+		if err != nil {
+			if err == sql.ErrNoRows {
+				env.LogInfo.Printf("Can not get hashed password: user with following credentials: (login: %s; email: %s) "+
+					"does not exist", login, email)
+				RespondWithError(w, http.StatusUnauthorized, WrongCredentials, env.LogError)
+				return
+			}
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
 
-	// generate hashed fingerprint
-	hashedCtx, err := bcrypt.GenerateFromPassword([]byte(ctx), bcrypt.DefaultCost)
-	if err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
+		if err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
+			env.LogInfo.Printf("Inputted password by user %s does not match hashed one", login)
+			RespondWithError(w, http.StatusUnauthorized, WrongCredentials, env.LogError)
+			return
+		}
 
-	LogInfo.Printf("Generating JWT Token with hashed fingerprint")
+		env.LogInfo.Printf("Generating hashed fingerprint")
 
-	token, err := getToken(login, string(hashedCtx))
-	if err != nil {
-		LogError.Print(err)
-		RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-		return
-	}
+		ctx, err := generateRandomContext()
+		if err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
 
-	LogInfo.Printf("Token successfully generated. Sending token to user %s", login)
+		// set raw fingerprint in cookie
+		ctxCookie := &http.Cookie{Name: "Secure-Fgp", Value: ctx, SameSite: http.SameSiteStrictMode, HttpOnly: true,
+			Expires: time.Now().Add(time.Hour * 1), Path: "/"}
+		http.SetCookie(w, ctxCookie)
 
-	RespondWithBody(w, http.StatusAccepted, token)
+		// generate hashed fingerprint
+		hashedCtx, err := bcrypt.GenerateFromPassword([]byte(ctx), bcrypt.DefaultCost)
+		if err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
+
+		env.LogInfo.Printf("Generating JWT Token with hashed fingerprint")
+
+		token, err := getToken(login, string(hashedCtx), env)
+		if err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
+
+		env.LogInfo.Printf("Token successfully generated. Sending token to user %s", login)
+
+		RespondWithBody(w, http.StatusAccepted, token, env.LogError)
+	})
 }

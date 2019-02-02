@@ -31,22 +31,15 @@ var (
 
 	frontFolder = "front/"
 
-	dbUser     string
-	dbPassword string
-	dbName     string
-
-	// Db - database connection
-	Db *sql.DB
-
-	signingKey []byte
+	env *models.Env = &models.Env{}
 
 	jwtMiddleware = jwtmiddleware.New(jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
-			return signingKey, nil
+			return env.SigningKey, nil
 		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err string) {
 			logInfo.Printf("Error checking JWT Token: Malformed or invalid JWT Token")
-			handler.RespondWithError(w, http.StatusUnauthorized, handler.InvalidToken)
+			handler.RespondWithError(w, http.StatusUnauthorized, handler.InvalidToken, env.LogError)
 		},
 		SigningMethod: jwt.SigningMethodHS256,
 	})
@@ -109,10 +102,10 @@ func RunServer(serverConfigPath, adminsConfigPath string) {
 		logError.Fatalf("Fatal error reading server config file: %s \n", err)
 	}
 
-	dbUser = viper.GetString("db_user")
-	dbPassword = viper.GetString("db_password")
-	dbName = viper.GetString("db_name")
-	signingKey = []byte(viper.GetString("jwtSecretKey"))
+	dbUser := viper.GetString("db_user")
+	dbPassword := viper.GetString("db_password")
+	dbName := viper.GetString("db_name")
+	signingKey := []byte(viper.GetString("jwtSecretKey"))
 
 	viper.SetConfigFile(adminsConfigPath)
 	err = viper.ReadInConfig()
@@ -131,39 +124,40 @@ func RunServer(serverConfigPath, adminsConfigPath string) {
 
 	logInfo.Printf("Logging into postgres database with following credentials: %s", dbinfo)
 
-	Db, err = sql.Open("postgres", dbinfo)
+	db, err := sql.Open("postgres", dbinfo)
 	if err != nil {
 		logError.Fatalf("Error opening connection with database: %s", err)
 	}
 	defer func() {
-		err := Db.Close()
+		err := db.Close()
 		if err != nil {
 			logError.Fatalf("Error closing connection with database: %s", err)
 		}
 	}()
-	handler.Db = Db
-	handler.LogInfo = logInfo
-	handler.LogError = logError
-	handler.SigningKey = signingKey
-	handler.Admins = admins
+
+	env.LogInfo = logInfo
+	env.LogError = logError
+	env.Admins = admins
+	env.SigningKey = signingKey
+	env.Db = db
 
 	router := mux.NewRouter()
 
-	router.HandleFunc("/api/posts", handler.GetPosts).Queries("page", "{page}",
+	router.Handle("/api/posts", handler.GetPosts(env)).Queries("page", "{page}",
 		"posts-per-page", "{posts-per-page}").Methods("GET")
-	router.HandleFunc("/api/posts", handler.GetPosts).Queries("page", "{page}").Methods("GET")
-	router.HandleFunc("/api/posts/{id}", handler.GetCertainPost).Methods("GET")
+	router.Handle("/api/posts", handler.GetPosts(env)).Queries("page", "{page}").Methods("GET")
+	router.Handle("/api/posts/{id}", handler.GetCertainPost(env)).Methods("GET")
 	router.Handle("/api/posts",
-		jwtMiddleware.Handler(handler.JwtAuthentication(http.HandlerFunc(handler.CreatePost)))).Methods("POST")
+		jwtMiddleware.Handler(handler.JwtAuthentication(env, handler.CreatePost(env)))).Methods("POST")
 	router.Handle("/api/posts/{id}",
-		jwtMiddleware.Handler(handler.JwtAuthentication(http.HandlerFunc(handler.UpdatePost)))).Methods("PUT")
+		jwtMiddleware.Handler(handler.JwtAuthentication(env, handler.UpdatePost(env)))).Methods("PUT")
 	router.Handle("/api/posts/{id}",
-		jwtMiddleware.Handler(handler.JwtAuthentication(http.HandlerFunc(handler.DeletePost)))).Methods("DELETE")
+		jwtMiddleware.Handler(handler.JwtAuthentication(env, handler.DeletePost(env)))).Methods("DELETE")
 	router.HandleFunc("/api/hc", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Methods("GET")
-	router.HandleFunc("/api/user/register", handler.RegisterUserHandler).Methods("POST")
-	router.HandleFunc("/api/user/login", handler.LoginUserHandler).Methods("POST")
+	router.Handle("/api/user/register", handler.RegisterUserHandler(env)).Methods("POST")
+	router.Handle("/api/user/login", handler.LoginUserHandler(env)).Methods("POST")
 
 	router.PathPrefix("/css").Handler(http.StripPrefix("/css", http.FileServer(http.Dir(frontFolder+"/css"))))
 	router.PathPrefix("/scripts").Handler(http.StripPrefix("/scripts", http.FileServer(http.Dir(frontFolder+"/scripts"))))

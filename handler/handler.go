@@ -1,20 +1,9 @@
 package handler
 
 import (
-	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
-)
-
-var (
-	// LogInfo - log for writing+ messages
-	LogInfo *log.Logger
-	// LogError - log for writing server errors
-	LogError *log.Logger
-
-	// Db - database connection. This variable is set by main function
-	Db *sql.DB
 )
 
 const (
@@ -39,30 +28,30 @@ func respond(w http.ResponseWriter, code int) {
 	w.WriteHeader(code)
 }
 
-func respondWithJSON(w http.ResponseWriter, code int, body []byte) {
+func respondWithJSON(w http.ResponseWriter, code int, body []byte, logError *log.Logger) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 
 	_, err := w.Write(body)
 	if err != nil {
-		LogError.Print(err)
+		logError.Print(err)
 	}
 }
 
 //RespondWithError - write error in response body and respond
-func RespondWithError(w http.ResponseWriter, code int, errorCode PostErrorCode) {
+func RespondWithError(w http.ResponseWriter, code int, errorCode PostErrorCode, logError *log.Logger) {
 	var response Response
 	response.Error = errorCode
 	encodedResponse, _ := json.Marshal(response)
 
-	respondWithJSON(w, code, encodedResponse)
+	respondWithJSON(w, code, encodedResponse, logError)
 }
 
 //RespondWithBody - write body in response body and respond
-func RespondWithBody(w http.ResponseWriter, code int, payload interface{}) {
+func RespondWithBody(w http.ResponseWriter, code int, payload interface{}, logError *log.Logger) {
 	var response Response
 	response.Body = payload
 	encodedResponse, _ := json.Marshal(response)
 
-	respondWithJSON(w, code, encodedResponse)
+	respondWithJSON(w, code, encodedResponse, logError)
 }
