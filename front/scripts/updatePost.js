@@ -1,11 +1,7 @@
 function updatePost() {
     var postID = new window.URLSearchParams(window.location.search).get('id');
 
-    var title = document.getElementById("titleInput").value;
-    var content = document.getElementById("contentInput").value;
-
-    var post = {title: title, content: content};
-
+    var post = getEditorInput();
     var encodedPost = JSON.stringify(post);
 
     var token = sessionStorage.getItem("token");
@@ -25,7 +21,7 @@ function updatePost() {
             success: function (data, textStatus, jqXHR) {
                 window.location.replace(`/posts/${postID}`);
             },
-            error: function (data, textStatus, jqXHR) {
+            error: function (jqXHR, textStatus, error) {
                 var response = JSON.parse(jqXHR.responseText);
                 alert(response.error)
             }

@@ -13,6 +13,7 @@
     <script src="/scripts/autoGrow.js"></script>
     <script src="/scripts/create-edit-page.js"></script>
     <script src="/scripts/updatePost.js"></script>
+    <script src="/scripts/getEditorInput.js"></script>
 </head>
 
 <body>
@@ -48,9 +49,19 @@
                           data-min-rows="1" id="titleInput"></textarea>
             </div>
             <hr>
+            <div class="post-editor-meta-description">
+                <textarea class="meta-description-textarea" placeholder="Description" rows="2"
+                          data-min-rows="2" id="descriptionInput"></textarea>
+            </div>
+            <hr>
+            <div class="post-editor-meta-keywords">
+                <textarea class="meta-keywords-textarea" placeholder="Keywords" rows="1"
+                          data-min-rows="1" id="keywordsInput"></textarea>
+            </div>
+            <hr>
             <div class="post-editor-content">
-                <textarea class='autoExpand content-textarea' placeholder="" rows="12"
-                          data-min-rows="12" id="contentInput"></textarea>
+                <textarea class='autoExpand content-textarea' placeholder="" rows="8"
+                          data-min-rows="8" id="contentInput"></textarea>
             </div>
             <button onclick="updatePost()">Publish</button>
         </div>

@@ -56,7 +56,7 @@
 }
 
 
-.description-textarea, .keywords-textarea {
+.meta-description-textarea, .meta-keywords-textarea {
     background: white;
     color: black;
     font-family: 'Noto Serif';
@@ -69,10 +69,11 @@
     overflow: hidden;
 
     border: 0;
-    padding: 0;
     outline: none;
     width: 100%;
     resize: none;
+
+    font-size: 16px;
 
     word-break: break-word;
 }

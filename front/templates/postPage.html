@@ -3,6 +3,8 @@
     <html lang="en">
     <head>
         <meta charset="UTF-8">
+        <meta name="description" content="{{.Description}}">
+        <meta name="keywords" content="{{range $i, $keyword := .Keywords}}{{if $i}},{{end}}{{$keyword}}{{end}}">
         <title>{{.PostTitle}}</title>
 
         <link rel="stylesheet" href="/css/reset.css">

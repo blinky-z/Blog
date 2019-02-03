@@ -1,9 +1,5 @@
 function createPost() {
-    var title = document.getElementById("titleInput").value;
-    var content = document.getElementById("contentInput").value;
-
-    var post = {title: title, content: content};
-
+    var post = getEditorInput();
     var encodedPost = JSON.stringify(post);
 
     var token = sessionStorage.getItem("token");
