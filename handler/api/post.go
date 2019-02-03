@@ -1,4 +1,4 @@
-package handler
+package api
 
 import (
 	"database/sql"
@@ -23,6 +23,8 @@ const (
 	InvalidID PostErrorCode = "INVALID_ID"
 	// InvalidContent - incorrect user input - invalid content of post
 	InvalidContent PostErrorCode = "INVALID_CONTENT"
+	// InvalidMetadata - incorrect user input - invalid description or keywords
+	InvalidMetadata PostErrorCode = "INVALID_METADATA"
 	// BadRequestBody - incorrect user post - invalid json post
 	BadRequestBody PostErrorCode = "BAD_BODY"
 	// NoSuchPost - incorrect user input - requested post does not exist in database
@@ -40,8 +42,19 @@ const (
 
 	defaultPostsPerPage string = "10"
 
+	// maxDescriptionLen - max post meta description. 160 is a good value for search engines
+	maxDescriptionLen int = 160
+
+	// maxKeywordsAmount - don't overuse meta keywords. 4 is a good amount for search engines
+	maxKeywordsAmount int = 4
+	// maxKeywordLen - max len of each meta keyword
+	maxKeywordLen int = 20
+
 	roleAdmin = "admin"
 	roleUser  = "user"
+
+	dbPostsInputFields = "title, content, metadata"
+	dbPostsAllFields   = "id, title, date, content, metadata"
 )
 
 // ValidateGetPostsParams - validate query params of get posts request
@@ -92,9 +105,29 @@ func validatePost(r *http.Request) (post models.Post, validateError PostErrorCod
 		return
 	}
 
-	if len(post.Title) > MaxPostTitleLen || len(post.Title) == 0 {
+	postTitleLen := len(post.Title)
+	if postTitleLen > MaxPostTitleLen || postTitleLen == 0 {
 		validateError = InvalidTitle
 		return
+	}
+
+	postDescriptionLen := len(post.Metadata.Description)
+	if postDescriptionLen > maxDescriptionLen || postDescriptionLen == 0 {
+		validateError = InvalidMetadata
+		return
+	}
+
+	postKeywordsAmount := len(post.Metadata.Keywords)
+	if postKeywordsAmount > maxKeywordsAmount || postKeywordsAmount == 0 {
+		validateError = InvalidMetadata
+		return
+	}
+
+	for _, currentKeyword := range post.Metadata.Keywords {
+		if len(currentKeyword) > maxKeywordLen {
+			validateError = InvalidMetadata
+			return
+		}
 	}
 
 	if len(post.Content) == 0 {
@@ -110,7 +143,13 @@ func ValidatePostID(r *http.Request) (id string, validateError PostErrorCode) {
 	validateError = NoError
 	vars := mux.Vars(r)
 
-	if _, err := strconv.Atoi(vars["id"]); err != nil {
+	num, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		validateError = InvalidID
+		return
+	}
+
+	if num < 0 {
 		validateError = InvalidID
 		return
 	}
@@ -133,7 +172,7 @@ func CreatePost(env *models.Env) http.Handler {
 
 		post, validatePostError := validatePost(r)
 		if validatePostError != NoError {
-			env.LogInfo.Print("Can not create post: post is invalid")
+			env.LogInfo.Print("Can't create post: post is invalid")
 			RespondWithError(w, http.StatusBadRequest, validatePostError, env.LogError)
 			return
 		}
@@ -142,14 +181,22 @@ func CreatePost(env *models.Env) http.Handler {
 
 		env.LogInfo.Printf("Inserting post with Title %s into database", post.Title)
 
+		encodedMetadata, err := json.Marshal(post.Metadata)
+		if err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusBadRequest, InvalidMetadata, env.LogError)
+			return
+		}
+
 		if _, err := env.Db.Exec("BEGIN TRANSACTION"); err != nil {
 			env.LogError.Print(err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
 			return
 		}
-		if err := env.Db.QueryRow("insert into posts(title, content) values($1, $2) RETURNING id, title, date, content",
-			post.Title, post.Content).
-			Scan(&createdPost.ID, &createdPost.Title, &createdPost.Date, &createdPost.Content); err != nil {
+		var metadataAsJSONString string
+		if err := env.Db.QueryRow("insert into posts("+dbPostsInputFields+") values($1, $2, $3) "+
+			"RETURNING "+dbPostsAllFields, post.Title, post.Content, encodedMetadata).
+			Scan(&createdPost.ID, &createdPost.Title, &createdPost.Date, &createdPost.Content, &metadataAsJSONString); err != nil {
 			env.LogError.Print(err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
 			return
@@ -161,6 +208,8 @@ func CreatePost(env *models.Env) http.Handler {
 		}
 
 		env.LogInfo.Printf("Post with Title %s successfully created", createdPost.Title)
+
+		_ = json.Unmarshal([]byte(metadataAsJSONString), &createdPost.Metadata)
 
 		RespondWithBody(w, http.StatusCreated, createdPost, env.LogError)
 	})
@@ -184,7 +233,6 @@ func UpdatePost(env *models.Env) http.Handler {
 			RespondWithError(w, http.StatusBadRequest, validateIDError, env.LogError)
 			return
 		}
-
 		post, validatePostError := validatePost(r)
 		if validatePostError != NoError {
 			env.LogInfo.Printf("Can not UPDATE post with ID %s : New Post is invalid", id)
@@ -208,14 +256,22 @@ func UpdatePost(env *models.Env) http.Handler {
 
 		env.LogInfo.Printf("Updating post with ID %s in database", id)
 
+		encodedMetadata, err := json.Marshal(post.Metadata)
+		if err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusBadRequest, InvalidMetadata, env.LogError)
+			return
+		}
+
 		if _, err := env.Db.Exec("BEGIN TRANSACTION"); err != nil {
 			env.LogError.Print(err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
 			return
 		}
-		if err := env.Db.QueryRow("UPDATE posts SET title = $1, content = $2 WHERE id = $3 RETURNING id, title, date, content",
-			post.Title, post.Content, id).
-			Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Date, &updatedPost.Content); err != nil {
+		var metadataAsJSONString string
+		if err := env.Db.QueryRow("UPDATE posts SET ("+dbPostsInputFields+") = ($1, $2, $3) "+
+			"WHERE id = $4 RETURNING "+dbPostsAllFields, post.Title, post.Content, encodedMetadata, id).
+			Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Date, &updatedPost.Content, &metadataAsJSONString); err != nil {
 			if err != nil {
 				env.LogError.Print(err)
 				RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
@@ -229,6 +285,8 @@ func UpdatePost(env *models.Env) http.Handler {
 		}
 
 		env.LogInfo.Printf("Post with ID %s successfully updated", id)
+
+		_ = json.Unmarshal([]byte(metadataAsJSONString), &updatedPost.Metadata)
 
 		RespondWithBody(w, http.StatusOK, updatedPost, env.LogError)
 	})
@@ -292,8 +350,10 @@ func GetCertainPost(env *models.Env) http.Handler {
 			switch err {
 			case sql.ErrNoRows:
 				RespondWithError(w, http.StatusNotFound, NoSuchPost, env.LogError)
+				return
 			default:
 				RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+				return
 			}
 		}
 
@@ -317,6 +377,7 @@ func GetPosts(env *models.Env) http.Handler {
 		posts, err := postService.GetPosts(env, page, postsPerPage)
 		if err != nil {
 			RespondWithError(w, http.StatusBadRequest, TechnicalError, env.LogError)
+			return
 		}
 
 		RespondWithBody(w, http.StatusOK, posts, env.LogError)
