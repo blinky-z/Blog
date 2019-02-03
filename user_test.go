@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/blinky-z/Blog/handler"
+	"github.com/blinky-z/Blog/handler/api"
 	"github.com/blinky-z/Blog/models"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
@@ -18,7 +18,7 @@ import (
 )
 
 type ResponseLogin struct {
-	Error handler.PostErrorCode
+	Error api.PostErrorCode
 	Body  string
 }
 
@@ -75,7 +75,7 @@ func TestRegisterUserWithExistingEmail(t *testing.T) {
 
 	r := registerUser(username, loginEmail, loginPassword)
 
-	checkErrorResponse(r, http.StatusBadRequest, handler.AlreadyRegistered)
+	checkErrorResponse(r, http.StatusBadRequest, api.AlreadyRegistered)
 }
 
 func TestRegisterUserWithExistingLogin(t *testing.T) {
@@ -83,66 +83,66 @@ func TestRegisterUserWithExistingLogin(t *testing.T) {
 
 	r := registerUser(loginUsername, email, loginPassword)
 
-	checkErrorResponse(r, http.StatusBadRequest, handler.AlreadyRegistered)
+	checkErrorResponse(r, http.StatusBadRequest, api.AlreadyRegistered)
 }
 
 func TestRegisterUserWithTooLongUsername(t *testing.T) {
-	username := strings.Repeat("a", handler.MaxLoginLen*2)
+	username := strings.Repeat("a", api.MaxLoginLen*2)
 
 	r := registerUser(username, loginEmail, loginPassword)
 
-	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidLogin)
+	checkErrorResponse(r, http.StatusBadRequest, api.InvalidLogin)
 }
 
 func TestRegisterUserWithTooShortUsername(t *testing.T) {
-	username := strings.Repeat("a", handler.MinLoginLen/2)
+	username := strings.Repeat("a", api.MinLoginLen/2)
 
 	r := registerUser(username, loginEmail, loginPassword)
 
-	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidLogin)
+	checkErrorResponse(r, http.StatusBadRequest, api.InvalidLogin)
 }
 
 func TestRegisterUserWithTooLongPassword(t *testing.T) {
-	password := strings.Repeat("A", handler.MaxPwdLen*2)
+	password := strings.Repeat("A", api.MaxPwdLen*2)
 
 	r := registerUser(loginUsername, loginEmail, password)
 
-	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidPassword)
+	checkErrorResponse(r, http.StatusBadRequest, api.InvalidPassword)
 }
 
 func TestRegisterUserWithTooShortPassword(t *testing.T) {
-	password := strings.Repeat("A", handler.MinPwdLen/2)
+	password := strings.Repeat("A", api.MinPwdLen/2)
 
 	r := registerUser(loginUsername, loginEmail, password)
 
-	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidPassword)
+	checkErrorResponse(r, http.StatusBadRequest, api.InvalidPassword)
 }
 
 func TestRegisterUserWhereLoginIdenticalPassword(t *testing.T) {
-	password := strings.Repeat("A", handler.MinPwdLen)
+	password := strings.Repeat("A", api.MinPwdLen)
 	login := password
 
 	r := registerUser(login, loginEmail, password)
 
-	checkErrorResponse(r, http.StatusBadRequest, handler.InvalidPassword)
+	checkErrorResponse(r, http.StatusBadRequest, api.InvalidPassword)
 }
 
 func TestRegisterUserWithEmptyUsername(t *testing.T) {
 	r := registerUser("", loginEmail, loginPassword)
 
-	checkErrorResponse(r, http.StatusBadRequest, handler.IncompleteCredentials)
+	checkErrorResponse(r, http.StatusBadRequest, api.IncompleteCredentials)
 }
 
 func TestRegisterUserWithEmptyEmail(t *testing.T) {
 	r := registerUser(loginUsername, "", loginPassword)
 
-	checkErrorResponse(r, http.StatusBadRequest, handler.IncompleteCredentials)
+	checkErrorResponse(r, http.StatusBadRequest, api.IncompleteCredentials)
 }
 
 func TestRegisterUserWithEmptyPassword(t *testing.T) {
 	r := registerUser(loginUsername, loginEmail, "")
 
-	checkErrorResponse(r, http.StatusBadRequest, handler.IncompleteCredentials)
+	checkErrorResponse(r, http.StatusBadRequest, api.IncompleteCredentials)
 }
 
 func TestRegisterUserWithBadRequestBody(t *testing.T) {
@@ -159,7 +159,7 @@ func TestRegisterUserWithBadRequestBody(t *testing.T) {
 		panic(fmt.Sprintf("Can not send request. Error: %s", err))
 	}
 
-	checkErrorResponse(r, http.StatusBadRequest, handler.BadRequestBody)
+	checkErrorResponse(r, http.StatusBadRequest, api.BadRequestBody)
 }
 
 // Log In tests
@@ -173,31 +173,31 @@ func TestLoginUserWithUsername(t *testing.T) {
 func TestLoginUserWithWrongUsername(t *testing.T) {
 	r := loginUser("abcdef", "", loginPassword)
 
-	checkErrorResponse(r, http.StatusUnauthorized, handler.WrongCredentials)
+	checkErrorResponse(r, http.StatusUnauthorized, api.WrongCredentials)
 }
 
 func TestLoginUserWithWrongEmail(t *testing.T) {
 	r := loginUser("", "abcd@gmail.com", loginPassword)
 
-	checkErrorResponse(r, http.StatusUnauthorized, handler.WrongCredentials)
+	checkErrorResponse(r, http.StatusUnauthorized, api.WrongCredentials)
 }
 
 func TestLoginUserWithWrongPassword(t *testing.T) {
 	r := loginUser("", loginEmail, "abcde1fZ")
 
-	checkErrorResponse(r, http.StatusUnauthorized, handler.WrongCredentials)
+	checkErrorResponse(r, http.StatusUnauthorized, api.WrongCredentials)
 }
 
 func TestLoginUserWithEmptyLoginAndEmail(t *testing.T) {
 	r := loginUser("", "", "abcd")
 
-	checkErrorResponse(r, http.StatusBadRequest, handler.IncompleteCredentials)
+	checkErrorResponse(r, http.StatusBadRequest, api.IncompleteCredentials)
 }
 
 func TestLoginUserWithEmptyPassword(t *testing.T) {
 	r := loginUser("", loginEmail, "")
 
-	checkErrorResponse(r, http.StatusBadRequest, handler.IncompleteCredentials)
+	checkErrorResponse(r, http.StatusBadRequest, api.IncompleteCredentials)
 }
 
 // Test JWT tokens
@@ -234,7 +234,7 @@ func TestCreatePostWithNotAdminUser(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusForbidden, handler.NoPermissions)
+	checkErrorResponse(r, http.StatusForbidden, api.NoPermissions)
 }
 
 func TestUpdatePostWithNotAdminUser(t *testing.T) {
@@ -250,7 +250,7 @@ func TestUpdatePostWithNotAdminUser(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusForbidden, handler.NoPermissions)
+	checkErrorResponse(r, http.StatusForbidden, api.NoPermissions)
 }
 
 func TestDeletePostWithNotAdminUser(t *testing.T) {
@@ -262,7 +262,7 @@ func TestDeletePostWithNotAdminUser(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusForbidden, handler.NoPermissions)
+	checkErrorResponse(r, http.StatusForbidden, api.NoPermissions)
 }
 
 func TestCreateInvalidJwtToken(t *testing.T) {
@@ -294,7 +294,7 @@ func TestCreatePostWithInvalidJwtToken(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusUnauthorized, handler.InvalidToken)
+	checkErrorResponse(r, http.StatusUnauthorized, api.InvalidToken)
 }
 
 func TestUpdatePostWithInvalidJwtToken(t *testing.T) {
@@ -310,7 +310,7 @@ func TestUpdatePostWithInvalidJwtToken(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusUnauthorized, handler.InvalidToken)
+	checkErrorResponse(r, http.StatusUnauthorized, api.InvalidToken)
 }
 
 func TestDeletePostWithInvalidJwtToken(t *testing.T) {
@@ -322,7 +322,7 @@ func TestDeletePostWithInvalidJwtToken(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusUnauthorized, handler.InvalidToken)
+	checkErrorResponse(r, http.StatusUnauthorized, api.InvalidToken)
 }
 
 func TestCreatePostWithMissingToken(t *testing.T) {
@@ -340,7 +340,7 @@ func TestCreatePostWithMissingToken(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusUnauthorized, handler.InvalidToken)
+	checkErrorResponse(r, http.StatusUnauthorized, api.InvalidToken)
 }
 
 func TestCreatePostWithMissingAuthorizationHeader(t *testing.T) {
@@ -368,5 +368,5 @@ func TestCreatePostWithMissingAuthorizationHeader(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusUnauthorized, handler.InvalidToken)
+	checkErrorResponse(r, http.StatusUnauthorized, api.InvalidToken)
 }

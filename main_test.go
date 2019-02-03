@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/blinky-z/Blog/handler"
+	"github.com/blinky-z/Blog/handler/api"
 	"github.com/blinky-z/Blog/models"
 	"github.com/google/uuid"
 	"io"
@@ -27,7 +27,7 @@ var (
 )
 
 type ResponseWithError struct {
-	Error handler.PostErrorCode
+	Error api.PostErrorCode
 	Body  interface{}
 }
 
@@ -53,7 +53,7 @@ func setNewAuthData(r *http.Response) {
 // API for matching status code and error message of responses
 
 // checkErrorResponse - check response that should return error message in response body
-func checkErrorResponse(r *http.Response, expectedStatusCode int, expectedErrorMessage handler.PostErrorCode) {
+func checkErrorResponse(r *http.Response, expectedStatusCode int, expectedErrorMessage api.PostErrorCode) {
 	var response ResponseWithError
 	decodeErrorResponse(r.Body, &response)
 	if r.StatusCode != expectedStatusCode || response.Error != expectedErrorMessage {
