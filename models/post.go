@@ -8,8 +8,9 @@ import "time"
 // 'Date' - post creation time
 // 'Content' - post content
 type Post struct {
-	ID      string    `json:"id"`
-	Title   string    `json:"title"`
-	Date    time.Time `json:"date"`
-	Content string    `json:"content"`
+	ID       string    `json:"id"`
+	Title    string    `json:"title"`
+	Date     time.Time `json:"date"`
+	Content  string    `json:"content"`
+	Metadata MetaData  `json:"metadata"`
 }
