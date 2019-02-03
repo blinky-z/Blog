@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"github.com/blinky-z/Blog/handler/api"
 	"github.com/blinky-z/Blog/models"
@@ -12,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -102,8 +102,7 @@ func decodeErrorResponse(responseBody io.ReadCloser, resp *ResponseWithError) {
 // Tests
 
 func init() {
-	testConfigFile := flag.String("config", "configs/testConfig.json", "server config file for tests")
-	flag.Parse()
+	testConfigFile := filepath.FromSlash("configs/testConfig.json")
 
 	loginUsername = uuid.New().String()
 	loginEmail = loginUsername + "@gmail.com"
@@ -112,17 +111,22 @@ func init() {
 	admins := &AdminsConfig{Admins: []models.User{{Login: loginUsername}}}
 	encodedAdmins := encodeMessage(admins)
 
-	testAdminsFile := "configs/testAdmins.json"
+	testAdminsFile := filepath.FromSlash("configs/testAdmins.json")
 	adminsFile, err := os.OpenFile(testAdminsFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
 	if err != nil {
 		panic("Error opening admins config file")
 	}
+	defer func() {
+		if err := adminsFile.Close(); err != nil {
+			panic("Error closing admins config file")
+		}
+	}()
 	_, err = adminsFile.Write(encodedAdmins)
 	if err != nil {
 		panic("Error writing admin to tests admins config file")
 	}
 
-	go RunServer(*testConfigFile, testAdminsFile)
+	go RunServer(testConfigFile, testAdminsFile)
 	for {
 		resp, err := http.Get("http://" + Address + "/api/hc")
 		if err == nil && resp.StatusCode == http.StatusOK {

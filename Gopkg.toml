@@ -67,3 +67,8 @@
   name = "gotest.tools"
   version = "2.3.0"
   source = "https://github.com/gotestyourself/gotest.tools"
+
+[[constraint]]
+  name = "github.com/spf13/pflag"
+  version = "1.0.3"
+  source = "github.com/spf13/pflag"

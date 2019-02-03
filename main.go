@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"flag"
 	"fmt"
 	"github.com/auth0/go-jwt-middleware"
 	"github.com/blinky-z/Blog/handler/api"
@@ -11,10 +10,12 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 )
 
 var (
@@ -121,9 +122,11 @@ func RunServer(serverConfigPath, adminsConfigPath string) {
 }
 
 func main() {
-	userConfigPath := flag.String("config", "configs/config.json", "config file path")
-	adminsListConfigPath := flag.String("admins", "configs/admins.json", "admins list")
+	userConfigPath := pflag.StringP("config", "c",
+		filepath.FromSlash("configs/config.json"), "config file path")
+	adminsListConfigPath := pflag.StringP("admins", "a",
+		filepath.FromSlash("configs/admins.json"), "admins list")
 
-	flag.Parse()
+	pflag.Parse()
 	RunServer(*userConfigPath, *adminsListConfigPath)
 }

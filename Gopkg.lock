@@ -161,6 +161,7 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "298182f68c66c05229eb03ac171abe6e309ee79a"
+  source = "github.com/spf13/pflag"
   version = "v1.0.3"
 
 [[projects]]
@@ -238,6 +239,7 @@
     "github.com/google/uuid",
     "github.com/gorilla/mux",
     "github.com/lib/pq",
+    "github.com/spf13/pflag",
     "github.com/spf13/viper",
     "golang.org/x/crypto/bcrypt",
     "gotest.tools/assert",
