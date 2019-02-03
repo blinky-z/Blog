@@ -24,7 +24,8 @@ type Response struct {
 // PostErrorCode - represents error occurred while handling request
 type PostErrorCode string
 
-func respond(w http.ResponseWriter, code int) {
+// Respond - respond without body
+func Respond(w http.ResponseWriter, code int) {
 	w.WriteHeader(code)
 }
 

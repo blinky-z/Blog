@@ -228,7 +228,7 @@ func RegisterUserHandler(env *models.Env) http.Handler {
 
 		env.LogInfo.Printf("User with following credentials: (login: %s; email: %s) successfully registered", login, email)
 
-		respond(w, http.StatusOK)
+		Respond(w, http.StatusOK)
 	})
 }
 

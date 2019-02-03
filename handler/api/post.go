@@ -331,7 +331,7 @@ func DeletePost(env *models.Env) http.Handler {
 
 		env.LogInfo.Printf("Post with ID %s successfully deleted", id)
 
-		respond(w, http.StatusOK)
+		Respond(w, http.StatusOK)
 	})
 }
 
