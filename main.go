@@ -70,7 +70,7 @@ func RunServer(serverConfigPath, adminsConfigPath string) {
 		logError.Fatalf("Fatal error unmarshaling admins list: %s", err)
 	}
 
-	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s",
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
 		dbUser, dbPassword, dbName)
 
 	logInfo.Printf("Logging into postgres database with following credentials: %s", dbinfo)
