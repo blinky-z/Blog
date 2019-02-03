@@ -60,7 +60,7 @@ func GeneratePostPage(env *models.Env) http.Handler {
 		id, validateIDError := api.ValidatePostID(r)
 		if validateIDError != api.NoError {
 			env.LogInfo.Print("Can not GET post: post ID is invalid")
-			api.RespondWithError(w, http.StatusBadRequest, validateIDError, env.LogError)
+			api.RespondWithError(w, http.StatusNotFound, validateIDError, env.LogError)
 			return
 		}
 
@@ -113,7 +113,7 @@ func GenerateIndexPage(env *models.Env) http.Handler {
 		params, validateError := api.ValidateGetPostsParams(r)
 		if validateError != api.NoError {
 			env.LogInfo.Print("Can not GET range of posts : get posts Query params are invalid")
-			api.RespondWithError(w, http.StatusBadRequest, validateError, env.LogError)
+			api.RespondWithError(w, http.StatusNotFound, validateError, env.LogError)
 			return
 		}
 		page := params.Page
