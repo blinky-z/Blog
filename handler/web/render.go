@@ -60,7 +60,7 @@ func GeneratePostPage(env *models.Env) http.Handler {
 		id, validateIDError := api.ValidatePostID(r)
 		if validateIDError != api.NoError {
 			env.LogInfo.Print("Can not GET post: post ID is invalid")
-			api.RespondWithError(w, http.StatusNotFound, validateIDError, env.LogError)
+			api.Respond(w, http.StatusNotFound)
 			return
 		}
 
@@ -69,10 +69,10 @@ func GeneratePostPage(env *models.Env) http.Handler {
 		if err != nil {
 			switch err {
 			case sql.ErrNoRows:
-				api.RespondWithError(w, http.StatusNotFound, api.NoSuchPost, env.LogError)
+				api.Respond(w, http.StatusNotFound)
 				return
 			default:
-				api.RespondWithError(w, http.StatusInternalServerError, api.TechnicalError, env.LogError)
+				api.Respond(w, http.StatusInternalServerError)
 				return
 			}
 		}
@@ -82,7 +82,7 @@ func GeneratePostPage(env *models.Env) http.Handler {
 			template.ParseFiles(templatesFolder+"header.html", templatesFolder+"postPage.html", templatesFolder+"footer.html")
 		if err != nil {
 			env.LogError.Print(err)
-			api.RespondWithError(w, http.StatusInternalServerError, api.TechnicalError, env.LogError)
+			api.Respond(w, http.StatusInternalServerError)
 			return
 		}
 
@@ -100,7 +100,7 @@ func GeneratePostPage(env *models.Env) http.Handler {
 		env.LogInfo.Printf("Executing post template")
 		if err := postTemplate.ExecuteTemplate(w, "postPage", data); err != nil {
 			env.LogError.Print(err)
-			api.RespondWithError(w, http.StatusInternalServerError, api.TechnicalError, env.LogError)
+			api.Respond(w, http.StatusInternalServerError)
 		}
 	})
 }
@@ -113,7 +113,7 @@ func GenerateIndexPage(env *models.Env) http.Handler {
 		params, validateError := api.ValidateGetPostsParams(r)
 		if validateError != api.NoError {
 			env.LogInfo.Print("Can not GET range of posts : get posts Query params are invalid")
-			api.RespondWithError(w, http.StatusNotFound, validateError, env.LogError)
+			api.Respond(w, http.StatusNotFound)
 			return
 		}
 		page := params.Page
@@ -122,7 +122,12 @@ func GenerateIndexPage(env *models.Env) http.Handler {
 		posts, err := postService.GetPosts(env, page, 11)
 		if err != nil {
 			env.LogError.Print(err)
-			api.RespondWithError(w, http.StatusInternalServerError, api.TechnicalError, env.LogError)
+			api.Respond(w, http.StatusInternalServerError)
+			return
+		}
+
+		if len(posts) == 0 {
+			api.Respond(w, http.StatusNotFound)
 			return
 		}
 
@@ -131,7 +136,7 @@ func GenerateIndexPage(env *models.Env) http.Handler {
 			template.ParseFiles(templatesFolder+"header.html", templatesFolder+"indexPage.html", templatesFolder+"footer.html")
 		if err != nil {
 			env.LogError.Print(err)
-			api.RespondWithError(w, http.StatusInternalServerError, api.TechnicalError, env.LogError)
+			api.Respond(w, http.StatusInternalServerError)
 			return
 		}
 
@@ -179,7 +184,7 @@ func GenerateIndexPage(env *models.Env) http.Handler {
 		env.LogInfo.Printf("Executing index template")
 		if err := indexTemplate.ExecuteTemplate(w, "indexPage", data); err != nil {
 			env.LogError.Print(err)
-			api.RespondWithError(w, http.StatusInternalServerError, api.TechnicalError, env.LogError)
+			api.Respond(w, http.StatusInternalServerError)
 		}
 	})
 }
