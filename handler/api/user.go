@@ -162,7 +162,7 @@ func JwtAuthentication(env *models.Env, next http.Handler) http.Handler {
 
 		env.LogInfo.Printf("Fingerprint is valid. Serving next http handler")
 
-		ctx := context.WithValue(r.Context(), CtxKey, role)
+		ctx := context.WithValue(r.Context(), CtxKey, models.UserRole(role))
 		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	})

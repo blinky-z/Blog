@@ -50,8 +50,8 @@ const (
 	// maxKeywordLen - max len of each meta keyword
 	maxKeywordLen int = 20
 
-	roleAdmin = "admin"
-	roleUser  = "user"
+	roleAdmin = models.UserRole("admin")
+	roleUser  = models.UserRole("user")
 
 	dbPostsInputFields = "title, content, metadata"
 	dbPostsAllFields   = "id, title, date, content, metadata"
@@ -163,7 +163,7 @@ func CreatePost(env *models.Env) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		env.LogInfo.Print("Got new Post CREATE job")
 
-		userRole := r.Context().Value(CtxKey).(string)
+		userRole := r.Context().Value(CtxKey).(models.UserRole)
 		if userRole != roleAdmin {
 			env.LogInfo.Printf("User with role %s doesn't have permissions to CREATE post", userRole)
 			RespondWithError(w, http.StatusForbidden, NoPermissions, env.LogError)
@@ -220,7 +220,7 @@ func UpdatePost(env *models.Env) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		env.LogInfo.Print("Got new Post UPDATE job")
 
-		userRole := r.Context().Value(CtxKey).(string)
+		userRole := r.Context().Value(CtxKey).(models.UserRole)
 		if userRole != roleAdmin {
 			env.LogInfo.Printf("User with role %s doesn't have permissions to UPDATE post", userRole)
 			RespondWithError(w, http.StatusForbidden, NoPermissions, env.LogError)
@@ -297,7 +297,7 @@ func DeletePost(env *models.Env) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		env.LogInfo.Print("Got new Post DELETE job")
 
-		userRole := r.Context().Value(CtxKey).(string)
+		userRole := r.Context().Value(CtxKey).(models.UserRole)
 		if userRole != roleAdmin {
 			env.LogInfo.Printf("User with role %s doesn't have permissions to DELETE post", userRole)
 			RespondWithError(w, http.StatusForbidden, NoPermissions, env.LogError)
