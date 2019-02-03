@@ -65,7 +65,7 @@ func RunServer(serverConfigPath, adminsConfigPath string) {
 		logError.Fatalf("Fatal error reading admins list config file: %s", err)
 	}
 
-	var admins []models.User
+	var admins []models.Admin
 	err = viper.UnmarshalKey("admins", &admins)
 	if err != nil {
 		logError.Fatalf("Fatal error unmarshaling admins list: %s", err)

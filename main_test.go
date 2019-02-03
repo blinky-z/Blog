@@ -32,7 +32,7 @@ type ResponseWithError struct {
 }
 
 type AdminsConfig struct {
-	Admins []models.User `json:"admins"`
+	Admins []models.Admin `json:"admins"`
 }
 
 // helpful API for testing
@@ -108,7 +108,7 @@ func init() {
 	loginEmail = loginUsername + "@gmail.com"
 	loginPassword = uuid.New().String() + "Z"
 
-	admins := &AdminsConfig{Admins: []models.User{{Login: loginUsername}}}
+	admins := &AdminsConfig{Admins: []models.Admin{{Login: loginUsername}}}
 	encodedAdmins := encodeMessage(admins)
 
 	testAdminsFile := filepath.FromSlash("configs/testAdmins.json")
