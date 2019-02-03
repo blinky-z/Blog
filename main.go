@@ -19,8 +19,8 @@ import (
 )
 
 var (
-	logInfoOutfile, _  = os.OpenFile("./logs/Info.log", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
-	logErrorOutfile, _ = os.OpenFile("./logs/Error.log", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	logInfoOutfile, _  = os.OpenFile(filepath.FromSlash("./logs/Info.log"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	logErrorOutfile, _ = os.OpenFile(filepath.FromSlash("./logs/Error.log"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 
 	logInfo  = log.New(logInfoOutfile, "INFO: ", log.Ltime)
 	logError = log.New(logErrorOutfile, "ERROR: ", log.Ltime)
@@ -30,7 +30,7 @@ var (
 	// Address - server address with port
 	Address = "localhost:" + Port
 
-	frontFolder = "front/"
+	frontFolder = filepath.FromSlash("front/")
 
 	env *models.Env = &models.Env{}
 

@@ -8,11 +8,12 @@ import (
 	"github.com/blinky-z/Blog/postService"
 	"html/template"
 	"net/http"
+	"path/filepath"
 	"strings"
 )
 
-const (
-	templatesFolder = "front/templates/"
+var (
+	templatesFolder = filepath.FromSlash("front/templates/")
 )
 
 // BlogPost - represents blog post on index and /posts/{id} pages
@@ -190,11 +191,8 @@ func HandleHTMLFile(env *models.Env, frontFolder string) http.Handler {
 		currentURLPath := r.URL.Path
 		currentURLPath = strings.TrimSuffix(currentURLPath, ".html")
 
-		env.LogInfo.Printf("Current url: %s", currentURLPath)
-
 		var fileName string
 		if currentURLPath == "" || currentURLPath == "index" {
-			env.LogInfo.Printf("Current url: %s. So generate index page", currentURLPath)
 			GenerateIndexPage(env).ServeHTTP(w, r)
 			return
 		}
