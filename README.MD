@@ -105,7 +105,7 @@ $ go build
 $ ./ server --config=/path/to/my/ServerConfig.json --admins=/path/to/my/adminsConfig.json
 ```
 
-ИЛИ
+или
 
 ```
 $ go build
