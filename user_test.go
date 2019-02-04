@@ -36,7 +36,7 @@ func decodeAuthResponse(responseBody io.ReadCloser, response *ResponseLogin) {
 // -----------
 // Helpful API for sending authorization http requests
 
-func sendAuthUserMessage(address string, credentials models.User) *http.Response {
+func sendAuthUserMessage(address string, credentials interface{}) *http.Response {
 	encodedCredentials := encodeMessage(credentials)
 
 	request, err := http.NewRequest("POST", address, bytes.NewReader(encodedCredentials))
@@ -54,13 +54,13 @@ func sendAuthUserMessage(address string, credentials models.User) *http.Response
 }
 
 func registerUser(login, email, password string) *http.Response {
-	registrationCredentials := models.User{Login: login, Email: email, Password: password}
+	registrationCredentials := models.RegistrationRequest{Username: login, Email: email, Password: password}
 
 	return sendAuthUserMessage("http://"+Address+"/api/user/register", registrationCredentials)
 }
 
 func loginUser(login, email, password string) *http.Response {
-	loginCredentials := models.User{Login: login, Email: email, Password: password}
+	loginCredentials := models.LoginRequest{Username: login, Email: email, Password: password}
 
 	return sendAuthUserMessage("http://"+Address+"/api/user/login", loginCredentials)
 }
