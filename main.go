@@ -32,18 +32,9 @@ var (
 
 	frontFolder = filepath.FromSlash("front/")
 
-	env *models.Env = &models.Env{}
+	env = &models.Env{}
 
-	jwtMiddleware = jwtmiddleware.New(jwtmiddleware.Options{
-		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
-			return env.SigningKey, nil
-		},
-		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err string) {
-			logInfo.Printf("Error checking JWT Token: Malformed or invalid JWT Token")
-			api.RespondWithError(w, http.StatusUnauthorized, api.InvalidToken, env.LogError)
-		},
-		SigningMethod: jwt.SigningMethodHS256,
-	})
+	jwtMiddleware *jwtmiddleware.JWTMiddleware
 )
 
 // RunServer - run server function. Config file name and path should be passed
@@ -87,29 +78,44 @@ func RunServer(serverConfigPath, adminsConfigPath string) {
 		}
 	}()
 
+	jwtMiddleware = jwtmiddleware.New(jwtmiddleware.Options{
+		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+			return signingKey, nil
+		},
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err string) {
+			logInfo.Printf("Error checking JWT Token: Malformed or invalid JWT Token")
+			api.RespondWithError(w, http.StatusUnauthorized, api.InvalidToken, env.LogError)
+		},
+		SigningMethod: jwt.SigningMethodHS256,
+	})
+
 	env.LogInfo = logInfo
 	env.LogError = logError
-	env.Admins = admins
-	env.SigningKey = signingKey
 	env.Db = db
+
+	api.UserEnv.Env = env
+	api.UserEnv.SigningKey = signingKey
+	api.UserEnv.Admins = admins
+
+	api.PostEnv.Env = env
 
 	router := mux.NewRouter()
 
-	router.Handle("/api/posts", api.GetPosts(env)).Queries("page", "{page}",
+	router.Handle("/api/posts", api.PostEnv.GetPosts()).Queries("page", "{page}",
 		"posts-per-page", "{posts-per-page}").Methods("GET")
-	router.Handle("/api/posts", api.GetPosts(env)).Queries("page", "{page}").Methods("GET")
-	router.Handle("/api/posts/{id}", api.GetCertainPost(env)).Methods("GET")
+	router.Handle("/api/posts", api.PostEnv.GetPosts()).Queries("page", "{page}").Methods("GET")
+	router.Handle("/api/posts/{id}", api.PostEnv.GetCertainPost()).Methods("GET")
 	router.Handle("/api/posts",
-		jwtMiddleware.Handler(api.JwtAuthentication(env, api.CreatePost(env)))).Methods("POST")
+		jwtMiddleware.Handler(api.JwtAuthentication(env, api.PostEnv.CreatePost()))).Methods("POST")
 	router.Handle("/api/posts/{id}",
-		jwtMiddleware.Handler(api.JwtAuthentication(env, api.UpdatePost(env)))).Methods("PUT")
+		jwtMiddleware.Handler(api.JwtAuthentication(env, api.PostEnv.UpdatePost()))).Methods("PUT")
 	router.Handle("/api/posts/{id}",
-		jwtMiddleware.Handler(api.JwtAuthentication(env, api.DeletePost(env)))).Methods("DELETE")
+		jwtMiddleware.Handler(api.JwtAuthentication(env, api.PostEnv.DeletePost()))).Methods("DELETE")
 	router.HandleFunc("/api/hc", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Methods("GET")
-	router.Handle("/api/user/register", api.RegisterUserHandler(env)).Methods("POST")
-	router.Handle("/api/user/login", api.LoginUserHandler(env)).Methods("POST")
+	router.Handle("/api/user/register", api.UserEnv.RegisterUserHandler()).Methods("POST")
+	router.Handle("/api/user/login", api.UserEnv.LoginUserHandler()).Methods("POST")
 
 	router.PathPrefix("/css").Handler(http.StripPrefix("/css", http.FileServer(http.Dir(frontFolder+"/css"))))
 	router.PathPrefix("/scripts").Handler(http.StripPrefix("/scripts", http.FileServer(http.Dir(frontFolder+"/scripts"))))

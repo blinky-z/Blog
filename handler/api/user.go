@@ -22,6 +22,18 @@ var (
 	CtxKey = ctxRoleKey("role")
 )
 
+// UserAPI - environment container struct to declare all auth handlers as methods
+type UserAPI struct {
+	Env        *models.Env
+	SigningKey []byte
+	Admins     []models.Admin
+}
+
+var (
+	// UserEnv - instance of UserAPI struct. Initialized by main
+	UserEnv UserAPI
+)
+
 const (
 	// WrongCredentials - user inputs wrong password or login or email while logging in
 	WrongCredentials PostErrorCode = "WRONG_CREDENTIALS"
@@ -52,7 +64,12 @@ const (
 	MaxEmailLen int = 255
 )
 
-func validateUserRegistrationCredentials(r *http.Request) (credentials models.User, validateError PostErrorCode) {
+func checkEmail(email string) bool {
+	return strings.Count(email, "@") == 1 && len(email) <= MaxEmailLen && email[0] != '@' && email[len(email)-1] != '@'
+}
+
+func validateUserRegistrationCredentials(r *http.Request) (
+	credentials models.RegistrationRequest, validateError PostErrorCode) {
 	validateError = NoError
 
 	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
@@ -62,11 +79,11 @@ func validateUserRegistrationCredentials(r *http.Request) (credentials models.Us
 		}
 	}
 
-	login := credentials.Login
+	username := credentials.Username
 	password := credentials.Password
 	email := credentials.Email
 
-	if len(login) == 0 || len(email) == 0 || len(password) == 0 {
+	if len(username) == 0 || len(email) == 0 || len(password) == 0 {
 		validateError = IncompleteCredentials
 		return
 	}
@@ -76,14 +93,14 @@ func validateUserRegistrationCredentials(r *http.Request) (credentials models.Us
 		return
 	}
 
-	loginLen := len(login)
+	loginLen := len(username)
 	if loginLen < MinLoginLen || loginLen > MaxLoginLen {
 		validateError = InvalidLogin
 		return
 	}
 
 	passwordLen := len(password)
-	if passwordLen < MinPwdLen || passwordLen > MaxPwdLen || password == login {
+	if passwordLen < MinPwdLen || passwordLen > MaxPwdLen || password == username {
 		validateError = InvalidPassword
 		return
 	}
@@ -91,7 +108,7 @@ func validateUserRegistrationCredentials(r *http.Request) (credentials models.Us
 	return
 }
 
-func validateUserLoginCredentials(r *http.Request) (credentials models.User, validateError PostErrorCode) {
+func validateUserLoginCredentials(r *http.Request) (credentials models.LoginRequest, validateError PostErrorCode) {
 	validateError = NoError
 
 	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
@@ -101,24 +118,26 @@ func validateUserLoginCredentials(r *http.Request) (credentials models.User, val
 		}
 	}
 
-	login := credentials.Login
-	password := credentials.Password
+	username := credentials.Username
 	email := credentials.Email
+	password := credentials.Password
 
-	if (len(login) == 0 && len(email) == 0) || len(password) == 0 {
+	if (len(username) == 0 && len(email) == 0) || len(password) == 0 {
 		validateError = IncompleteCredentials
 		return
 	}
 
-	if len(email) != 0 && !checkEmail(email) {
-		validateError = InvalidEmail
-		return
-	}
-
-	loginLen := len(login)
-	if loginLen != 0 && (loginLen < MinLoginLen || loginLen > MaxLoginLen) {
-		validateError = InvalidLogin
-		return
+	if len(email) != 0 {
+		if !checkEmail(email) {
+			validateError = InvalidEmail
+			return
+		}
+	} else {
+		loginLen := len(username)
+		if loginLen != 0 && (loginLen < MinLoginLen || loginLen > MaxLoginLen) {
+			validateError = InvalidLogin
+			return
+		}
 	}
 
 	passwordLen := len(password)
@@ -128,10 +147,6 @@ func validateUserLoginCredentials(r *http.Request) (credentials models.User, val
 	}
 
 	return
-}
-
-func checkEmail(email string) bool {
-	return strings.Count(email, "@") == 1 && len(email) <= MaxEmailLen && email[0] != '@' && email[len(email)-1] != '@'
 }
 
 // JwtAuthentication - middleware for checking JWT tokens
@@ -153,7 +168,8 @@ func JwtAuthentication(env *models.Env, next http.Handler) http.Handler {
 		tokenFingerprint := claims["fingerprint"].(string)
 
 		if err = bcrypt.CompareHashAndPassword([]byte(tokenFingerprint), []byte(rawFingerprint)); err != nil {
-			env.LogInfo.Printf("Error checking fingeprint: raw fingerprint does not match fingeprint containing in JWT Token")
+			env.LogInfo.Printf(
+				"Error checking fingeprint: raw fingerprint does not match fingeprint containing in JWT Token")
 			RespondWithError(w, http.StatusUnauthorized, InvalidToken, env.LogError)
 			return
 		}
@@ -169,7 +185,8 @@ func JwtAuthentication(env *models.Env, next http.Handler) http.Handler {
 }
 
 // RegisterUserHandler - checks user registration credentials and inserts login and password into database
-func RegisterUserHandler(env *models.Env) http.Handler {
+func (api *UserAPI) RegisterUserHandler() http.Handler {
+	env := api.Env
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		env.LogInfo.Print("Got new user Registration job")
 
@@ -180,12 +197,13 @@ func RegisterUserHandler(env *models.Env) http.Handler {
 			return
 		}
 
-		login := credentials.Login
+		username := credentials.Username
 		email := credentials.Email
 		password := []byte(credentials.Password)
 
 		var userExists bool
-		if err := env.Db.QueryRow("select exists(select from users where email = $1 or login = $2)", email, login).
+		if err := env.Db.QueryRow(
+			"select exists(select from users where email = $1 or username = $2)", email, username).
 			Scan(&userExists); err != nil {
 			env.LogError.Print(err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
@@ -193,7 +211,8 @@ func RegisterUserHandler(env *models.Env) http.Handler {
 		}
 
 		if userExists {
-			env.LogInfo.Printf("User with following credentials: (login: %s; email: %s) already registered", login, email)
+			env.LogInfo.Printf("User with following credentials: (username: %s; email: %s) already registered",
+				username, email)
 			RespondWithError(w, http.StatusBadRequest, AlreadyRegistered, env.LogError)
 			return
 		}
@@ -205,16 +224,16 @@ func RegisterUserHandler(env *models.Env) http.Handler {
 			return
 		}
 
-		env.LogInfo.Printf("Inserting credentials of user with following credentials: (login: %s; email: %s) into database",
-			login, email)
+		env.LogInfo.Printf("Inserting credentials of user with following credentials: (username: %s; email: %s) "+
+			"into database", username, email)
 
 		if _, err = env.Db.Exec("BEGIN TRANSACTION"); err != nil {
 			env.LogError.Print(err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
 			return
 		}
-		_, err = env.Db.Exec("insert into users (login, email, password) values($1, $2, $3)",
-			login, email, string(hashedPassword))
+		_, err = env.Db.Exec("insert into users (username, email, password) values($1, $2, $3)",
+			username, email, string(hashedPassword))
 		if err != nil {
 			env.LogError.Print(err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
@@ -226,7 +245,8 @@ func RegisterUserHandler(env *models.Env) http.Handler {
 			return
 		}
 
-		env.LogInfo.Printf("User with following credentials: (login: %s; email: %s) successfully registered", login, email)
+		env.LogInfo.Printf("User with following credentials: (username: %s; email: %s) successfully registered",
+			username, email)
 
 		Respond(w, http.StatusOK)
 	})
@@ -251,12 +271,12 @@ func isUserAdmin(login string, admins []models.Admin) bool {
 	return false
 }
 
-func getToken(login, ctx string, env *models.Env) (string, error) {
+func createToken(login, fgp string, api *UserAPI) (string, error) {
 	var claims models.TokenClaims
 	claims.ExpiresAt = time.Now().Add(1 * time.Hour).Unix()
-	claims.Fingerprint = ctx
+	claims.Fingerprint = fgp
 
-	if isUserAdmin(login, env.Admins) {
+	if isUserAdmin(login, api.Admins) {
 		claims.Role = roleAdmin
 	} else {
 		claims.Role = roleUser
@@ -264,13 +284,14 @@ func getToken(login, ctx string, env *models.Env) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	tokenString, err := token.SignedString(env.SigningKey)
+	tokenString, err := token.SignedString(api.SigningKey)
 
 	return tokenString, err
 }
 
 // LoginUserHandler - checks user credentials and returns authorization token
-func LoginUserHandler(env *models.Env) http.Handler {
+func (api *UserAPI) LoginUserHandler() http.Handler {
+	env := api.Env
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		env.LogInfo.Printf("Got new user Log In job")
 
@@ -281,25 +302,27 @@ func LoginUserHandler(env *models.Env) http.Handler {
 			return
 		}
 
-		login := credentials.Login
+		username := credentials.Username
 		email := credentials.Email
 		password := credentials.Password
 
 		var hashedPassword string
 
-		env.LogInfo.Printf("Getting hashed password from database of user with following credentials: (login: %s; email: %s)",
-			login, email)
+		env.LogInfo.Printf("Getting hashed password from database of user with following credentials: "+
+			"(username: %s; email: %s)", username, email)
 
 		var err error
-		if len(login) == 0 {
-			err = env.Db.QueryRow("select login, password from users where email = $1", email).Scan(&login, &hashedPassword)
+		if len(username) == 0 {
+			err = env.Db.QueryRow("select username, password from users where email = $1", email).
+				Scan(&username, &hashedPassword)
 		} else {
-			err = env.Db.QueryRow("select password from users where login = $1", login).Scan(&hashedPassword)
+			err = env.Db.QueryRow("select password from users where username = $1", username).
+				Scan(&hashedPassword)
 		}
 		if err != nil {
 			if err == sql.ErrNoRows {
-				env.LogInfo.Printf("Can not get hashed password: user with following credentials: (login: %s; email: %s) "+
-					"does not exist", login, email)
+				env.LogInfo.Printf("Can not get hashed password: user with following credentials: "+
+					"(username: %s; email: %s) "+"does not exist", username, email)
 				RespondWithError(w, http.StatusUnauthorized, WrongCredentials, env.LogError)
 				return
 			}
@@ -309,7 +332,7 @@ func LoginUserHandler(env *models.Env) http.Handler {
 		}
 
 		if err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
-			env.LogInfo.Printf("Inputted password by user %s does not match hashed one", login)
+			env.LogInfo.Printf("Inputted password by user %s does not match hashed one", username)
 			RespondWithError(w, http.StatusUnauthorized, WrongCredentials, env.LogError)
 			return
 		}
@@ -329,7 +352,7 @@ func LoginUserHandler(env *models.Env) http.Handler {
 		http.SetCookie(w, ctxCookie)
 
 		// generate hashed fingerprint
-		hashedCtx, err := bcrypt.GenerateFromPassword([]byte(ctx), bcrypt.DefaultCost)
+		hashedFgp, err := bcrypt.GenerateFromPassword([]byte(ctx), bcrypt.DefaultCost)
 		if err != nil {
 			env.LogError.Print(err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
@@ -338,14 +361,14 @@ func LoginUserHandler(env *models.Env) http.Handler {
 
 		env.LogInfo.Printf("Generating JWT Token with hashed fingerprint")
 
-		token, err := getToken(login, string(hashedCtx), env)
+		token, err := createToken(username, string(hashedFgp), api)
 		if err != nil {
 			env.LogError.Print(err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
 			return
 		}
 
-		env.LogInfo.Printf("Token successfully generated. Sending token to user %s", login)
+		env.LogInfo.Printf("Token successfully generated. Sending token to user %s", username)
 
 		RespondWithBody(w, http.StatusAccepted, token, env.LogError)
 	})

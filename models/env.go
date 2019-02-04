@@ -13,8 +13,4 @@ type Env struct {
 	LogError *log.Logger
 	// Db - database connection pointer
 	Db *sql.DB
-	// SigningKey - secret key for creating token
-	SigningKey []byte
-	// Admins - List of admins that own permissions to create, update, delete posts
-	Admins []Admin
 }

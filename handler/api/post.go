@@ -16,6 +16,16 @@ type GetPostsRangeParams struct {
 	PostsPerPage int
 }
 
+// PostAPI - environment container struct to declare all post handlers as methods
+type PostAPI struct {
+	Env *models.Env
+}
+
+var (
+	// PostEnv - instance of PostAPI struct. Initialized by main
+	PostEnv PostAPI
+)
+
 const (
 	// InvalidTitle - incorrect user input - invalid title of post
 	InvalidTitle PostErrorCode = "INVALID_TITLE"
@@ -159,7 +169,8 @@ func ValidatePostID(r *http.Request) (id string, validateError PostErrorCode) {
 }
 
 // CreatePost - create post http handler
-func CreatePost(env *models.Env) http.Handler {
+func (api *PostAPI) CreatePost() http.Handler {
+	env := api.Env
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		env.LogInfo.Print("Got new Post CREATE job")
 
@@ -216,7 +227,8 @@ func CreatePost(env *models.Env) http.Handler {
 }
 
 // UpdatePost - update post http handler
-func UpdatePost(env *models.Env) http.Handler {
+func (api *PostAPI) UpdatePost() http.Handler {
+	env := api.Env
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		env.LogInfo.Print("Got new Post UPDATE job")
 
@@ -293,7 +305,8 @@ func UpdatePost(env *models.Env) http.Handler {
 }
 
 // DeletePost - delete post http handler
-func DeletePost(env *models.Env) http.Handler {
+func (api *PostAPI) DeletePost() http.Handler {
+	env := api.Env
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		env.LogInfo.Print("Got new Post DELETE job")
 
@@ -336,7 +349,8 @@ func DeletePost(env *models.Env) http.Handler {
 }
 
 // GetCertainPost - get single post from database http handler
-func GetCertainPost(env *models.Env) http.Handler {
+func (api *PostAPI) GetCertainPost() http.Handler {
+	env := api.Env
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, validateIDError := ValidatePostID(r)
 		if validateIDError != NoError {
@@ -362,7 +376,8 @@ func GetCertainPost(env *models.Env) http.Handler {
 }
 
 // GetPosts - get one page of posts from database http handler
-func GetPosts(env *models.Env) http.Handler {
+func (api *PostAPI) GetPosts() http.Handler {
+	env := api.Env
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		params, validateError := ValidateGetPostsParams(r)
 		if validateError != NoError {
