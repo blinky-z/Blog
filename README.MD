@@ -52,10 +52,10 @@ go test -v
 
 ### Описание конфигов сервера
 Для того, чтобы запустить сервер с своими конфигами, необходимо передать следующие аргументы в программу:
- - *config* - местоположение конфига сервера. 
+ - *--config* (shorthand: *-c*) - местоположение конфига сервера. 
 
 **Стандартный путь:** *configs/config.json*
- - *admins* - местоположение конфига с списком админов, которые имеют такие привилегии, как создавать, 
+ - *admins* (shorthand: *-a*) - местоположение конфига с списком админов, которые имеют такие привилегии, как создавать, 
  изменять и удалять посты.
 
 **Стандартный путь:** *configs/admins.json*
@@ -102,5 +102,12 @@ go test -v
 ### Запуск сервера с указанием собественных конфигов
 ```
 $ go build
-$ ./ server -config=/path/to/my/ServerConfig.json -admins=/path/to/my/adminsConfig.json
+$ ./ server --config=/path/to/my/ServerConfig.json --admins=/path/to/my/adminsConfig.json
+```
+
+ИЛИ
+
+```
+$ go build
+$ ./ server -c=/path/to/my/ServerConfig.json -a=/path/to/my/adminsConfig.json
 ```
