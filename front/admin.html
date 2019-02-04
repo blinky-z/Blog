@@ -42,7 +42,7 @@
     <!--Content-->
     <div id="content">
         <div class="admin-posts">
-            <button onclick="window.location='/create-post'">Create new post</button>
+            <button onclick="window.location='/admin/create-post'">Create new post</button>
             <div id="page-navigation-bar">
                 <div id="page-navigation-bar-template">
                     <div id="page-navigation-bar-newer-posts"><a href="{{newerPostsLink}}">Newer Posts</a></div>
@@ -56,14 +56,14 @@
                     <div class="admin-post">
                         <div class="admin-post-panel">
                             <div class="post-info">
-                                <div class="admin-post-title"><a href="/edit-post?id={{postID}}">{{postHeader}}</a>
+                                <div class="admin-post-title"><a href="/admin/edit-post?id={{postID}}">{{postHeader}}</a>
                                 </div>
                                 <div class="admin-post-time-creation"><a
-                                            href="/edit-post?id={{postID}}">{{postCreationTime}}</a>
+                                            href="/admin/edit-post?id={{postID}}">{{postCreationTime}}</a>
                                 </div>
                                 <div class="manage-post-navbar">
                                     <ul>
-                                        <li><a href="/edit-post?id={{postID}}">edit</a></li>
+                                        <li><a href="/admin/edit-post?id={{postID}}">edit</a></li>
                                         <li><a href="javascript:deletePost({{postID}})">delete</a></li>
                                         <li><a href="{{postLink}}">view</a></li>
                                     </ul>

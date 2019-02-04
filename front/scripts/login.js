@@ -7,7 +7,7 @@ function login() {
     if (login.includes('@')) {
         credentials = {email: login, password: password}
     } else {
-        credentials = {login: login, password: password}
+        credentials = {username: login, password: password}
     }
 
     var encodedCredentials = JSON.stringify(credentials);

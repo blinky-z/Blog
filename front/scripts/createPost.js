@@ -23,7 +23,7 @@ function createPost() {
                 var postID = createdPost.id;
                 window.location.replace(`/posts/${postID}`)
             },
-            error: function (data, textStatus, jqXHR) {
+            error: function (jqXHR) {
                 var response = JSON.parse(jqXHR.responseText);
                 alert(response.error)
             }

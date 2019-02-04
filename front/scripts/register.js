@@ -1,9 +1,9 @@
 function registerAccount() {
     var email = document.getElementById("emailInput").value;
-    var login = document.getElementById("loginInput").value;
+    var username = document.getElementById("loginInput").value;
     var password = document.getElementById("passwordInput").value;
 
-    var credentials = {email: email, login: login, password: password};
+    var credentials = {email: email, username: username, password: password};
 
     var encodedCredentials = JSON.stringify(credentials);
     console.log(encodedCredentials);
