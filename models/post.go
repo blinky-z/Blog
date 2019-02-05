@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// Post - represents row in table contains posts
+// Post - represents blog post
 // 'ID' - post id. Id is filed automatically by database
 // 'Title' - title of post
 // 'Date' - post creation time
@@ -13,4 +13,9 @@ type Post struct {
 	Date     time.Time `json:"date"`
 	Content  string    `json:"content"`
 	Metadata MetaData  `json:"metadata"`
+}
+
+type CertainPostResponse struct {
+	Post
+	Comments []Comment
 }
