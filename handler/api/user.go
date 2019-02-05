@@ -149,8 +149,9 @@ func validateUserLoginCredentials(r *http.Request) (credentials models.LoginRequ
 	return
 }
 
-// JwtAuthentication - middleware for checking JWT tokens
-func JwtAuthentication(env *models.Env, next http.Handler) http.Handler {
+// FgpAuthentication - middleware for checking user's fingerprint
+// This handler should be served only after JWT token checking
+func FgpAuthentication(env *models.Env, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		env.LogInfo.Printf("Checking fingerprint")
 
