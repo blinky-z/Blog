@@ -99,6 +99,8 @@ func RunServer(serverConfigPath, adminsConfigPath string) {
 
 	api.PostEnv.Env = env
 
+	api.CommentEnv.Env = env
+
 	router := mux.NewRouter()
 
 	router.Handle("/api/posts", api.PostEnv.GetPosts()).Queries("page", "{page}",
@@ -106,16 +108,21 @@ func RunServer(serverConfigPath, adminsConfigPath string) {
 	router.Handle("/api/posts", api.PostEnv.GetPosts()).Queries("page", "{page}").Methods("GET")
 	router.Handle("/api/posts/{id}", api.PostEnv.GetCertainPost()).Methods("GET")
 	router.Handle("/api/posts",
-		jwtMiddleware.Handler(api.JwtAuthentication(env, api.PostEnv.CreatePost()))).Methods("POST")
+		jwtMiddleware.Handler(api.FgpAuthentication(env, api.PostEnv.CreatePost()))).Methods("POST")
 	router.Handle("/api/posts/{id}",
-		jwtMiddleware.Handler(api.JwtAuthentication(env, api.PostEnv.UpdatePost()))).Methods("PUT")
+		jwtMiddleware.Handler(api.FgpAuthentication(env, api.PostEnv.UpdatePost()))).Methods("PUT")
 	router.Handle("/api/posts/{id}",
-		jwtMiddleware.Handler(api.JwtAuthentication(env, api.PostEnv.DeletePost()))).Methods("DELETE")
+		jwtMiddleware.Handler(api.FgpAuthentication(env, api.PostEnv.DeletePost()))).Methods("DELETE")
 	router.HandleFunc("/api/hc", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Methods("GET")
 	router.Handle("/api/user/register", api.UserEnv.RegisterUserHandler()).Methods("POST")
 	router.Handle("/api/user/login", api.UserEnv.LoginUserHandler()).Methods("POST")
+	router.Handle("/api/comments", api.CommentEnv.CreateComment()).Methods("POST")
+	router.Handle("/api/comments/{id}",
+		jwtMiddleware.Handler(api.FgpAuthentication(env, api.CommentEnv.UpdateComment()))).Methods("PUT")
+	router.Handle("/api/comments/{id}",
+		jwtMiddleware.Handler(api.FgpAuthentication(env, api.CommentEnv.DeleteComment()))).Methods("DELETE")
 
 	router.PathPrefix("/css").Handler(http.StripPrefix("/css", http.FileServer(http.Dir(frontFolder+"/css"))))
 	router.PathPrefix("/scripts").Handler(http.StripPrefix("/scripts", http.FileServer(http.Dir(frontFolder+"/scripts"))))
