@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"github.com/blinky-z/Blog/commentService"
 	"github.com/blinky-z/Blog/models"
 	"github.com/blinky-z/Blog/postService"
 	"github.com/gorilla/mux"
@@ -62,9 +63,6 @@ const (
 
 	roleAdmin = models.UserRole("admin")
 	roleUser  = models.UserRole("user")
-
-	dbPostsInputFields = "title, content, metadata"
-	dbPostsAllFields   = "id, title, date, content, metadata"
 )
 
 // ValidateGetPostsParams - validate query params of get posts request
@@ -148,12 +146,16 @@ func validatePost(r *http.Request) (post models.Post, validateError PostErrorCod
 	return
 }
 
-// ValidatePostID - validates post id on posts/{id} endpoint
-func ValidatePostID(r *http.Request) (id string, validateError PostErrorCode) {
+// ValidateID - validates id of post or comment
+func ValidateID(idAsString string) (validateError PostErrorCode) {
 	validateError = NoError
-	vars := mux.Vars(r)
 
-	num, err := strconv.Atoi(vars["id"])
+	if len(idAsString) == 0 {
+		validateError = InvalidID
+		return
+	}
+
+	num, err := strconv.Atoi(idAsString)
 	if err != nil {
 		validateError = InvalidID
 		return
@@ -164,7 +166,6 @@ func ValidatePostID(r *http.Request) (id string, validateError PostErrorCode) {
 		return
 	}
 
-	id = vars["id"]
 	return
 }
 
@@ -205,8 +206,8 @@ func (api *PostAPI) CreatePost() http.Handler {
 			return
 		}
 		var metadataAsJSONString string
-		if err := env.Db.QueryRow("insert into posts("+dbPostsInputFields+") values($1, $2, $3) "+
-			"RETURNING "+dbPostsAllFields, post.Title, post.Content, encodedMetadata).
+		if err := env.Db.QueryRow("insert into posts("+postService.DbPostInputFields+") values($1, $2, $3) "+
+			"RETURNING "+postService.DbPostFields, post.Title, post.Content, encodedMetadata).
 			Scan(&createdPost.ID, &createdPost.Title, &createdPost.Date, &createdPost.Content, &metadataAsJSONString); err != nil {
 			env.LogError.Print(err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
@@ -239,12 +240,14 @@ func (api *PostAPI) UpdatePost() http.Handler {
 			return
 		}
 
-		id, validateIDError := ValidatePostID(r)
+		id := mux.Vars(r)["id"]
+		validateIDError := ValidateID(id)
 		if validateIDError != NoError {
 			env.LogInfo.Print("Can not UPDATE post: ID of Post to update is invalid")
 			RespondWithError(w, http.StatusBadRequest, validateIDError, env.LogError)
 			return
 		}
+
 		post, validatePostError := validatePost(r)
 		if validatePostError != NoError {
 			env.LogInfo.Printf("Can not UPDATE post with ID %s : New Post is invalid", id)
@@ -264,9 +267,9 @@ func (api *PostAPI) UpdatePost() http.Handler {
 			return
 		}
 
-		var updatedPost models.Post
-
 		env.LogInfo.Printf("Updating post with ID %s in database", id)
+
+		var updatedPost models.Post
 
 		encodedMetadata, err := json.Marshal(post.Metadata)
 		if err != nil {
@@ -281,14 +284,12 @@ func (api *PostAPI) UpdatePost() http.Handler {
 			return
 		}
 		var metadataAsJSONString string
-		if err := env.Db.QueryRow("UPDATE posts SET ("+dbPostsInputFields+") = ($1, $2, $3) "+
-			"WHERE id = $4 RETURNING "+dbPostsAllFields, post.Title, post.Content, encodedMetadata, id).
+		if err := env.Db.QueryRow("UPDATE posts SET ("+postService.DbPostInputFields+") = ($1, $2, $3) "+
+			"WHERE id = $4 RETURNING "+postService.DbPostFields, post.Title, post.Content, encodedMetadata, id).
 			Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Date, &updatedPost.Content, &metadataAsJSONString); err != nil {
-			if err != nil {
-				env.LogError.Print(err)
-				RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
-				return
-			}
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
 		}
 		if _, err := env.Db.Exec("END TRANSACTION"); err != nil {
 			env.LogError.Print(err)
@@ -317,7 +318,8 @@ func (api *PostAPI) DeletePost() http.Handler {
 			return
 		}
 
-		id, validateIDError := ValidatePostID(r)
+		id := mux.Vars(r)["id"]
+		validateIDError := ValidateID(id)
 		if validateIDError != NoError {
 			env.LogInfo.Print("Can not DELETE post: post ID is invalid")
 			RespondWithError(w, http.StatusBadRequest, validateIDError, env.LogError)
@@ -352,7 +354,8 @@ func (api *PostAPI) DeletePost() http.Handler {
 func (api *PostAPI) GetCertainPost() http.Handler {
 	env := api.Env
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		id, validateIDError := ValidatePostID(r)
+		id := mux.Vars(r)["id"]
+		validateIDError := ValidateID(id)
 		if validateIDError != NoError {
 			env.LogInfo.Print("Can not GET post: post ID is invalid")
 			RespondWithError(w, http.StatusBadRequest, validateIDError, env.LogError)
@@ -371,7 +374,31 @@ func (api *PostAPI) GetCertainPost() http.Handler {
 			}
 		}
 
-		RespondWithBody(w, http.StatusOK, post, env.LogError)
+		comments, err := commentService.GetComments(env, id)
+		if err != nil {
+			switch err {
+			default:
+				RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+				return
+			}
+		}
+
+		var certainPostResponse models.CertainPostResponse
+		certainPostResponse.Post = post
+		certainPostResponse.Comments = comments
+
+		encodedComments, _ := json.Marshal(comments)
+		var comments1 []models.Comment
+		json.Unmarshal(encodedComments, &comments1)
+
+		if len(comments) != 0 {
+			comment1 := comments[0]
+			encodedComment1, _ := json.Marshal(comment1)
+			var comment2 models.Comment
+			json.Unmarshal(encodedComment1, &comment2)
+		}
+
+		RespondWithBody(w, http.StatusOK, certainPostResponse, env.LogError)
 	})
 }
 
