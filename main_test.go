@@ -50,6 +50,7 @@ func setNewAuthData(r *http.Response) {
 	}
 }
 
+// Common helpful functions
 // API for matching status code and error message of responses
 
 // checkErrorResponse - check response that should return error message in response body

@@ -22,6 +22,11 @@ type ResponseSinglePost struct {
 	Body  models.Post
 }
 
+type ResponseSinglePostWithComments struct {
+	Error api.PostErrorCode
+	Body  models.CertainPostResponse
+}
+
 type ResponseRangePosts struct {
 	Error api.PostErrorCode
 	Body  []models.Post
@@ -81,6 +86,13 @@ func decodeSinglePostResponse(responseBody io.ReadCloser, r *ResponseSinglePost)
 	}
 }
 
+func decodeSinglePostWithCommentsResponse(responseBody io.ReadCloser, r *ResponseSinglePostWithComments) {
+	err := json.NewDecoder(responseBody).Decode(r)
+	if err != nil {
+		panic(fmt.Sprintf("Error decoding received body. Error: %s", err))
+	}
+}
+
 func decodeRangePostsResponse(responseBody io.ReadCloser, r *ResponseRangePosts) {
 	err := json.NewDecoder(responseBody).Decode(r)
 	if err != nil {
@@ -89,7 +101,7 @@ func decodeRangePostsResponse(responseBody io.ReadCloser, r *ResponseRangePosts)
 }
 
 // -----------
-// Helpful API for sending posts handling http requests
+// API for sending posts handling http requests
 
 func getPost(postID string) *http.Response {
 	return sendPostHandleMessage("GET", "http://"+Address+"/api/posts/"+postID, "")
@@ -313,7 +325,7 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 
 	// Step 6: Get deleted post
 	{
-		var response ResponseSinglePost
+		var response ResponseSinglePostWithComments
 
 		r := getPost(workingPost.ID)
 		defer func() {
@@ -322,7 +334,7 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 				panic(err)
 			}
 		}()
-		decodeSinglePostResponse(r.Body, &response)
+		decodeSinglePostWithCommentsResponse(r.Body, &response)
 		if r.StatusCode != http.StatusNotFound {
 			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
