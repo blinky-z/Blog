@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/blinky-z/Blog/commentService"
 	"github.com/blinky-z/Blog/handler/api"
 	"github.com/blinky-z/Blog/models"
 	"io"
@@ -491,4 +492,30 @@ func TestUpdateCommentWithTooLongContent(t *testing.T) {
 	r = updateComment(createdComment.ID, &newComment)
 
 	checkErrorResponse(r, http.StatusBadRequest, api.InvalidContent)
+}
+
+func TestEnsureReceivedCommentsInAscOrder(t *testing.T) {
+	comment := testCreateCommentFactory()
+	comment.Author = "test author"
+	comment.Content = "test content"
+
+	r := createComment(&comment)
+	createComment(&comment)
+	createComment(&comment)
+	createComment(&comment)
+	defer func() {
+		err := r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	comments, _ := commentService.GetComments(env, comment.PostID)
+	for i := 1; i < len(comments); i++ {
+		if comments[i-1].Date.Before(comments[i].Date) {
+			t.Fatalf("Received comments from commentService should be sorted in ascending order, but "+
+				"comment[%d] date goes after comment[%d] date\nComment[%d]: %+v\nComment[%d]: %+v\nReceived comments: %+v",
+				i-1, i, i-1, comments[i-1], i, comments[i], comments)
+		}
+	}
 }
