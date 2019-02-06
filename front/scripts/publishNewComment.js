@@ -2,10 +2,10 @@ function publishNewComment() {
     var postID = window.location.pathname.substr(window.location.pathname.lastIndexOf('/') + 1);
 
     var commentCreateRequest = {PostID: '', ParentID: null, Author: '', Content: ''};
-    var userInput = getCommentCreationInput();
+
     commentCreateRequest.PostID = postID;
-    commentCreateRequest.Author = userInput.Author;
-    commentCreateRequest.Content = userInput.Content;
+    commentCreateRequest.Author = document.getElementsByClassName("comment-author-input")[0].value;
+    commentCreateRequest.Content = document.getElementsByClassName("comment-content-textarea")[0].value;
 
     var encodedCommentData = JSON.stringify(commentCreateRequest);
     console.log(encodedCommentData);
@@ -27,22 +27,20 @@ function publishNewComment() {
                 createdCommentChild.removeAttribute('style');
                 createdCommentChild.getElementsByClassName('username')[0].getElementsByTagName('a')[0]
                     .getElementsByTagName('b')[0].innerHTML = createdComment.author;
-                var options = {
-                    weekday: 'short', year: 'numeric', month: 'narrow', day: 'numeric',
-                    hour: 'numeric', minute: '2-digit', second: '2-digit'
-                };
                 createdCommentChild.getElementsByClassName('creation-time')[0].getElementsByTagName('a')[0]
                     .innerHTML = convertToGoTimeFormat(createdComment.date);
                 createdCommentChild.getElementsByClassName('comment-content')[0].innerHTML = createdComment.content;
                 createdCommentChild.getElementsByClassName('comment-reply')[0].setAttribute('data-comment-id',
                     createdComment.id);
 
-                commentsList.appendChild(createdCommentChild);
+                var createdCommentChildList = document.createElement('ul');
+                createdCommentChildList.appendChild(createdCommentChild);
+                commentsList.appendChild(createdCommentChildList);
 
                 alert('Comment successfully created');
 
-                document.getElementById('comment-content-textarea').value = '';
-                document.getElementById('comment-content-textarea')
+                document.getElementsByClassName('comment-content-textarea')[0].value = '';
+                document.getElementsByClassName('comment-content-textarea')[0]
                     .setAttribute('rows', document.getElementById('comment-content-textarea')
                         .getAttribute('data-min-rows'));
             },

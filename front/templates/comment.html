@@ -1,0 +1,26 @@
+{{define "comment"}}
+    <li id="{{.CommentID}}" class="comment">
+        <div class="comment-block">
+            <div class="comment-header">
+                <div class="username"><a href="" rel="nofollow"><b>{{.Username}}</b></a>
+                </div>
+                <div class="creation-time"><a href="" rel="nofollow">{{.CreationTime}}</a>
+                </div>
+            </div>
+            <p class="comment-content">{{.CommentContent}}</p>
+            <div class="comment-actions">
+                <div class="reply-comment-button">
+                    <a class="comment-reply" data-comment-id="{{.CommentID}}"
+                       href="#" onclick="showCommentReplyBox(this); return false;">Reply</a>
+                </div>
+            </div>
+        </div>
+    </li>
+    {{if .Childs}}
+        {{range .Childs}}
+            <ul>
+                {{template "comment" .}}
+            </ul>
+        {{end}}
+    {{end}}
+{{end}}

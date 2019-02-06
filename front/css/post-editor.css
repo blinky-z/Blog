@@ -4,20 +4,6 @@
     height: 450px;
 }
 
-.autoExpand {
-    display: block;
-    box-sizing: border-box;
-    overflow: hidden;
-
-    border: 0;
-    padding: 0;
-    outline: none;
-    width: 100%;
-    resize: none;
-
-    word-break: break-word;
-}
-
 .post-editor-title {
     width: 100%;
 }

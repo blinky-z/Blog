@@ -43,58 +43,75 @@
                 <h2>{{.CommentsCount}} comments</h2>
                 <div class="comments-list">
                     <ul>
-                        <li id="comment-template" class="comment" style="display: none">
-                            <div class="avatar-image"><img src="" alt=""></div>
-                            <div class="comment-block">
-                                <div class="comment-header">
-                                    <div class="username"><a href="" rel="nofollow"><b></b></a></div>
-                                    <div class="creation-time"><a href="" rel="nofollow"></a></div>
-                                </div>
-                                <p class="comment-content"></p>
-                                <div class="comment-actions">
-                                    <a class="comment-reply" data-comment-id=""
-                                       href="javascript:replyToComment(this)">Reply</a>
-                                </div>
-                            </div>
-                        </li>
-                        {{range .Comments}}
-                            <li id="{{.CommentID}}" class="comment">
-                                <div class="avatar-image"><img src="{{.UserAvatarImg}}" alt=""></div>
+                        <ul>
+                            <li id="comment-template" class="comment" style="display: none">
                                 <div class="comment-block">
                                     <div class="comment-header">
-                                        <div class="username"><a href="" rel="nofollow"><b>{{.Username}}</b></a></div>
-                                        <div class="creation-time"><a href="" rel="nofollow">{{.CreationTime}}</a></div>
+                                        <div class="username"><a href="" rel="nofollow"><b></b></a></div>
+                                        <div class="creation-time"><a href="" rel="nofollow"></a></div>
                                     </div>
-                                    <p class="comment-content">{{.CommentContent}}</p>
+                                    <p class="comment-content"></p>
                                     <div class="comment-actions">
-                                        <a class="comment-reply" data-comment-id="{{.CommentID}}"
-                                           href="#" onclick="replyToComment(this); return false;">Reply</a>
+                                        <div class="comment-reply-button">
+                                            <a class="comment-reply" data-comment-id=""
+                                               href="#" onclick="showCommentReplyBox(this); return false;">Reply</a>
+                                        </div>
                                     </div>
                                 </div>
                             </li>
+                        </ul>
+                        {{range .Comments}}
+                            <ul>
+                                {{template "comment" .}}
+                            </ul>
                         {{end}}
                     </ul>
                 </div>
                 <hr>
-                <div class="comment-create-box">
-                    <div class="comment-content-container">
-                            <textarea id="comment-content-textarea" class="autoExpand"
-                                      placeholder="Enter your comment..."
-                                      data-min-rows="4" rows="4" cols="50"></textarea>
-                    </div>
-                    <div class="comment-author-container">
-                        <span><b><i>Comment as:</i></b></span>
-                        <input id="comment-author-input" placeholder="Enter your username...">
-                    </div>
-                    <div id="publish-comment-button" onclick="publishNewComment()">Publish</div>
-                </div>
+                <div id="add-comment-button"><a href="#" onclick="showCommentCreateBox(); return false">Add a
+                        comment</a></div>
+                <script>
+                    function showCommentCreateBox() {
+                        document.getElementById('add-comment-button').innerHTML =
+                            '<div class="comment-create-box">\n' +
+                            '<div class="comment-content-container">\n' +
+                            '<textarea class="autoExpand comment-content-textarea"\n' +
+                            'placeholder="Enter your comment..."\n' +
+                            'data-min-rows="4" rows="4" cols="50"></textarea>\n' +
+                            '</div>\n' +
+                            '<div class="comment-author-container">\n' +
+                            '<span><b><i>Comment as:</i></b></span>\n' +
+                            '<input class="comment-author-input" placeholder="Enter your username...">\n' +
+                            '</div>\n' +
+                            '<div class="publish-comment-button" onclick="publishNewComment()">Publish</div>\n' +
+                            '</div>'
+                    }
+
+                    function showCommentReplyBox(commentReplyLink) {
+                        var commentID = commentReplyLink.getAttribute('data-comment-id');
+                        var replyButtonDiv = commentReplyLink.parentNode;
+                        replyButtonDiv.innerHTML =
+                            '<div class="comment-create-box">\n' +
+                            '<div class="comment-content-container">\n' +
+                            '<textarea class="autoExpand comment-content-reply-textarea"\n' +
+                            'placeholder="Enter your comment..."\n' +
+                            'data-min-rows="4" rows="4" cols="50"></textarea>\n' +
+                            '</div>\n' +
+                            '<div class="comment-author-container">\n' +
+                            '<span><b><i>Comment as:</i></b></span>\n' +
+                            '<input class="comment-author-reply-input" placeholder="Enter your username...">\n' +
+                            '</div>\n' +
+                            '<div class="publish-comment-button" data-comment-id="' + commentID + '" ' +
+                            'onclick="replyToComment(this)">Publish</div>\n' +
+                            '</div>'
+                    }
+                </script>
             </div>
         </div>
         {{template "footer"}}
     </div>
     </body>
     <script src="/scripts/autoExpand.js"></script>
-    <script src="/scripts/getCommentCreationInput.js"></script>
     <script src="/scripts/publishNewComment.js"></script>
     <script src="/scripts/replyToComment.js"></script>
     <script src="/scripts/convertToGoTimeFormat.js"></script>
