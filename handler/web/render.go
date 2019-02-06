@@ -3,9 +3,11 @@ package web
 import (
 	"database/sql"
 	"fmt"
+	"github.com/blinky-z/Blog/commentService"
 	"github.com/blinky-z/Blog/handler/api"
 	"github.com/blinky-z/Blog/models"
 	"github.com/blinky-z/Blog/postService"
+	"github.com/gorilla/mux"
 	"html/template"
 	"net/http"
 	"path/filepath"
@@ -16,15 +18,9 @@ var (
 	templatesFolder = filepath.FromSlash("front/templates/")
 )
 
-// BlogPost - represents blog post on index and /posts/{id} pages
-type BlogPost struct {
-	PostLink         string
-	PostTitle        string
-	PostAuthor       string
-	PostCreationTime string
-	PostSnippet      string
-	PostContent      string
-}
+const (
+	timeFormat = "Mon Jan 2 15:04:05"
+)
 
 // PostsList - represents posts list on index page
 type PostsList struct {
@@ -41,15 +37,41 @@ type PageSelector struct {
 
 // IndexPage - represents index page
 type IndexPage struct {
+	models.MetaData
 	PostsList
 	PageSelector
-	models.MetaData
+}
+
+// PostComment - represents comment in comments section
+type PostComment struct {
+	CommentID      string
+	UserAvatarImg  string
+	Username       string
+	CreationTime   string
+	CommentContent string
+}
+
+// PostCommentsList - represents comments section below post
+type PostCommentsList struct {
+	Comments []PostComment
+}
+
+// BlogPost - represents blog post on index and /posts/{id} pages
+type BlogPost struct {
+	PostLink         string
+	PostTitle        string
+	PostAuthor       string
+	PostCreationTime string
+	PostSnippet      string
+	PostContent      string
 }
 
 // PostPage - represents /posts/{id} page
 type PostPage struct {
-	BlogPost
 	models.MetaData
+	BlogPost
+	CommentsCount int
+	PostCommentsList
 }
 
 // GeneratePostPage - handler for server-side rendering /posts/{id} page
@@ -57,15 +79,16 @@ func GeneratePostPage(env *models.Env) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		env.LogInfo.Printf("Rendering post page")
 
-		id, validateIDError := api.ValidatePostID(r)
+		postID := mux.Vars(r)["id"]
+		validateIDError := api.ValidateID(postID)
 		if validateIDError != api.NoError {
 			env.LogInfo.Print("Can not GET post: post ID is invalid")
 			api.Respond(w, http.StatusNotFound)
 			return
 		}
 
-		env.LogInfo.Printf("Getting post with id %s from database", id)
-		post, err := postService.GetCertainPost(env, id)
+		env.LogInfo.Printf("Getting post with id %s from database", postID)
+		post, err := postService.GetCertainPost(env, postID)
 		if err != nil {
 			switch err {
 			case sql.ErrNoRows:
@@ -92,15 +115,38 @@ func GeneratePostPage(env *models.Env) http.Handler {
 
 		data.PostTitle = post.Title
 		data.PostAuthor = "Dmitry"
-		data.PostCreationTime = post.Date.Format("Mon Jan 2 15:04:05")
+		data.PostCreationTime = post.Date.Format(timeFormat)
 		data.PostContent = post.Content
-		data.Description = post.Metadata.Description
-		data.Keywords = post.Metadata.Keywords
+
+		var postMetadata models.MetaData
+		postMetadata.Description = post.Metadata.Description
+		postMetadata.Keywords = post.Metadata.Keywords
+
+		data.MetaData = postMetadata
+
+		var postComments PostCommentsList
+		comments, err := commentService.GetComments(env, postID)
+		if err != nil {
+			env.LogError.Print(err)
+			api.Respond(w, http.StatusInternalServerError)
+			return
+		}
+		for _, currentComment := range comments {
+			var currentPostComment PostComment
+			currentPostComment.Username = currentComment.Author
+			currentPostComment.CreationTime = currentComment.Date.Format(timeFormat)
+			currentPostComment.CommentID = currentComment.ID
+			currentPostComment.CommentContent = currentComment.Content
+
+			postComments.Comments = append(postComments.Comments, currentPostComment)
+		}
+
+		data.PostCommentsList = postComments
+		data.CommentsCount = len(data.PostCommentsList.Comments)
 
 		env.LogInfo.Printf("Executing post template")
 		if err := postTemplate.ExecuteTemplate(w, "postPage", data); err != nil {
 			env.LogError.Print(err)
-			api.Respond(w, http.StatusInternalServerError)
 		}
 	})
 }
@@ -149,7 +195,7 @@ func GenerateIndexPage(env *models.Env) http.Handler {
 			post := posts[currentPostNum]
 			blogPostData.PostTitle = post.Title
 			blogPostData.PostAuthor = "Dmitry"
-			blogPostData.PostCreationTime = post.Date.Format("Mon Jan 2 15:04:05")
+			blogPostData.PostCreationTime = post.Date.Format(timeFormat)
 			blogPostData.PostLink = fmt.Sprintf("/posts/%s", post.ID)
 			if len(post.Content) < 160 {
 				blogPostData.PostSnippet = post.Content
@@ -178,13 +224,11 @@ func GenerateIndexPage(env *models.Env) http.Handler {
 		indexMetadata.Description = "Blog about programming"
 		indexMetadata.Keywords = []string{"Programming"}
 
-		data.Description = indexMetadata.Description
-		data.Keywords = indexMetadata.Keywords
+		data.MetaData = indexMetadata
 
 		env.LogInfo.Printf("Executing index template")
 		if err := indexTemplate.ExecuteTemplate(w, "indexPage", data); err != nil {
 			env.LogError.Print(err)
-			api.Respond(w, http.StatusInternalServerError)
 		}
 	})
 }

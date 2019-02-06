@@ -62,10 +62,7 @@ em {
 ul {
     display: block;
     list-style-type: disc;
-    margin-top: 1em;
-    margin-bottom: 1em;
-    margin-left: 0;
-    margin-right: 0;
+    margin: 1em 0;
     padding-left: 40px;
 }
 
@@ -130,123 +127,12 @@ li {
     float: right;
 }
 
-.blog-post, .post {
-    text-align: left;
-    margin-top: 20px;
-    margin-bottom: 20px;
-    padding: 30px 50px 80px 50px;
-    border: solid 2px #000000;
-}
-
-.blog-post-header, .post-header {
-    text-transform: uppercase;
-    font-size: 48px;
-    padding-top: 5px;
-    padding-bottom: 40px;
-    font-weight: 600;
-}
-
-.blog-post-header a {
-    text-decoration: none;
-    color: black;
-}
-
-.blog-post-description, .post-description {
-    font-weight: 500;
-    font-size: 18px;
-    padding-bottom: 30px;
-}
-
-.blog-post-snippet {
-    word-break: break-all;
-    line-height: 22px;
-    font-size: 18px;
-    margin-bottom: 12px;
-}
-
-.blog-post-share {
-    float: left;
-    font-size: 16px;
-    padding-top: 15px;
-    padding-bottom: 15px;
-}
-
-.blog-post-share-socials {
-    display: inline-block;
-}
-
-.blog-post-share-socials ul {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-}
-
-.blog-post-share-socials li {
-    float: left;
-}
-
-.blog-post-share-socials li a {
-    padding-left: 2px;
-    padding-right: 2px;
-}
-
-.blog-post-read-more {
-    float: right;
-    text-decoration: underline;
-    font-size: 16px;
-    padding: 15px 0 15px;
-}
-
-.blog-post-read-more a {
-    color: black;
-}
-
-#blog-page-selector {
-    width: 100%;
-    font-size: 16px;
-    font-weight: 500;
-    margin-top: -10px;
-    margin-bottom: 60px;
-}
-
-#blog-page-selector a {
-    text-decoration: none;
-    color: black;
-}
-
-#blog-page-selector a:hover {
-    text-decoration: underline;
-}
-
-#blog-page-selector-newer-posts {
-    text-align: left;
-    float: left;
-    width: 100px;
-}
-
-.has-no-posts {
-    display: none;
-}
-
-#blog-page-selector-home {
-    margin: 0 auto;
-    width: 100px;
-}
-
-#blog-page-selector-older-posts {
-    text-align: right;
-    float: right;
-    width: 100px;
-}
-
 #footer {
-    padding-top: 80px;
     width: 1000px;
-    position: absolute;
-    bottom: 0;
 }
 
 .footer-copyright {
+    padding-top: 60px;
     border-bottom: solid 2px #000000;
     text-align: center;
     font-size: 14px;

@@ -9,16 +9,20 @@
 
         <link rel="stylesheet" href="/css/reset.css">
         <link rel="stylesheet" href="/css/style.css">
+        <link rel="stylesheet" href="/css/post.css">
+        <link rel="stylesheet" href="/css/autoExpandTextarea.css">
         <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Amatic+SC">
         <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Dosis'>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     </head>
     <body>
     <div id="container">
         {{template "header"}}
         <div id="content">
-            <div class="post">
-                <h1 class="post-header">{{.PostTitle}}</h1>
-                <h3 class="post-description">Written by <b>{{.PostAuthor}}</b> on <b>{{.PostCreationTime}}</b></h3>
+            <div class="blog-post">
+                <h1 class="blog-post-header">{{.PostTitle}}</h1>
+                <h3 class="blog-post-description">Written by <b>{{.PostAuthor}}</b> on <b>{{.PostCreationTime}}</b></h3>
                 <div class="post-content">{{.PostContent}}</div>
                 <div class="blog-post-share">
                     Share:
@@ -35,9 +39,62 @@
                 </div>
                 <div style="clear: left"></div>
             </div>
+            <div class="comments">
+                <h2>{{.CommentsCount}} comments</h2>
+                <div class="comments-list">
+                    <ul>
+                        <li id="comment-template" class="comment" style="display: none">
+                            <div class="avatar-image"><img src="" alt=""></div>
+                            <div class="comment-block">
+                                <div class="comment-header">
+                                    <div class="username"><a href="" rel="nofollow"></a></div>
+                                    <div class="creation-time"><a href="" rel="nofollow"></a></div>
+                                </div>
+                                <p class="comment-content"></p>
+                                <div class="comment-actions">
+                                    <a class="comment-reply" data-comment-id=""
+                                       href="javascript:replyToComment(this)">Reply</a>
+                                </div>
+                            </div>
+                        </li>
+                        {{range .Comments}}
+                            <li id="{{.CommentID}}" class="comment">
+                                <div class="avatar-image"><img src="{{.UserAvatarImg}}" alt=""></div>
+                                <div class="comment-block">
+                                    <div class="comment-header">
+                                        <div class="username"><a href="" rel="nofollow"><b>{{.Username}}</b></a></div>
+                                        <div class="creation-time"><a href="" rel="nofollow">{{.CreationTime}}</a></div>
+                                    </div>
+                                    <p class="comment-content">{{.CommentContent}}</p>
+                                    <div class="comment-actions">
+                                        <a class="comment-reply" data-comment-id="{{.CommentID}}"
+                                           href="javascript:replyToComment(this)">Reply</a>
+                                    </div>
+                                </div>
+                            </li>
+                        {{end}}
+                    </ul>
+                </div>
+                <hr>
+                <div class="comment-create-box">
+                    <div class="comment-content-container">
+                            <textarea id="comment-content-textarea" class="autoExpand" placeholder="Enter your comment..."
+                                      data-min-rows="4" rows="4" cols="50"></textarea>
+                    </div>
+                    <div class="comment-author-container">
+                        <span><b><i>Comment as:</i></b></span>
+                        <input id="comment-author-input" placeholder="Enter your username...">
+                    </div>
+                    <div id="publish-comment-button" onclick="publishNewComment()">Publish</div>
+                </div>
+            </div>
         </div>
         {{template "footer"}}
     </div>
     </body>
+    <script src="/scripts/autoExpand.js"></script>
+    <script src="/scripts/getCommentCreationInput.js"></script>
+    <script src="/scripts/publishNewComment.js"></script>
+    <script src="/scripts/replyToComment.js"></script>
     </html>
 {{end}}

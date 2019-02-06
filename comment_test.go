@@ -150,10 +150,9 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 				panic(err)
 			}
 		}()
+		checkNiceResponse(r, http.StatusCreated)
+
 		decodeCommentResponse(r.Body, &response)
-		if r.StatusCode != http.StatusCreated {
-			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
-		}
 
 		workingComment = response.Body
 
@@ -184,10 +183,9 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 				panic(err)
 			}
 		}()
+		checkNiceResponse(r, http.StatusOK)
+
 		decodeSinglePostWithCommentsResponse(r.Body, &response)
-		if r.StatusCode != http.StatusOK {
-			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
-		}
 
 		comments := response.Body.Comments
 		receivedComment := comments[0]
@@ -211,10 +209,9 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 				panic(err)
 			}
 		}()
+		checkNiceResponse(r, http.StatusOK)
+
 		decodeCommentResponse(r.Body, &response)
-		if r.StatusCode != http.StatusOK {
-			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
-		}
 
 		updatedComment := response.Body
 		if updatedComment.Content != newPost.Content {
@@ -236,10 +233,9 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 				panic(err)
 			}
 		}()
+		checkNiceResponse(r, http.StatusOK)
+
 		decodeSinglePostWithCommentsResponse(r.Body, &response)
-		if r.StatusCode != http.StatusOK {
-			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
-		}
 
 		comments := response.Body.Comments
 		receivedComment := comments[0]
@@ -258,13 +254,7 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 				panic(err)
 			}
 		}()
-		if r.StatusCode != http.StatusOK {
-			var response ResponseSinglePost
-
-			decodeSinglePostResponse(r.Body, &response)
-
-			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
-		}
+		checkNiceResponse(r, http.StatusOK)
 	}
 
 	// Step 6: Get post with comments and ensure that there's no comments
@@ -278,10 +268,9 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 				panic(err)
 			}
 		}()
+		checkNiceResponse(r, http.StatusOK)
+
 		decodeSinglePostWithCommentsResponse(r.Body, &response)
-		if r.StatusCode != http.StatusOK {
-			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
-		}
 
 		comments := response.Body.Comments
 		receivedComment := comments[0]
@@ -512,10 +501,43 @@ func TestEnsureReceivedCommentsInAscOrder(t *testing.T) {
 
 	comments, _ := commentService.GetComments(env, comment.PostID)
 	for i := 1; i < len(comments); i++ {
-		if comments[i-1].Date.Before(comments[i].Date) {
+		if !comments[i-1].Date.Before(comments[i].Date) {
 			t.Fatalf("Received comments from commentService should be sorted in ascending order, but "+
 				"comment[%d] date goes after comment[%d] date\nComment[%d]: %+v\nComment[%d]: %+v\nReceived comments: %+v",
 				i-1, i, i-1, comments[i-1], i, comments[i], comments)
 		}
+	}
+}
+
+func TestEnsureDeletedCommentContentIsRemoved(t *testing.T) {
+	comment := testCreateCommentFactory()
+	comment.Author = "test author"
+	comment.Content = "test content"
+
+	r := createComment(&comment)
+	checkNiceResponse(r, http.StatusCreated)
+	defer func() {
+		err := r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	createdComment := getCommentFromResponseBody(r)
+
+	r = deleteComment(createdComment.ID)
+	checkNiceResponse(r, http.StatusOK)
+
+	var response ResponseSinglePostWithComments
+
+	r = getPost(createdComment.PostID)
+	checkNiceResponse(r, http.StatusOK)
+
+	decodeSinglePostWithCommentsResponse(r.Body, &response)
+
+	comments := response.Body.Comments
+	receivedComment := comments[0]
+	if receivedComment.Content != api.DeletedCommentContent {
+		t.Fatalf("Deleted comment has content\nComment: %v", receivedComment)
 	}
 }
