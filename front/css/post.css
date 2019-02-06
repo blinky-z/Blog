@@ -125,7 +125,7 @@
 .comments .comments-list ul {
     list-style-type: none;
     margin: 0;
-    padding: 8px 22px;
+    padding: 8px 0 8px 22px;
 }
 
 .comments .comments-list ul li {
@@ -133,6 +133,8 @@
 
 .comments .comments-list .comment {
     border: 2px solid black;
+    width: 100%;
+    max-width: 100%;
     margin-bottom: 16px;
     overflow: auto;
 }
