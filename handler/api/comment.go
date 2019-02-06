@@ -28,6 +28,9 @@ const (
 	MinAuthorLen int = MinLoginLen
 	//MaxAuthorLen - max length of comment author
 	MaxAuthorLen int = MaxLoginLen
+
+	// DeletedCommentContent - message that replaces content of deleted comment
+	DeletedCommentContent = "Содержимое этого комментария было удалено"
 )
 
 func validateCommentContent(content string) PostErrorCode {
@@ -291,7 +294,8 @@ func (api *CommentAPI) DeleteComment() http.Handler {
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
 			return
 		}
-		if _, err := env.Db.Exec("UPDATE comments SET deleted = TRUE WHERE id = $1", id); err != nil {
+		if _, err := env.Db.Exec("UPDATE comments SET deleted = TRUE, content = $1 WHERE id = $2",
+			DeletedCommentContent, id); err != nil {
 			env.LogError.Print(err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
 			return
