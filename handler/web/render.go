@@ -173,9 +173,9 @@ func GeneratePostPage(env *models.Env) http.Handler {
 		}
 
 		// TODO
-		// ошибка: здесь мы просто берем детей родителей, у которых нет родителей, т.е. мы берем комменты первого уровня
+		// ошибка: здесь мы просто берем комменты 0 уровня
 		// и ложим их вместе с их детьми в слайс
-		// но ведь нам нужно, чтобы не только дети комментариев первого уровня были, но и также дети детей
+		// но ведь нам нужно, чтобы не только дети комментариев 0 уровня были, но и также дети детей
 		var parentCommentWithChilds []CommentWithChilds
 		for _, parentCommendID := range parentComments {
 			parentCommentWithChilds = append(parentCommentWithChilds, commentWithChildsAsMap[parentCommendID])
