@@ -48,7 +48,7 @@ type CommentWithChilds struct {
 	Username       string
 	CreationTime   string
 	CommentContent string
-	Childs         []CommentWithChilds
+	Childs         []*CommentWithChilds
 }
 
 // PostCommentsList - represents comments section below post
@@ -136,14 +136,14 @@ func GeneratePostPage(env *models.Env) http.Handler {
 		// когда мы встречаем коммент, у которого есть родитель, мы находим в мапе этот коммент и добавляем к списку
 		// вложенных комментов этот коммент
 		// вложенные комменты в мапе не сохраняем
-		commentWithChildsAsMap := make(map[string]CommentWithChilds)
+		commentWithChildsAsMap := make(map[string]*CommentWithChilds)
 		var parentComments []string
 
 		// на этом шаге мы поместили в мапу абсолютно все комменты
 		// каждый коммент может вмещать в себя еще комментарии
 		// теперь, мы имеем ID коммента и сам коммент по этому ID в мапе commentWithChildsAsMap
 		for _, comment := range comments {
-			var commentWithChilds CommentWithChilds
+			commentWithChilds := &CommentWithChilds{}
 			commentWithChilds.CommentID = comment.ID
 			commentWithChilds.CommentContent = comment.Content
 			commentWithChilds.CreationTime = comment.Date.Format(timeFormat)
@@ -160,6 +160,11 @@ func GeneratePostPage(env *models.Env) http.Handler {
 		// теперь заполним всех детей у всех комментов
 		// при этом, теперь в мапе будут лежать как родители со всеми детьми, так и дети
 		// у детей также есть дети
+		// ВАЖНО: нужно обязательно работать с указателями, таким образом, обновляя ребенков в одном родителе,
+		// мы также меняем этого родителя как ребенка в других родителях
+		// например, у родителя 2 есть ребенки 3, 4, 5
+		// у родителя 5 есть ребенок 6
+		// если бы мы не работали с указателями, тогда обновление родителя 5 не даст обновление ребенка 5 в родителе 2
 		for _, comment := range comments {
 			if comment.ParentID.Valid {
 				// достанем родителя текущего ребенка
@@ -172,21 +177,13 @@ func GeneratePostPage(env *models.Env) http.Handler {
 			}
 		}
 
-		// TODO
-		// ошибка: здесь мы просто берем комменты 0 уровня
-		// и ложим их вместе с их детьми в слайс
-		// но ведь нам нужно, чтобы не только дети комментариев 0 уровня были, но и также дети детей
 		var parentCommentWithChilds []CommentWithChilds
 		for _, parentCommendID := range parentComments {
-			parentCommentWithChilds = append(parentCommentWithChilds, commentWithChildsAsMap[parentCommendID])
+			parentCommentWithChilds = append(parentCommentWithChilds, *commentWithChildsAsMap[parentCommendID])
 		}
 
-		fmt.Printf("\n%+v\n", parentComments)
-		fmt.Printf("\n%+v\n", commentWithChildsAsMap)
-		fmt.Printf("\n%+v\n", parentCommentWithChilds)
 		data.Comments = parentCommentWithChilds
-
-		data.CommentsCount = len(data.Comments)
+		data.CommentsCount = len(commentWithChildsAsMap)
 
 		env.LogInfo.Printf("Executing post template")
 		if err := postTemplate.ExecuteTemplate(w, "postPage", data); err != nil {
