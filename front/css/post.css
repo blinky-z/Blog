@@ -2,8 +2,9 @@
     text-align: left;
     margin-top: 20px;
     margin-bottom: 20px;
-    padding: 30px 50px 80px 50px;
+    padding: 30px 50px 40px 50px;
     border: solid 2px #000000;
+    overflow: auto;
 }
 
 .blog-post-header {
@@ -25,18 +26,18 @@
     padding-bottom: 30px;
 }
 
-.blog-post-snippet {
-    word-break: break-all;
+.blog-post-snippet, .post-content {
+    font-family: 'Times New Roman';
+    word-break: break-word;
     line-height: 22px;
-    font-size: 18px;
-    margin-bottom: 12px;
+    font-size: 20px;
+    margin-bottom: 16px;
+    font-weight: 200;
 }
 
 .blog-post-share {
     float: left;
     font-size: 16px;
-    padding-top: 15px;
-    padding-bottom: 15px;
 }
 
 .blog-post-share-socials {
@@ -62,7 +63,6 @@
     float: right;
     text-decoration: underline;
     font-size: 16px;
-    padding: 15px 0 15px;
 }
 
 .blog-post-read-more a {
@@ -123,6 +123,9 @@
 }
 
 .comments .comments-list ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 8px 22px;
 }
 
 .comments .comments-list ul li {
@@ -131,6 +134,7 @@
 .comments .comments-list .comment {
     border: 2px solid black;
     margin-bottom: 16px;
+    overflow: auto;
 }
 
 .comment .avatar-image {
@@ -142,7 +146,7 @@
 
 .comment .comment-block {
     text-align: left;
-    padding: 22px 0 20px 34px;
+    padding: 22px 34px 20px 34px;
 }
 
 .comment .comment-block .comment-header {
@@ -169,7 +173,11 @@
 }
 
 .comment .comment-block .comment-content {
-    margin-bottom: 18px;
+    font-family: 'Dosis';
+    word-break: break-all;
+    font-size: 18px;
+    line-height: 20px;
+    margin-bottom: 16px;
 }
 
 .comment .comment-block .comment-actions {

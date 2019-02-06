@@ -160,15 +160,6 @@ li {
     float: right;
 }
 
-.post-content {
-    font-family: "Times New Roman";
-    word-break: break-all;
-    text-align: left;
-    font-size: 18px;
-    line-height: 22px;
-    margin-bottom: 20px;
-}
-
 .post-related-posts {
     overflow: hidden;
     margin-top: 20px;

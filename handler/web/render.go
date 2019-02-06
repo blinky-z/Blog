@@ -19,7 +19,7 @@ var (
 )
 
 const (
-	timeFormat = "Mon Jan 2 15:04:05"
+	timeFormat = "January 2 2006, 15:04:05"
 )
 
 // PostsList - represents posts list on index page

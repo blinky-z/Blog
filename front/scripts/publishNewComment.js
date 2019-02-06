@@ -25,13 +25,26 @@ function publishNewComment() {
                 var createdCommentChild = document.getElementById('comment-template').cloneNode(true);
                 createdCommentChild.setAttribute('id', createdComment.id);
                 createdCommentChild.removeAttribute('style');
-                createdCommentChild.getElementsByClassName('username')[0].value = createdComment.author;
-                createdCommentChild.getElementsByClassName('creation-time')[0].value = createdComment.date;
-                createdCommentChild.getElementsByClassName('comment-content')[0].value = createdComment.content;
+                createdCommentChild.getElementsByClassName('username')[0].getElementsByTagName('a')[0]
+                    .getElementsByTagName('b')[0].innerHTML = createdComment.author;
+                var options = {
+                    weekday: 'short', year: 'numeric', month: 'narrow', day: 'numeric',
+                    hour: 'numeric', minute: '2-digit', second: '2-digit'
+                };
+                createdCommentChild.getElementsByClassName('creation-time')[0].getElementsByTagName('a')[0]
+                    .innerHTML = convertToGoTimeFormat(createdComment.date);
+                createdCommentChild.getElementsByClassName('comment-content')[0].innerHTML = createdComment.content;
                 createdCommentChild.getElementsByClassName('comment-reply')[0].setAttribute('data-comment-id',
                     createdComment.id);
 
                 commentsList.appendChild(createdCommentChild);
+
+                alert('Comment successfully created');
+
+                document.getElementById('comment-content-textarea').value = '';
+                document.getElementById('comment-content-textarea')
+                    .setAttribute('rows', document.getElementById('comment-content-textarea')
+                        .getAttribute('data-min-rows'));
             },
             error: function (jqXHR) {
                 var response = JSON.parse(jqXHR.responseText);

@@ -24,23 +24,25 @@
                         <h3 class="blog-post-description">Written by <b>{{.PostAuthor}}</b> on
                             <b> {{.PostCreationTime }}</b></h3>
                         <p class="blog-post-snippet">{{.PostSnippet}}</p>
-                        <div class="blog-post-share">
-                            Share:
-                            <div class="blog-post-share-socials">
-                                <ul>
-                                    <li><a href="https://vk.com" target="_blank"><img src="/images/vk-icon.png"
-                                                                                      width="18"
-                                                                                      height="18"
-                                                                                      title="VK"></a></li>
-                                    <li><a href="https://facebook.com" target="_blank"><img
-                                                    src="/images/facebook-icon.png"
-                                                    width="18" height="18"
-                                                    title="Facebook"></a></li>
-                                </ul>
+                        <div class="blog-post-actions">
+                            <div class="blog-post-share">
+                                Share:
+                                <div class="blog-post-share-socials">
+                                    <ul>
+                                        <li><a href="https://vk.com" target="_blank"><img src="/images/vk-icon.png"
+                                                                                          width="18"
+                                                                                          height="18"
+                                                                                          title="VK"></a></li>
+                                        <li><a href="https://facebook.com" target="_blank"><img
+                                                        src="/images/facebook-icon.png"
+                                                        width="18" height="18"
+                                                        title="Facebook"></a></li>
+                                    </ul>
+                                </div>
                             </div>
-                        </div>
-                        <div class="blog-post-read-more">
-                            <a href="{{.PostLink}}">Read More</a>
+                            <div class="blog-post-read-more">
+                                <a href="{{.PostLink}}">Read More</a>
+                            </div>
                         </div>
                     </div>
                 {{end}}
