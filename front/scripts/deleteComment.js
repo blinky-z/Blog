@@ -17,6 +17,8 @@ function deleteComment(deleteCommentButtonLink) {
             success: function (data, textStatus, jqXHR) {
                 document.getElementById(commentID).getElementsByClassName('comment-content')[0].innerHTML =
                     'Содержимое этого комментария было удалено';
+
+                alert('Комментарий был успешно удален');
             },
             error: function (jqXHR) {
                 var response = JSON.parse(jqXHR.responseText);
