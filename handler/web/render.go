@@ -100,6 +100,18 @@ func GeneratePostPage(env *models.Env) http.Handler {
 			}
 		}
 
+		incCommentsLevelFunc := template.FuncMap{
+			"inc": func(i int) int {
+				return i + 1
+			},
+		}
+
+		passArgsToNextLevelFunc := template.FuncMap{
+			"args": func(vs ...interface{}) []interface{} {
+				return vs
+			},
+		}
+
 		env.LogInfo.Printf("Getting post page template")
 		postTemplate, err :=
 			template.ParseFiles(templatesFolder+"header.html", templatesFolder+"comment.html",
@@ -186,7 +198,8 @@ func GeneratePostPage(env *models.Env) http.Handler {
 		data.CommentsCount = len(commentWithChildsAsMap)
 
 		env.LogInfo.Printf("Executing post template")
-		if err := postTemplate.ExecuteTemplate(w, "postPage", data); err != nil {
+		if err := postTemplate.Funcs(incCommentsLevelFunc).Funcs(passArgsToNextLevelFunc).
+			ExecuteTemplate(w, "postPage", data); err != nil {
 			env.LogError.Print(err)
 		}
 	})

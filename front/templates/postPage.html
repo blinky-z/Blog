@@ -60,9 +60,9 @@
                                 </div>
                             </li>
                         </ul>
-                        {{range .Comments}}
+                        {{range $index, $comment := .Comments}}
                             <ul>
-                                {{template "comment" .}}
+                                {{template "comment" $comment}}
                             </ul>
                         {{end}}
                     </ul>
