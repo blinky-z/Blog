@@ -7,6 +7,7 @@ import (
 	"github.com/blinky-z/Blog/handler/api"
 	"github.com/blinky-z/Blog/handler/web"
 	"github.com/blinky-z/Blog/models"
+	"github.com/blinky-z/Blog/settings"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
@@ -56,7 +57,7 @@ func RunServer(serverConfigPath, adminsConfigPath string) {
 		logError.Fatalf("Fatal error reading admins list config file: %s", err)
 	}
 
-	var admins []models.Admin
+	var admins []settings.Admin
 	err = viper.UnmarshalKey("admins", &admins)
 	if err != nil {
 		logError.Fatalf("Fatal error unmarshaling admins list: %s", err)

@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"github.com/blinky-z/Blog/models"
+	"github.com/blinky-z/Blog/settings"
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
@@ -26,7 +27,7 @@ var (
 type UserAPI struct {
 	Env        *models.Env
 	SigningKey []byte
-	Admins     []models.Admin
+	Admins     []settings.Admin
 }
 
 var (
@@ -264,7 +265,7 @@ func generateRandomContext() (string, error) {
 }
 
 // IsUserAdmin - check if user is admin
-func IsUserAdmin(login string, admins []models.Admin) bool {
+func IsUserAdmin(login string, admins []settings.Admin) bool {
 	for _, currentAdmin := range admins {
 		if currentAdmin.Login == login {
 			return true

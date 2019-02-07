@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/blinky-z/Blog/handler/api"
-	"github.com/blinky-z/Blog/models"
+	"github.com/blinky-z/Blog/settings"
 	"github.com/google/uuid"
 	"io"
 	"io/ioutil"
@@ -32,7 +32,7 @@ type ResponseWithError struct {
 }
 
 type AdminsConfig struct {
-	Admins []models.Admin `json:"admins"`
+	Admins []settings.Admin `json:"admins"`
 }
 
 // helpful API for testing
@@ -109,7 +109,7 @@ func init() {
 	loginEmail = loginUsername + "@gmail.com"
 	loginPassword = uuid.New().String() + "Z"
 
-	admins := &AdminsConfig{Admins: []models.Admin{{Login: loginUsername}}}
+	admins := &AdminsConfig{Admins: []settings.Admin{{Login: loginUsername}}}
 	encodedAdmins := encodeMessage(admins)
 
 	testAdminsFile := filepath.FromSlash("configs/testAdmins.json")
