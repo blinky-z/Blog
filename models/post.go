@@ -19,5 +19,5 @@ type Post struct {
 // This struct extends Post, adding Comments field allowing to store post's comments
 type CertainPostResponse struct {
 	Post
-	Comments []Comment
+	Comments []Comment `json:"comments"`
 }
