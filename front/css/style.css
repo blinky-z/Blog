@@ -128,11 +128,13 @@ li {
 }
 
 #footer {
+    position: absolute;
+    bottom: 0;
     width: 1000px;
+    height: 30px;
 }
 
 .footer-copyright {
-    padding-top: 60px;
     border-bottom: solid 2px #000000;
     text-align: center;
     font-size: 14px;
@@ -192,6 +194,12 @@ li {
     width: 1000px;
     background-color: #ffffff;
     margin: 0 auto 0 auto;
+}
+
+#container::after {
+    content: '';
+    display: block;
+    height: 100px;
 }
 
 #container > div {
