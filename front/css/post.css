@@ -128,9 +128,6 @@
     padding: 8px 0 8px 22px;
 }
 
-.comments .comments-list ul li {
-}
-
 .comments .comments-list .comment {
     border: 2px solid black;
     width: 100%;
@@ -175,23 +172,51 @@
 }
 
 .comment .comment-block .comment-content {
-    font-family: 'Dosis';
-    word-break: break-all;
-    font-size: 18px;
-    line-height: 20px;
+    font-family: 'Dosis' !important;
+    word-break: break-all !important;
+    font-size: 18px !important;
+    line-height: 20px !important;
     margin-bottom: 16px;
+    padding: 4px 0;
 }
 
 .comment .comment-block .comment-actions {
     font-size: 20px;
 }
 
-.comment .comment-block .comment-actions .comment-reply {
-}
-
 .comment .comment-block .comment-actions::after {
     content: '';
     clear: both;
+}
+
+.comment-actions {
+    font-size: 18px;
+    margin-top: 6px;
+}
+
+.comment .comment-block .comment-actions > ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+.comment .comment-block .comment-actions > ul > li {
+    float: left;
+}
+
+.comment .comment-block .comment-actions > ul > li.save-comment-button {
+    float: right;
+}
+
+.comment .comment-block .comment-actions > ul > li > a {
+    display: block;
+    color: black;
+    padding-right: 6px;
+    text-decoration: underline;
+}
+
+.comment .comment-block .comment-actions ul li a:hover {
+    color: #3498db;
 }
 
 .comment a {
@@ -229,15 +254,24 @@
 }
 
 .autoExpand.comment-content-textarea,
-.autoExpand.comment-content-reply-textarea {
+.autoExpand.comment-content-reply-textarea,
+.autoExpand.comment-content.editCommentTextarea {
+    width: 100%;
     resize: none;
     background: white;
     color: black;
     box-sizing: border-box;
-    padding: 5px 8px;
+    padding: 4px 0;
     border: 2px solid #111;
     font-family: 'Noto Serif';
     font-size: 22px;
+    line-height: 22px;
+}
+
+.autoExpand.comment-content.editCommentTextarea {
+    padding-left: 0;
+    border: none;
+    outline: 1px dashed darkblue;
 }
 
 .comment-author-container {

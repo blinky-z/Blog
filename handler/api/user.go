@@ -100,7 +100,7 @@ func validateUserRegistrationCredentials(r *http.Request) (
 	}
 
 	passwordLen := len(password)
-	if passwordLen < MinPwdLen || passwordLen > MaxPwdLen || password == username {
+	if passwordLen < MinPwdLen || passwordLen > MaxPwdLen {
 		validateError = InvalidPassword
 		return
 	}
@@ -263,7 +263,7 @@ func generateRandomContext() (string, error) {
 	return base64.URLEncoding.EncodeToString(bytes), nil
 }
 
-func isUserAdmin(login string, admins []models.Admin) bool {
+func IsUserAdmin(login string, admins []models.Admin) bool {
 	for _, currentAdmin := range admins {
 		if currentAdmin.Login == login {
 			return true
@@ -277,7 +277,7 @@ func createToken(login, fgp string, api *UserAPI) (string, error) {
 	claims.ExpiresAt = time.Now().Add(1 * time.Hour).Unix()
 	claims.Fingerprint = fgp
 
-	if isUserAdmin(login, api.Admins) {
+	if IsUserAdmin(login, api.Admins) {
 		claims.Role = roleAdmin
 	} else {
 		claims.Role = roleUser
@@ -347,10 +347,15 @@ func (api *UserAPI) LoginUserHandler() http.Handler {
 			return
 		}
 
-		// set raw fingerprint in cookie
+		// set raw fingerprint cookie
 		ctxCookie := &http.Cookie{Name: "Secure-Fgp", Value: ctx, SameSite: http.SameSiteStrictMode, HttpOnly: true,
 			Expires: time.Now().Add(time.Hour * 1), Path: "/"}
 		http.SetCookie(w, ctxCookie)
+
+		// set username cookie for detecting is user admin
+		usernameCookie := &http.Cookie{Name: "Login", Value: username, SameSite: http.SameSiteStrictMode, HttpOnly: true,
+			Path: "/"}
+		http.SetCookie(w, usernameCookie)
 
 		// generate hashed fingerprint
 		hashedFgp, err := bcrypt.GenerateFromPassword([]byte(ctx), bcrypt.DefaultCost)

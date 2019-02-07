@@ -24,6 +24,7 @@ function createCommentChild(createCommentResponse) {
     commentChild.getElementsByClassName('comment-content')[0].innerHTML = createCommentResponse.content;
     commentChild.getElementsByClassName('comment-reply')[0].setAttribute('data-comment-id',
         createCommentResponse.id);
+    commentChild.getElementsByClassName('comment-reply')[0].setAttribute('data-opened', 'false');
 
     return commentChild;
 }

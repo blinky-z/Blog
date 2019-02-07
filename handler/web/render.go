@@ -72,6 +72,7 @@ type PostPage struct {
 	BlogPost
 	CommentsCount int
 	PostCommentsList
+	IsUserAdmin bool
 }
 
 // GeneratePostPage - handler for server-side rendering /posts/{id} page
@@ -85,6 +86,15 @@ func GeneratePostPage(env *models.Env) http.Handler {
 			env.LogInfo.Print("Can not GET post: post ID is invalid")
 			api.Respond(w, http.StatusNotFound)
 			return
+		}
+
+		var isUserAdmin bool
+
+		usernameCookie, err := r.Cookie("Login")
+		if err != nil {
+			isUserAdmin = false
+		} else {
+			isUserAdmin = api.IsUserAdmin(usernameCookie.Value, api.UserEnv.Admins)
 		}
 
 		env.LogInfo.Printf("Getting post with id %s from database", postID)
@@ -176,6 +186,8 @@ func GeneratePostPage(env *models.Env) http.Handler {
 
 		data.Comments = parentCommentWithChilds
 		data.CommentsCount = len(commentWithChildsAsMap)
+
+		data.IsUserAdmin = isUserAdmin
 
 		env.LogInfo.Printf("Executing post template")
 		if err := postTemplate.Funcs(incCommentsLevelFunc).Funcs(passArgsToNextLevelFunc).

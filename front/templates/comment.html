@@ -1,20 +1,35 @@
 {{define "comment"}}
-    <li id="{{.CommentID}}" class="comment">
+    {{$comment := index . 0}}
+    {{$isAdmin := index . 1}}
+    <li id="{{$comment.CommentID}}" class="comment">
         <div class="comment-block">
             <div class="comment-header">
                 <div class="username"><a href="#" onclick="return false;"
-                                         rel="nofollow"><b>{{.Username}}</b></a>
+                                         rel="nofollow"><b>{{$comment.Username}}</b></a>
                 </div>
                 <div class="creation-time"><a href="#" onclick="return false;"
-                                              rel="nofollow">{{.CreationTime}}</a>
+                                              rel="nofollow">{{$comment.CreationTime}}</a>
                 </div>
             </div>
-            <p class="comment-content">{{.CommentContent}}</p>
+            <p class="comment-content">{{$comment.CommentContent}}</p>
             <div class="comment-actions">
-                <div class="reply-comment-button">
-                    <a class="comment-reply" data-comment-id="{{.CommentID}}"
-                       href="#" onclick="showCommentReplyBox(this); return false;">Reply</a>
-                </div>
+                <ul>
+                    <li class="reply-comment-button">
+                        <a class="comment-reply" data-comment-id="{{$comment.CommentID}}"
+                           href="#" onclick="showCommentReplyBox(this); return false;" data-opened="false">Reply</a>
+                    </li>
+                    {{if $isAdmin}}
+                        <li class="edit-comment-button">
+                            <a class="comment-edit" data-comment-id="{{$comment.CommentID}}"
+                               href="#" onclick="editComment(this); return false;" data-opened="false">Edit</a>
+                        </li>
+                        <li class="delete-comment-button">
+                            <a class="comment-delete" data-comment-id="{{$comment.CommentID}}"
+                               href="#" onclick="deleteComment(this); return false;">Delete</a>
+                        </li>
+                    {{end}}
+                </ul>
+                <div style="clear: both"></div>
             </div>
         </div>
     </li>

@@ -43,9 +43,10 @@
                 <h2>{{.CommentsCount}} comments</h2>
                 <div class="comments-list">
                     <ul>
+                        {{$isAdmin := .IsUserAdmin}}
                         {{range $index, $comment := .Comments}}
                             <ul>
-                                {{template "comments-list" args $comment 0}}
+                                {{template "comments-list" args $comment 0 $isAdmin}}
                             </ul>
                         {{end}}
                     </ul>
@@ -64,6 +65,8 @@
     <script src="/scripts/convertToGoTimeFormat.js"></script>
     <script src="/scripts/showCommentCreateForm.js"></script>
     <script src="/scripts/createCommentChild.js"></script>
+    <script src="/scripts/editComment.js"></script>
+    <script src="/scripts/deleteComment.js"></script>
     <script src="https://momentjs.com/downloads/moment.js"></script>
     </html>
 {{end}}

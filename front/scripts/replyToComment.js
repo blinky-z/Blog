@@ -56,9 +56,10 @@ function replyToComment(commentReplyButtonLink) {
                 alert('Comment successfully created');
 
                 // close reply form
-                var replyButton = currentComment.getElementsByClassName('reply-comment-button')[0];
-                replyButton.innerHTML = `<a class="comment-reply" data-comment-id="${commentID}"
-                        href="#" onclick="showCommentReplyBox(this); return false;">Reply</a>`;
+                currentComment.getElementsByClassName('replyBox')[0].parentNode
+                    .removeChild(currentComment.getElementsByClassName('replyBox')[0]);
+                currentComment.getElementsByClassName('comment-reply')[0]
+                    .setAttribute('data-opened', 'false')
             },
             error: function (jqXHR) {
                 var response = JSON.parse(jqXHR.responseText);
