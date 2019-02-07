@@ -1,7 +1,9 @@
 $(document).ready(function () {
+    var template;
+
     function generatePostsList(posts) {
-        var postsList = document.getElementById("admin-posts-list");
-        var adminPostTemplate = Handlebars.compile(document.getElementById("admin-post-template").innerHTML);
+        var postsList = template.getElementById("admin-posts-list");
+        var adminPostTemplate = Handlebars.compile(template.getElementById("admin-post-template").innerHTML);
         postsList.innerHTML = '';
 
         if (posts == null) {
@@ -12,7 +14,7 @@ $(document).ready(function () {
             var post = posts[currentPostNum];
             var data = {postHeader: '', postCreationTime: '', postID: '', postLink: ''};
             data.postHeader = post.title;
-            data.postCreationTime = new Date(post.date).toLocaleString();
+            data.postCreationTime = convertToGoTimeFormat(post.date);
             data.postID = post.id;
             data.postLink = `/posts/${post.id}`;
 
@@ -23,8 +25,8 @@ $(document).ready(function () {
     }
 
     function generatePageSelector(currentPage, posts) {
-        var pageSelector = document.getElementById("page-navigation-bar");
-        var pageSelectorTemplate = Handlebars.compile(document.getElementById("page-navigation-bar-template").innerHTML);
+        var pageSelector = template.getElementById("page-navigation-bar");
+        var pageSelectorTemplate = Handlebars.compile(template.getElementById("page-navigation-bar-template").innerHTML);
 
         var data = {newerPostsLink: '', olderPostsLink: '', currentPageLink: '', currentPageNumber: ''};
 
@@ -46,17 +48,38 @@ $(document).ready(function () {
         pageSelector.innerHTML = pageSelectorTemplate(data);
 
         if (currentPage === 0) {
-            document.getElementById("page-navigation-bar-newer-posts").className = 'has-no-posts';
+            template.getElementById("page-navigation-bar-newer-posts").className = 'has-no-posts';
         }
         if (posts.length <= 10) {
-            document.getElementById("page-navigation-bar-older-posts").className = 'has-no-posts';
+            template.getElementById("page-navigation-bar-older-posts").className = 'has-no-posts';
         }
     }
 
     function generateAdminPage(posts) {
-        generatePostsList(posts);
+        $.ajax(
+            {
+                url: `/templates/admin_template.html`,
+                type: 'GET',
+                success: function (data, textStatus, jqXHR) {
+                    var response = jqXHR.responseText;
 
-        generatePageSelector(parseInt(postsPage), posts);
+                    var parser = new DOMParser();
+                    template = parser.parseFromString(response, 'text/html');
+
+                    generatePostsList(posts);
+
+                    generatePageSelector(parseInt(postsPage), posts);
+
+                    document.open();
+                    document.write(template.documentElement.innerHTML);
+                    document.close();
+                },
+                error: function (data, textStatus, jqXHR) {
+                    var response = JSON.parse(jqXHR.responseText);
+                    console.log(response.error)
+                }
+            }
+        );
     }
 
     var postsPage = new window.URLSearchParams(window.location.search).get('page');

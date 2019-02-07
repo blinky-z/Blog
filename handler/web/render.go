@@ -285,6 +285,7 @@ func HandleHTMLFile(env *models.Env, frontFolder string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		currentURLPath := r.URL.Path
 		currentURLPath = strings.TrimSuffix(currentURLPath, ".html")
+		currentURLPath = filepath.FromSlash(currentURLPath)
 
 		var fileName string
 		if currentURLPath == "" || currentURLPath == "index" {
@@ -295,6 +296,8 @@ func HandleHTMLFile(env *models.Env, frontFolder string) http.Handler {
 		fileName = currentURLPath + ".html"
 
 		filePath := frontFolder + fileName
+
+		env.LogInfo.Printf("Current path: %s", filePath)
 
 		http.ServeFile(w, r, filePath)
 	})
