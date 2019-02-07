@@ -9,5 +9,4 @@ CREATE TABLE if not exists Comments
   DELETED   BOOLEAN     DEFAULT FALSE
 );
 
-CREATE UNIQUE INDEX if not exists idIndex ON Comments (ID);
 CREATE INDEX if not exists postIdIndex ON Comments (POST_ID);
