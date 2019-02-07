@@ -62,7 +62,7 @@
                         </ul>
                         {{range $index, $comment := .Comments}}
                             <ul>
-                                {{template "comment" $comment}}
+                                {{template "comment" args $comment 0}}
                             </ul>
                         {{end}}
                     </ul>
@@ -70,42 +70,6 @@
                 <hr>
                 <div id="add-comment-button"><a href="#" onclick="showCommentCreateBox(); return false">Add a
                         comment</a></div>
-                <script>
-                    function showCommentCreateBox() {
-                        document.getElementById('add-comment-button').innerHTML =
-                            '<div class="comment-create-box">\n' +
-                            '<div class="comment-content-container">\n' +
-                            '<textarea class="autoExpand comment-content-textarea"\n' +
-                            'placeholder="Enter your comment..."\n' +
-                            'data-min-rows="4" rows="4" cols="50"></textarea>\n' +
-                            '</div>\n' +
-                            '<div class="comment-author-container">\n' +
-                            '<span><b><i>Comment as:</i></b></span>\n' +
-                            '<input class="comment-author-input" placeholder="Enter your username...">\n' +
-                            '</div>\n' +
-                            '<div class="publish-comment-button" onclick="publishNewComment()">Publish</div>\n' +
-                            '</div>'
-                    }
-
-                    function showCommentReplyBox(commentReplyLink) {
-                        var commentID = commentReplyLink.getAttribute('data-comment-id');
-                        var replyButtonDiv = commentReplyLink.parentNode;
-                        replyButtonDiv.innerHTML =
-                            '<div class="comment-create-box">\n' +
-                            '<div class="comment-content-container">\n' +
-                            '<textarea class="autoExpand comment-content-reply-textarea"\n' +
-                            'placeholder="Enter your comment..."\n' +
-                            'data-min-rows="4" rows="4" cols="50"></textarea>\n' +
-                            '</div>\n' +
-                            '<div class="comment-author-container">\n' +
-                            '<span><b><i>Comment as:</i></b></span>\n' +
-                            '<input class="comment-author-reply-input" placeholder="Enter your username...">\n' +
-                            '</div>\n' +
-                            '<div class="publish-comment-button" data-comment-id="' + commentID + '" ' +
-                            'onclick="replyToComment(this)">Publish</div>\n' +
-                            '</div>'
-                    }
-                </script>
             </div>
         </div>
         {{template "footer"}}
@@ -115,6 +79,7 @@
     <script src="/scripts/publishNewComment.js"></script>
     <script src="/scripts/replyToComment.js"></script>
     <script src="/scripts/convertToGoTimeFormat.js"></script>
+    <script src="/scripts/showCommentCreateForm.js"></script>
     <script src="https://momentjs.com/downloads/moment.js"></script>
     </html>
 {{end}}

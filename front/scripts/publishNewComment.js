@@ -39,9 +39,9 @@ function publishNewComment() {
 
                 alert('Comment successfully created');
 
-                document.getElementsByClassName('comment-content-textarea')[0].value = '';
-                document.getElementsByClassName('comment-content-textarea')[0]
-                    .setAttribute('rows', document.getElementById('comment-content-textarea')
+                document.getElementsByClassName('autoExpand comment-content-textarea')[0].value = '';
+                document.getElementsByClassName('autoExpand comment-content-textarea')[0]
+                    .setAttribute('rows', document.getElementsByClassName('comment-content-textarea')[0]
                         .getAttribute('data-min-rows'));
             },
             error: function (jqXHR) {

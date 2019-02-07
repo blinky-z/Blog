@@ -1,26 +1,37 @@
 {{define "comment"}}
-    <li id="{{.CommentID}}" class="comment">
+    {{$comment := index . 0}}
+    {{$level := index . 1}}
+    <li id="{{$comment.CommentID}}" class="comment">
         <div class="comment-block">
             <div class="comment-header">
-                <div class="username"><a href="#" onclick="return false;" rel="nofollow"><b>{{.Username}}</b></a>
+                <div class="username"><a href="#" onclick="return false;"
+                                         rel="nofollow"><b>{{$comment.Username}}</b></a>
                 </div>
-                <div class="creation-time"><a href="#" onclick="return false;" rel="nofollow">{{.CreationTime}}</a>
+                <div class="creation-time"><a href="#" onclick="return false;"
+                                              rel="nofollow">{{$comment.CreationTime}}</a>
                 </div>
             </div>
-            <p class="comment-content">{{.CommentContent}}</p>
+            <p class="comment-content">{{$comment.CommentContent}}</p>
             <div class="comment-actions">
                 <div class="reply-comment-button">
-                    <a class="comment-reply" data-comment-id="{{.CommentID}}"
+                    <a class="comment-reply" data-comment-id="{{$comment.CommentID}}"
                        href="#" onclick="showCommentReplyBox(this); return false;">Reply</a>
                 </div>
             </div>
         </div>
     </li>
-    {{if .Childs}}
-        {{range .Childs}}
-            <ul>
-                {{template "comment" .}}
-            </ul>
+    {{if $comment.Childs}}
+        {{if ne $level 5}}
+            {{range $comment.Childs}}
+                <ul>
+                    {{$nextLevel := inc $level}}
+                    {{template "comment" args . $nextLevel}}
+                </ul>
+            {{end}}
+        {{else}}
+            {{range $comment.Childs}}
+                {{template "comment" args . $level}}
+            {{end}}
         {{end}}
     {{end}}
 {{end}}

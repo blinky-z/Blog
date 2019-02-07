@@ -113,8 +113,8 @@ func GeneratePostPage(env *models.Env) http.Handler {
 		}
 
 		env.LogInfo.Printf("Getting post page template")
-		postTemplate, err :=
-			template.ParseFiles(templatesFolder+"header.html", templatesFolder+"comment.html",
+		postTemplate, err := template.New("").Funcs(incCommentsLevelFunc).Funcs(passArgsToNextLevelFunc).
+			ParseFiles(templatesFolder+"header.html", templatesFolder+"comment.html",
 				templatesFolder+"postPage.html", templatesFolder+"footer.html")
 		if err != nil {
 			env.LogError.Print(err)
@@ -143,17 +143,10 @@ func GeneratePostPage(env *models.Env) http.Handler {
 			api.Respond(w, http.StatusInternalServerError)
 			return
 		}
-		// TODO: написать это за O(N) или хотя бы за O(N^2)
-		// идея: сначала сохраним все комменты в мапу, где ключ будет ID коммента
-		// когда мы встречаем коммент, у которого есть родитель, мы находим в мапе этот коммент и добавляем к списку
-		// вложенных комментов этот коммент
-		// вложенные комменты в мапе не сохраняем
+
 		commentWithChildsAsMap := make(map[string]*CommentWithChilds)
 		var parentComments []string
 
-		// на этом шаге мы поместили в мапу абсолютно все комменты
-		// каждый коммент может вмещать в себя еще комментарии
-		// теперь, мы имеем ID коммента и сам коммент по этому ID в мапе commentWithChildsAsMap
 		for _, comment := range comments {
 			commentWithChilds := &CommentWithChilds{}
 			commentWithChilds.CommentID = comment.ID
@@ -168,23 +161,10 @@ func GeneratePostPage(env *models.Env) http.Handler {
 			}
 		}
 
-		// теперь у нас есть мапа со всеми комментами
-		// теперь заполним всех детей у всех комментов
-		// при этом, теперь в мапе будут лежать как родители со всеми детьми, так и дети
-		// у детей также есть дети
-		// ВАЖНО: нужно обязательно работать с указателями, таким образом, обновляя ребенков в одном родителе,
-		// мы также меняем этого родителя как ребенка в других родителях
-		// например, у родителя 2 есть ребенки 3, 4, 5
-		// у родителя 5 есть ребенок 6
-		// если бы мы не работали с указателями, тогда обновление родителя 5 не даст обновление ребенка 5 в родителе 2
 		for _, comment := range comments {
 			if comment.ParentID.Valid {
-				// достанем родителя текущего ребенка
 				parent := commentWithChildsAsMap[comment.ParentID.Value()]
-				// достанем детей текущего родителя
-				// добавим текущий коммент как ребенка к остальным детям родителя
 				parent.Childs = append(parent.Childs, commentWithChildsAsMap[comment.ID])
-				// обновим запись в мапе
 				commentWithChildsAsMap[comment.ParentID.Value()] = parent
 			}
 		}
