@@ -15,6 +15,8 @@ type Post struct {
 	Metadata MetaData  `json:"metadata"`
 }
 
+// CertainPostResponse - use this struct in GetCertainPost http handler (REST API)
+// This struct extend Post, adding Comments fields to store post's comments
 type CertainPostResponse struct {
 	Post
 	Comments []Comment

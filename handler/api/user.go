@@ -263,6 +263,7 @@ func generateRandomContext() (string, error) {
 	return base64.URLEncoding.EncodeToString(bytes), nil
 }
 
+// IsUserAdmin - check if user is admin
 func IsUserAdmin(login string, admins []models.Admin) bool {
 	for _, currentAdmin := range admins {
 		if currentAdmin.Login == login {

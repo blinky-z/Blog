@@ -387,17 +387,6 @@ func (api *PostAPI) GetCertainPost() http.Handler {
 		certainPostResponse.Post = post
 		certainPostResponse.Comments = comments
 
-		encodedComments, _ := json.Marshal(comments)
-		var comments1 []models.Comment
-		json.Unmarshal(encodedComments, &comments1)
-
-		if len(comments) != 0 {
-			comment1 := comments[0]
-			encodedComment1, _ := json.Marshal(comment1)
-			var comment2 models.Comment
-			json.Unmarshal(encodedComment1, &comment2)
-		}
-
 		RespondWithBody(w, http.StatusOK, certainPostResponse, env.LogError)
 	})
 }

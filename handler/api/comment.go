@@ -9,11 +9,13 @@ import (
 	"net/http"
 )
 
+// CommentAPI - environment container struct to declare all comment handlers as methods
 type CommentAPI struct {
 	Env *models.Env
 }
 
 var (
+	// CommentEnv - instance of CommentAPI struct. Initialized by main
 	CommentEnv CommentAPI
 )
 
@@ -96,6 +98,7 @@ func validateUpdateComment(r *http.Request) (comment models.CommentUpdateRequest
 	return
 }
 
+// CreateComment - create comment http handler
 func (api *CommentAPI) CreateComment() http.Handler {
 	env := api.Env
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -187,6 +190,7 @@ func (api *CommentAPI) CreateComment() http.Handler {
 	})
 }
 
+// UpdateComment - update comment http handler
 func (api *CommentAPI) UpdateComment() http.Handler {
 	env := api.Env
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -255,6 +259,7 @@ func (api *CommentAPI) UpdateComment() http.Handler {
 	})
 }
 
+// DeleteComment - delete comment http handler
 func (api *CommentAPI) DeleteComment() http.Handler {
 	env := api.Env
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
