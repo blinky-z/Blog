@@ -2,20 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Edit</title>
+    <title>Edit Post</title>
     <link rel="stylesheet" href="/css/reset.css">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/post-editor.css">
+    <link rel="stylesheet" href="/css/autoExpandTextarea.css">
     <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Amatic+SC">
     <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Dosis'>
-
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script src="/scripts/autoGrow.js"></script>
-    <script src="/scripts/create-edit-page.js"></script>
-    <script src="/scripts/updatePost.js"></script>
-    <script src="/scripts/getEditorInput.js"></script>
 </head>
-
 <body>
 <div id="container">
     <!--Header-->
@@ -60,18 +54,17 @@
             </div>
             <hr>
             <div class="post-editor-content">
-                <textarea class='autoExpand content-textarea' placeholder="" rows="8"
-                          data-min-rows="8" id="contentInput"></textarea>
+                <textarea class='autoExpand content-textarea' placeholder="" rows="10"
+                          data-min-rows="10" id="contentInput"></textarea>
             </div>
             <button onclick="updatePost()">Publish</button>
         </div>
     </div>
-    <!--Footer-->
-    <div id="footer">
-        <div class="footer-copyright">
-            <p>&copy; 2019</p>
-        </div>
-    </div>
 </div>
 </body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="/scripts/autoExpand.js"></script>
+<script src="/scripts/pageGeneration/create-edit-page.js"></script>
+<script src="/scripts/admin/updatePost.js"></script>
+<script src="/scripts/admin/getEditorInput.js"></script>
 </html>

@@ -1,33 +1,33 @@
 .post-editor {
-    margin: 15px auto;
+    margin: 20px auto 0 auto;
     width: 600px;
-    height: 450px;
 }
 
 .post-editor-title {
-    width: 100%;
+
 }
 
-.title-textarea {
+.autoExpand.title-textarea {
+    width: 100%;
     background: white;
     color: black;
     font-family: 'Noto Serif';
     padding: 10px 7px;
-    min-height: 40px;
     font-weight: 600;
     font-size: 24px;
+    line-height: 24px;
 }
 
-.title-textarea:focus:hover {
+.autoExpand.title-textarea:focus:hover {
     outline: 2px solid #016087;
 }
 
 .post-editor-content {
-    width: 100%;
     margin: 20px auto 15px auto;
 }
 
-.content-textarea {
+.autoExpand.content-textarea {
+    width: 100%;
     box-sizing: border-box;
     padding: 5px 10px;
     border: 4px solid #111;
@@ -38,9 +38,8 @@
     font-family: 'Noto Serif';
     font-weight: 300;
     font-size: 24px;
-    line-height: 1.2;
+    line-height: 24px;
 }
-
 
 .meta-description-textarea, .meta-keywords-textarea {
     background: white;
@@ -64,12 +63,14 @@
     word-break: break-word;
 }
 
+.postButtonWrap {
+    padding: 15px 0;
+}
+
 .post-editor button {
     width: 100%;
-    box-sizing: border-box;
     height: 40px;
     border-radius: 5px;
-    padding: 0;
     background: #e74c3c;
     border: none;
     color: white;

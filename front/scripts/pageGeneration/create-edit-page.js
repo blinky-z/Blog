@@ -5,13 +5,11 @@ $(document).ready(function () {
         var titleInput = inputFields[0];
         titleInput.value = post.title;
 
-        var postMetadata = post.metadata;
-
         var descriptionInput = inputFields[1];
-        descriptionInput.value = postMetadata.description;
+        descriptionInput.value = post.metadata.description;
 
         var keywordsInput = inputFields[2];
-        keywordsInput.value = postMetadata.keywords;
+        keywordsInput.value = post.metadata.keywords;
 
         var contentInput = inputFields[3];
         contentInput.value = post.content;
