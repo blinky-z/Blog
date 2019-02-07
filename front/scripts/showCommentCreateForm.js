@@ -16,8 +16,8 @@ function showCommentCreateBox() {
 
 function showCommentReplyBox(commentReplyLink) {
     var commentID = commentReplyLink.getAttribute('data-comment-id');
-    var replyButtonDiv = commentReplyLink.parentNode;
-    replyButtonDiv.innerHTML =
+    var replyButton = commentReplyLink.parentNode;
+    replyButton.innerHTML =
         '<div class="comment-create-box">\n' +
         '<div class="comment-content-container">\n' +
         '<textarea class="autoExpand comment-content-reply-textarea"\n' +
