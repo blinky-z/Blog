@@ -118,15 +118,6 @@ func TestRegisterUserWithTooShortPassword(t *testing.T) {
 	checkErrorResponse(r, http.StatusBadRequest, api.InvalidPassword)
 }
 
-func TestRegisterUserWhereLoginIdenticalPassword(t *testing.T) {
-	password := strings.Repeat("A", api.MinPwdLen)
-	login := password
-
-	r := registerUser(login, loginEmail, password)
-
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidPassword)
-}
-
 func TestRegisterUserWithEmptyUsername(t *testing.T) {
 	r := registerUser("", loginEmail, loginPassword)
 
