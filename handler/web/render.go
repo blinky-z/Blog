@@ -114,7 +114,7 @@ func GeneratePostPage(env *models.Env) http.Handler {
 
 		env.LogInfo.Printf("Getting post page template")
 		postTemplate, err := template.New("").Funcs(incCommentsLevelFunc).Funcs(passArgsToNextLevelFunc).
-			ParseFiles(templatesFolder+"header.html", templatesFolder+"comment.html",
+			ParseFiles(templatesFolder+"header.html", templatesFolder+"comments-list.html", templatesFolder+"comment.html",
 				templatesFolder+"postPage.html", templatesFolder+"footer.html")
 		if err != nil {
 			env.LogError.Print(err)

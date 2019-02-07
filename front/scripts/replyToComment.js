@@ -16,20 +16,18 @@ function levelOfComment(commentDiv) {
     return (level - 1);
 }
 
-function replyToComment(commentReplyButton) {
-    var commentID = commentReplyButton.getAttribute('data-comment-id');
-    var currentLevelCommentsList = document.getElementById(commentID).parentNode;
+function replyToComment(commentReplyButtonLink) {
+    var commentID = commentReplyButtonLink.getAttribute('data-comment-id');
+    var currentComment = document.getElementById(commentID);
 
     var postID = window.location.pathname.substr(window.location.pathname.lastIndexOf('/') + 1);
 
-    var commentCreateRequest = {PostID: '', ParentID: commentID, Author: '', Content: ''};
+    var commentCreateRequest = {PostID: '', ParentID: '', Author: '', Content: ''};
 
     commentCreateRequest.PostID = postID;
     commentCreateRequest.ParentID = commentID;
-    commentCreateRequest.Author = document.getElementById(commentID)
-        .getElementsByClassName("comment-author-reply-input")[0].value;
-    commentCreateRequest.Content = document.getElementById(commentID)
-        .getElementsByClassName("comment-content-reply-textarea")[0].value;
+    commentCreateRequest.Author = currentComment.getElementsByClassName("comment-author-reply-input")[0].value;
+    commentCreateRequest.Content = currentComment.getElementsByClassName("comment-content-reply-textarea")[0].value;
 
     var encodedCommentData = JSON.stringify(commentCreateRequest);
 
@@ -41,33 +39,26 @@ function replyToComment(commentReplyButton) {
             data: encodedCommentData,
             success: function (data, textStatus, jqXHR) {
                 var response = JSON.parse(jqXHR.responseText);
-                var createdComment = response.body;
+                var createCommentResponse = response.body;
 
-                var commentsList = currentLevelCommentsList;
-                var createdCommentChild = document.getElementById('comment-template').cloneNode(true);
-                createdCommentChild.setAttribute('id', createdComment.id);
-                createdCommentChild.removeAttribute('style');
-                createdCommentChild.getElementsByClassName('username')[0].getElementsByTagName('a')[0]
-                    .getElementsByTagName('b')[0].innerHTML = createdComment.author;
-                createdCommentChild.getElementsByClassName('creation-time')[0].getElementsByTagName('a')[0]
-                    .innerHTML = convertToGoTimeFormat(createdComment.date);
-                createdCommentChild.getElementsByClassName('comment-content')[0].innerHTML = createdComment.content;
-                createdCommentChild.getElementsByClassName('comment-reply')[0].setAttribute('data-comment-id',
-                    createdComment.id);
+                var currentCommentsList = currentComment.parentNode;
 
-                if (levelOfComment(document.getElementById(commentID)) < 5) {
-                    var createdCommentChildList = document.createElement('ul');
-                    createdCommentChildList.appendChild(createdCommentChild);
-                    commentsList.appendChild(createdCommentChildList);
+                var newComment = createCommentChild(createCommentResponse);
+
+                if (levelOfComment(currentComment) < 5) {
+                    var commentWithChilds = document.createElement('ul');
+                    commentWithChilds.appendChild(newComment);
+                    currentCommentsList.appendChild(commentWithChilds);
                 } else {
-                    commentsList.appendChild(createdCommentChild);
+                    currentCommentsList.appendChild(newComment);
                 }
 
                 alert('Comment successfully created');
 
-                var replyButton = commentReplyButton.parentNode.parentNode;
-                replyButton.innerHTML = '<a class="comment-reply" data-comment-id="' + commentID + '"\n' +
-                    'href="#" onclick="showCommentReplyBox(this); return false;">Reply</a>';
+                // close reply form
+                var replyButton = currentComment.getElementsByClassName('reply-comment-button')[0];
+                replyButton.innerHTML = `<a class="comment-reply" data-comment-id="${commentID}"
+                        href="#" onclick="showCommentReplyBox(this); return false;">Reply</a>`;
             },
             error: function (jqXHR) {
                 var response = JSON.parse(jqXHR.responseText);

@@ -43,26 +43,9 @@
                 <h2>{{.CommentsCount}} comments</h2>
                 <div class="comments-list">
                     <ul>
-                        <ul>
-                            <li id="comment-template" class="comment" style="display: none">
-                                <div class="comment-block">
-                                    <div class="comment-header">
-                                        <div class="username"><a href="#" onclick="return false;" rel="nofollow"><b></b></a></div>
-                                        <div class="creation-time"><a href="#" onclick="return false;" rel="nofollow"></a></div>
-                                    </div>
-                                    <p class="comment-content"></p>
-                                    <div class="comment-actions">
-                                        <div class="comment-reply-button">
-                                            <a class="comment-reply" data-comment-id=""
-                                               href="#" onclick="showCommentReplyBox(this); return false;">Reply</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </li>
-                        </ul>
                         {{range $index, $comment := .Comments}}
                             <ul>
-                                {{template "comment" args $comment 0}}
+                                {{template "comments-list" args $comment 0}}
                             </ul>
                         {{end}}
                     </ul>
@@ -80,6 +63,7 @@
     <script src="/scripts/replyToComment.js"></script>
     <script src="/scripts/convertToGoTimeFormat.js"></script>
     <script src="/scripts/showCommentCreateForm.js"></script>
+    <script src="/scripts/createCommentChild.js"></script>
     <script src="https://momentjs.com/downloads/moment.js"></script>
     </html>
 {{end}}
