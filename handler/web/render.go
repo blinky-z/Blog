@@ -22,42 +22,42 @@ const (
 	timeFormat = "January 2 2006, 15:04:05"
 )
 
-// PostsList - represents posts list on index page
-type PostsList struct {
-	Posts []BlogPost
+// postsList - represents posts list on index page
+type postsList struct {
+	Posts []blogPost
 }
 
-// PageSelector - represents page selector on index page
-type PageSelector struct {
+// pageSelector - represents page selector on index page
+type pageSelector struct {
 	HasNewerPosts  bool
 	NewerPostsLink string
 	OlderPostsLink string
 	HasOlderPosts  bool
 }
 
-// IndexPage - represents index page
-type IndexPage struct {
+// indexPage - represents index page
+type indexPage struct {
 	models.MetaData
-	PostsList
-	PageSelector
+	postsList
+	pageSelector
 }
 
-// CommentWithChilds - represents comment in comments section
-type CommentWithChilds struct {
+// commentWithChilds - represents comment in comments section
+type commentWithChilds struct {
 	CommentID      string
 	Username       string
 	CreationTime   string
 	CommentContent string
-	Childs         []*CommentWithChilds
+	Childs         []*commentWithChilds
 }
 
-// PostCommentsList - represents comments section below post
-type PostCommentsList struct {
-	Comments []CommentWithChilds
+// postCommentsList - represents comments section below post
+type postCommentsList struct {
+	Comments []commentWithChilds
 }
 
-// BlogPost - represents blog post on index and /posts/{id} pages
-type BlogPost struct {
+// blogPost - represents blog post on index and /posts/{id} pages
+type blogPost struct {
 	PostLink         string
 	PostTitle        string
 	PostAuthor       string
@@ -66,12 +66,12 @@ type BlogPost struct {
 	PostContent      string
 }
 
-// PostPage - represents /posts/{id} page
-type PostPage struct {
+// postPage - represents /posts/{id} page
+type postPage struct {
 	models.MetaData
-	BlogPost
+	blogPost
 	CommentsCount int
-	PostCommentsList
+	postCommentsList
 	IsUserAdmin bool
 }
 
@@ -110,20 +110,20 @@ func GeneratePostPage(env *models.Env) http.Handler {
 			}
 		}
 
-		incCommentsLevelFunc := template.FuncMap{
+		incTemplateFunc := template.FuncMap{
 			"inc": func(i int) int {
 				return i + 1
 			},
 		}
 
-		passArgsToNextLevelFunc := template.FuncMap{
+		passArgsTemplateFunc := template.FuncMap{
 			"args": func(vs ...interface{}) []interface{} {
 				return vs
 			},
 		}
 
 		env.LogInfo.Printf("Getting post page template")
-		postTemplate, err := template.New("").Funcs(incCommentsLevelFunc).Funcs(passArgsToNextLevelFunc).
+		postTemplate, err := template.New("").Funcs(incTemplateFunc).Funcs(passArgsTemplateFunc).
 			ParseFiles(templatesFolder+"header.html", templatesFolder+"comments-list.html", templatesFolder+"comment.html",
 				templatesFolder+"postPage.html", templatesFolder+"footer.html")
 		if err != nil {
@@ -134,7 +134,7 @@ func GeneratePostPage(env *models.Env) http.Handler {
 
 		env.LogInfo.Printf("Setting post page template data")
 
-		var data PostPage
+		var data postPage
 
 		data.PostTitle = post.Title
 		data.PostAuthor = "Dmitry"
@@ -154,11 +154,11 @@ func GeneratePostPage(env *models.Env) http.Handler {
 			return
 		}
 
-		commentWithChildsAsMap := make(map[string]*CommentWithChilds)
+		commentWithChildsAsMap := make(map[string]*commentWithChilds)
 		var parentComments []string
 
 		for _, comment := range comments {
-			commentWithChilds := &CommentWithChilds{}
+			commentWithChilds := &commentWithChilds{}
 			commentWithChilds.CommentID = comment.ID
 			commentWithChilds.CommentContent = comment.Content
 			commentWithChilds.CreationTime = comment.Date.Format(timeFormat)
@@ -173,13 +173,13 @@ func GeneratePostPage(env *models.Env) http.Handler {
 
 		for _, comment := range comments {
 			if comment.ParentID.Valid {
-				parent := commentWithChildsAsMap[comment.ParentID.Value()]
+				parent := commentWithChildsAsMap[comment.ParentID.Value().(string)]
 				parent.Childs = append(parent.Childs, commentWithChildsAsMap[comment.ID])
-				commentWithChildsAsMap[comment.ParentID.Value()] = parent
+				commentWithChildsAsMap[comment.ParentID.Value().(string)] = parent
 			}
 		}
 
-		var parentCommentWithChilds []CommentWithChilds
+		var parentCommentWithChilds []commentWithChilds
 		for _, parentCommendID := range parentComments {
 			parentCommentWithChilds = append(parentCommentWithChilds, *commentWithChildsAsMap[parentCommendID])
 		}
@@ -190,7 +190,7 @@ func GeneratePostPage(env *models.Env) http.Handler {
 		data.IsUserAdmin = isUserAdmin
 
 		env.LogInfo.Printf("Executing post template")
-		if err := postTemplate.Funcs(incCommentsLevelFunc).Funcs(passArgsToNextLevelFunc).
+		if err := postTemplate.Funcs(incTemplateFunc).Funcs(passArgsTemplateFunc).
 			ExecuteTemplate(w, "postPage", data); err != nil {
 			env.LogError.Print(err)
 		}
@@ -234,10 +234,10 @@ func GenerateIndexPage(env *models.Env) http.Handler {
 
 		env.LogInfo.Printf("Setting index page template data")
 
-		var data IndexPage
+		var data indexPage
 
 		for currentPostNum := 0; currentPostNum < len(posts) && currentPostNum < 10; currentPostNum++ {
-			var blogPostData BlogPost
+			var blogPostData blogPost
 			post := posts[currentPostNum]
 			blogPostData.PostTitle = post.Title
 			blogPostData.PostAuthor = "Dmitry"
@@ -296,8 +296,6 @@ func HandleHTMLFile(env *models.Env, frontFolder string) http.Handler {
 		fileName = currentURLPath + ".html"
 
 		filePath := frontFolder + fileName
-
-		env.LogInfo.Printf("Current path: %s", filePath)
 
 		http.ServeFile(w, r, filePath)
 	})
