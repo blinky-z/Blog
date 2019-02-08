@@ -59,7 +59,7 @@ func validateCreateComment(r *http.Request) (comment models.CommentCreateRequest
 	}
 
 	if comment.ParentID.Valid {
-		validateParentIDError := ValidateID(comment.ParentID.Value())
+		validateParentIDError := ValidateID(comment.ParentID.Value().(string))
 		if validateParentIDError != NoError {
 			validateError = validateParentIDError
 			return
@@ -158,21 +158,11 @@ func (api *CommentAPI) CreateComment() http.Handler {
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
 			return
 		}
-		var err error
-		if comment.ParentID.Valid {
-			err = env.Db.QueryRow("insert into comments("+commentService.DbCommentInputFields+") values($1, $2, $3, $4) "+
-				"RETURNING "+commentService.DbCommentFields,
-				comment.PostID, comment.ParentID.Value(), comment.Author, comment.Content).
-				Scan(&createdComment.ID, &createdComment.PostID, &createdComment.ParentID, &createdComment.Author,
-					&createdComment.Date, &createdComment.Content, &createdComment.Deleted)
-		} else {
-			err = env.Db.QueryRow("insert into comments("+commentService.DbCommentInputFields+") values($1, $2, $3, $4) "+
-				"RETURNING "+commentService.DbCommentFields,
-				comment.PostID, sql.NullString{}, comment.Author, comment.Content).
-				Scan(&createdComment.ID, &createdComment.PostID, &createdComment.ParentID, &createdComment.Author,
-					&createdComment.Date, &createdComment.Content, &createdComment.Deleted)
-		}
-		if err != nil {
+		if err := env.Db.QueryRow("insert into comments("+commentService.DbCommentInputFields+") values($1, $2, $3, $4) "+
+			"RETURNING "+commentService.DbCommentFields,
+			comment.PostID, comment.ParentID.Value(), comment.Author, comment.Content).
+			Scan(&createdComment.ID, &createdComment.PostID, &createdComment.ParentID, &createdComment.Author,
+				&createdComment.Date, &createdComment.Content, &createdComment.Deleted); err != nil {
 			env.LogError.Print(err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
 			return

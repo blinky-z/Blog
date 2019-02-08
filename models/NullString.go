@@ -14,8 +14,11 @@ import (
 type NullString sql.NullString
 
 // Value - helpful function to get value of NullString type field
-func (ns *NullString) Value() string {
-	return ns.String
+func (ns *NullString) Value() interface{} {
+	if ns.Valid {
+		return ns.String
+	}
+	return sql.NullString{}
 }
 
 // Scan - function to scan value from sql row's field
