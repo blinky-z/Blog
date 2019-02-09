@@ -10,7 +10,9 @@ import "time"
 type Post struct {
 	ID       string    `json:"id"`
 	Title    string    `json:"title"`
+	Author   string    `json:"author"`
 	Date     time.Time `json:"date"`
+	Snippet  string    `json:"snippet"`
 	Content  string    `json:"content"`
 	Metadata MetaData  `json:"metadata"`
 }
@@ -19,5 +21,5 @@ type Post struct {
 // This struct extends Post, adding Comments field allowing to store post's comments
 type CertainPostResponse struct {
 	Post
-	Comments []Comment `json:"comments"`
+	Comments []*CommentWithChilds `json:"comments"`
 }

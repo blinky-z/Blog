@@ -22,7 +22,9 @@ func testCreateCommentFactory() models.CommentCreateRequest {
 	post := testPostFactory()
 	post.Title = "post for testing comments"
 	post.Content = "post for testing comments"
+
 	r := createPost(post)
+	checkNiceResponse(r, http.StatusCreated)
 
 	var responseCreatePost ResponseSinglePost
 	decodeSinglePostResponse(r.Body, &responseCreatePost)
@@ -189,7 +191,7 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 
 		comments := response.Body.Comments
 		receivedComment := comments[0]
-		if receivedComment != workingComment {
+		if receivedComment.Comment != workingComment {
 			t.Fatalf("Received comment does not match created one\nCreated comment: %v\nReceived comment: %v",
 				workingComment, receivedComment)
 		}
@@ -239,7 +241,7 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 
 		comments := response.Body.Comments
 		receivedComment := comments[0]
-		if receivedComment != workingComment {
+		if receivedComment.Comment != workingComment {
 			t.Fatalf("Received comment does not match updated one\nUpdated comment: %v\n Received comment: %v",
 				workingComment, receivedComment)
 		}
@@ -332,7 +334,7 @@ func TestCreateCommentWithEmptyAuthor(t *testing.T) {
 func TestCreateCommentWithTooShortAuthor(t *testing.T) {
 	comment := testCreateCommentFactory()
 	comment.Content = "test content"
-	comment.Author = strings.Repeat("2", api.MinAuthorLen-1)
+	comment.Author = strings.Repeat("2", api.MinLoginLen-1)
 
 	r := createComment(&comment)
 	defer func() {
@@ -348,7 +350,7 @@ func TestCreateCommentWithTooShortAuthor(t *testing.T) {
 func TestCreateCommentWithTooLongAuthor(t *testing.T) {
 	comment := testCreateCommentFactory()
 	comment.Content = "test content"
-	comment.Author = strings.Repeat("1", api.MaxAuthorLen*2)
+	comment.Author = strings.Repeat("1", api.MaxLoginLen*2)
 
 	r := createComment(&comment)
 	defer func() {

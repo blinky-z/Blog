@@ -138,6 +138,17 @@ func validatePost(r *http.Request) (post models.Post, validateError PostErrorCod
 		}
 	}
 
+	authorLen := len(post.Author)
+	if authorLen > MaxLoginLen || authorLen < MinLoginLen || authorLen == 0 {
+		validateError = InvalidLogin
+		return
+	}
+
+	if len(post.Snippet) == 0 {
+		validateError = InvalidContent
+		return
+	}
+
 	if len(post.Content) == 0 {
 		validateError = InvalidContent
 		return
@@ -206,9 +217,10 @@ func (api *PostAPI) CreatePost() http.Handler {
 			return
 		}
 		var metadataAsJSONString string
-		if err := env.Db.QueryRow("insert into posts("+postService.DbPostInputFields+") values($1, $2, $3) "+
-			"RETURNING "+postService.DbPostFields, post.Title, post.Content, encodedMetadata).
-			Scan(&createdPost.ID, &createdPost.Title, &createdPost.Date, &createdPost.Content, &metadataAsJSONString); err != nil {
+		if err := env.Db.QueryRow("insert into posts("+postService.DbPostInputFields+") values($1, $2, $3, $4, $5) "+
+			"RETURNING "+postService.DbPostFields, post.Title, post.Author, post.Snippet, post.Content, encodedMetadata).
+			Scan(&createdPost.ID, &createdPost.Title, &createdPost.Author, &createdPost.Date, &createdPost.Snippet, &createdPost.Content,
+				&metadataAsJSONString); err != nil {
 			env.LogError.Print(err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
 			return
@@ -284,9 +296,10 @@ func (api *PostAPI) UpdatePost() http.Handler {
 			return
 		}
 		var metadataAsJSONString string
-		if err := env.Db.QueryRow("UPDATE posts SET ("+postService.DbPostInputFields+") = ($1, $2, $3) "+
-			"WHERE id = $4 RETURNING "+postService.DbPostFields, post.Title, post.Content, encodedMetadata, id).
-			Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Date, &updatedPost.Content, &metadataAsJSONString); err != nil {
+		if err := env.Db.QueryRow("UPDATE posts SET ("+postService.DbPostInputFields+") = ($1, $2, $3, $4, $5) "+
+			"WHERE id = $6 RETURNING "+postService.DbPostFields, post.Title, post.Author, post.Snippet, post.Content, encodedMetadata, id).
+			Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Author, &updatedPost.Date, &updatedPost.Snippet, &updatedPost.Content,
+				&metadataAsJSONString); err != nil {
 			env.LogError.Print(err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
 			return

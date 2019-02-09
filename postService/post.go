@@ -8,9 +8,9 @@ import (
 
 const (
 	// DbPostInputFields - fields that should be filled while inserting new post
-	DbPostInputFields = "title, content, metadata"
+	DbPostInputFields = "title, author, snippet, content, metadata"
 	// DbPostFields - all post fields
-	DbPostFields = "id, title, date, content, metadata"
+	DbPostFields = "id, title, author, date, snippet, content, metadata"
 )
 
 // GetCertainPost - return post as models.Post. Used for sending post back to user using http with following client-side
@@ -24,7 +24,7 @@ func GetCertainPost(env *models.Env, id string) (models.Post, error) {
 
 	var metadataAsJSONString string
 	if err := env.Db.QueryRow("select "+DbPostFields+" from posts where id = $1", id).
-		Scan(&post.ID, &post.Title, &post.Date, &post.Content, &metadataAsJSONString); err != nil {
+		Scan(&post.ID, &post.Title, &post.Author, &post.Date, &post.Snippet, &post.Content, &metadataAsJSONString); err != nil {
 		if err == sql.ErrNoRows {
 			env.LogInfo.Printf("Can not GET post with ID %s : post does not exist", id)
 			return post, err
@@ -61,7 +61,8 @@ func GetPosts(env *models.Env, page, postsPerPage int) ([]models.Post, error) {
 	for rows.Next() {
 		var currentPost models.Post
 		var metadataAsJSONString string
-		if err = rows.Scan(&currentPost.ID, &currentPost.Title, &currentPost.Date, &currentPost.Content, &metadataAsJSONString); err != nil {
+		if err = rows.Scan(&currentPost.ID, &currentPost.Title, &currentPost.Author, &currentPost.Date,
+			&currentPost.Snippet, &currentPost.Content, &metadataAsJSONString); err != nil {
 			env.LogError.Print(err)
 			return posts, err
 		}

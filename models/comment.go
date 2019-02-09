@@ -15,6 +15,12 @@ type Comment struct {
 	Deleted  bool       `json:"deleted"`
 }
 
+// represents comment with childs (reply comments)
+type CommentWithChilds struct {
+	Comment
+	Childs []*CommentWithChilds `json:"childs"`
+}
+
 // CommentCreateRequest - represents comment creation request
 type CommentCreateRequest struct {
 	PostID   string     `json:"postID"`

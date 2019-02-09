@@ -3,9 +3,9 @@
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <meta name="description" content="{{.Description}}">
-        <meta name="keywords" content="{{range $i, $keyword := .Keywords}}{{if $i}},{{end}}{{$keyword}}{{end}}">
-        <title>{{.PostTitle}}</title>
+        <meta name="description" content="{{.Metadata.Description}}">
+        <meta name="keywords" content="{{range $i, $keyword := .Metadata.Keywords}}{{if $i}},{{end}}{{$keyword}}{{end}}">
+        <title>{{.Post.Title}}</title>
 
         <link rel="stylesheet" href="/css/reset.css">
         <link rel="stylesheet" href="/css/style.css">
@@ -21,9 +21,11 @@
         {{template "header"}}
         <div id="content">
             <div class="blog-post">
-                <h1 class="blog-post-header">{{.PostTitle}}</h1>
-                <h3 class="blog-post-description">Written by <b>{{.PostAuthor}}</b> on <b>{{.PostCreationTime}}</b></h3>
-                <div class="post-content">{{.PostContent}}</div>
+                {{$creationTime := convertTime .Post.Date}}
+                <h1 class="blog-post-header">{{.Post.Title}}</h1>
+                <h3 class="blog-post-description">Written by <b>{{.Post.Author}}</b> on
+                    <b>{{$creationTime}}</b></h3>
+                <div class="post-content">{{.Post.Content}}</div>
                 <div class="blog-post-share">
                     Share:
                     <div class="blog-post-share-socials">
@@ -43,10 +45,9 @@
                 <h2>{{.CommentsCount}} comments</h2>
                 <div class="comments-list">
                     <ul>
-                        {{$isAdmin := .IsUserAdmin}}
                         {{range $index, $comment := .Comments}}
                             <ul>
-                                {{template "comments-list" args $comment 0 $isAdmin}}
+                                {{template "comments-list" args $comment 0 $.IsUserAdmin}}
                             </ul>
                         {{end}}
                     </ul>

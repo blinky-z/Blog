@@ -355,7 +355,7 @@ func (api *UserAPI) LoginUserHandler() http.Handler {
 		http.SetCookie(w, ctxCookie)
 
 		// set username cookie for detecting is user admin
-		usernameCookie := &http.Cookie{Name: "Login", Value: username, SameSite: http.SameSiteStrictMode, HttpOnly: true,
+		usernameCookie := &http.Cookie{Name: "Login", Value: username, SameSite: http.SameSiteStrictMode,
 			Path: "/"}
 		http.SetCookie(w, usernameCookie)
 

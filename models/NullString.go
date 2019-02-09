@@ -7,9 +7,8 @@ import (
 )
 
 // NullString - wraps built-in sql.NullString
-// We need this struct to use it in models.Comment since field ParentID can be null, but we can use it somewhere else
-// in future
-// Declaring own type, we can use custom marshal and unmarshal json functions
+// We need this struct to store either null or value (string) depending on database value
+// But also, declaring own type, we can use custom marshal and unmarshal json functions
 // Now json object will store only null or string value, not the whole sql.NullString struct
 type NullString sql.NullString
 

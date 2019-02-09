@@ -71,6 +71,10 @@ func comparePostLists(lList, rList []models.Post) bool {
 
 func testPostFactory() models.Post {
 	var testPost models.Post
+	testPost.Author = "test author"
+	testPost.Snippet = "test snippet"
+	testPost.Title = "test title"
+	testPost.Content = "test content"
 	testPost.Metadata.Keywords = []string{"testMetadata1", "testMetadata2"}
 	testPost.Metadata.Description = "test meta description"
 

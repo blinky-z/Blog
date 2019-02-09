@@ -3,8 +3,9 @@
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <meta name="description" content="{{.Description}}">
-        <meta name="keywords" content="{{range $i, $keyword := .Keywords}}{{if $i}},{{end}}{{$keyword}}{{end}}">
+        <meta name="description" content="{{.Metadata.Description}}">
+        <meta name="keywords"
+              content="{{range $i, $keyword := .Metadata.Keywords}}{{if $i}},{{end}}{{$keyword}}{{end}}">
         <title>Blog</title>
 
         <link rel="stylesheet" href="/css/reset.css">
@@ -19,11 +20,12 @@
         <div id="content">
             <div id="posts-list">
                 {{range .Posts}}
+                    {{$creationTime := convertTime .Date}}
                     <div class="blog-post">
-                        <h1 class="blog-post-header"><a href="{{.PostLink}}">{{.PostTitle}}</a></h1>
-                        <h3 class="blog-post-description">Written by <b>{{.PostAuthor}}</b> on
-                            <b> {{.PostCreationTime }}</b></h3>
-                        <p class="blog-post-snippet">{{.PostSnippet}}</p>
+                        <h1 class="blog-post-header"><a href="posts/{{.ID}}">{{.Title}}</a></h1>
+                        <h3 class="blog-post-description">Written by <b>{{.Author}}</b> on <b>{{$creationTime}}</b>
+                        </h3>
+                        <p class="blog-post-snippet">{{.Snippet}}</p>
                         <div class="blog-post-actions">
                             <div class="blog-post-share">
                                 Share:
@@ -41,20 +43,22 @@
                                 </div>
                             </div>
                             <div class="blog-post-read-more">
-                                <a href="{{.PostLink}}">Read More</a>
+                                <a href="posts/{{.ID}}">Read More</a>
                             </div>
                         </div>
                     </div>
                 {{end}}
             </div>
             <div id="blog-page-selector">
-                {{if .HasNewerPosts}}
-                    <div id="blog-page-selector-newer-posts"><a href="{{.NewerPostsLink}}">Newer Posts</a></div>
+                {{if .PageSelector.HasNewerPosts}}
+                    <div id="blog-page-selector-newer-posts"><a href="{{.PageSelector.NewerPostsLink}}">Newer Posts</a>
+                    </div>
                 {{else}}
                     <div id="blog-page-selector-newer-posts" class="has-no-posts"></div>
                 {{end}}
-                {{if .HasOlderPosts}}
-                    <div id="blog-page-selector-older-posts"><a href="{{.OlderPostsLink}}">Older Posts</a></div>
+                {{if .PageSelector.HasOlderPosts}}
+                    <div id="blog-page-selector-older-posts"><a href="{{.PageSelector.OlderPostsLink}}">Older Posts</a>
+                    </div>
                 {{else}}
                     <div id="blog-page-selector-older-posts" class="has-no-posts"></div>
                 {{end}}
@@ -64,5 +68,6 @@
         {{template "footer"}}
     </div>
     </body>
+    <script src="/scripts/convertToGoTimeFormat.js"></script>
     </html>
 {{end}}

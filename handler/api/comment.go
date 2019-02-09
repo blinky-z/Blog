@@ -26,11 +26,6 @@ const (
 	// MaxCommentContentLen - max length of comment content
 	MaxCommentContentLen int = 2048
 
-	//MinAuthorLen - min length of comment author
-	MinAuthorLen int = MinLoginLen
-	//MaxAuthorLen - max length of comment author
-	MaxAuthorLen int = MaxLoginLen
-
 	// DeletedCommentContent - message that replaces content of deleted comment
 	DeletedCommentContent = "Содержимое этого комментария было удалено"
 )
@@ -73,7 +68,7 @@ func validateCreateComment(r *http.Request) (comment models.CommentCreateRequest
 	}
 
 	authorLen := len(comment.Author)
-	if authorLen > MaxAuthorLen || authorLen < MinAuthorLen || authorLen == 0 {
+	if authorLen > MaxLoginLen || authorLen < MinLoginLen || authorLen == 0 {
 		validateError = InvalidLogin
 		return
 	}

@@ -11,7 +11,10 @@ $(document).ready(function () {
         var keywordsInput = inputFields[2];
         keywordsInput.value = post.metadata.keywords;
 
-        var contentInput = inputFields[3];
+        var snippetInput = inputFields[3];
+        snippetInput.value = post.snippet;
+
+        var contentInput = inputFields[4];
         contentInput.value = post.content;
     }
 
