@@ -28,11 +28,13 @@ var (
 )
 
 const (
-	// InvalidTitle - incorrect user input - invalid title of post
+	// InvalidTitle - incorrect user input - invalid post title
 	InvalidTitle PostErrorCode = "INVALID_TITLE"
-	// InvalidID - incorrect user input - invalid id of post
+	// InvalidID - incorrect user input - invalid post id
 	InvalidID PostErrorCode = "INVALID_ID"
-	// InvalidContent - incorrect user input - invalid content of post
+	// InvalidContent - incorrect user input - invalid post snippet
+	InvalidSnippet PostErrorCode = "INVALID_SNIPPET"
+	// InvalidContent - incorrect user input - invalid post content
 	InvalidContent PostErrorCode = "INVALID_CONTENT"
 	// InvalidMetadata - incorrect user input - invalid description or keywords
 	InvalidMetadata PostErrorCode = "INVALID_METADATA"
@@ -145,7 +147,7 @@ func validatePost(r *http.Request) (post models.Post, validateError PostErrorCod
 	}
 
 	if len(post.Snippet) == 0 {
-		validateError = InvalidContent
+		validateError = InvalidSnippet
 		return
 	}
 
