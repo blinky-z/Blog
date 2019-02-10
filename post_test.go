@@ -17,12 +17,12 @@ import (
 	"testing"
 )
 
-type ResponseSinglePost struct {
+type ResponsePost struct {
 	Error api.PostErrorCode
 	Body  models.Post
 }
 
-type ResponseSinglePostWithComments struct {
+type ResponsePostWithComments struct {
 	Error api.PostErrorCode
 	Body  models.CertainPostResponse
 }
@@ -83,14 +83,14 @@ func testPostFactory() models.Post {
 
 // API for encoding and decoding messages
 
-func decodeSinglePostResponse(responseBody io.ReadCloser, r *ResponseSinglePost) {
+func decodePostResponse(responseBody io.ReadCloser, r *ResponsePost) {
 	err := json.NewDecoder(responseBody).Decode(r)
 	if err != nil {
 		panic(fmt.Sprintf("Error decoding received body. Error: %s", err))
 	}
 }
 
-func decodeSinglePostWithCommentsResponse(responseBody io.ReadCloser, r *ResponseSinglePostWithComments) {
+func decodePostWithCommentsResponse(responseBody io.ReadCloser, r *ResponsePostWithComments) {
 	err := json.NewDecoder(responseBody).Decode(r)
 	if err != nil {
 		panic(fmt.Sprintf("Error decoding received body. Error: %s", err))
@@ -201,7 +201,7 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 
 	// Step 1: Create Post
 	{
-		var response ResponseSinglePost
+		var response ResponsePost
 
 		sourcePost := testPostFactory()
 		sourcePost.Title = "Title1"
@@ -214,7 +214,7 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 				panic(err)
 			}
 		}()
-		decodeSinglePostResponse(r.Body, &response)
+		decodePostResponse(r.Body, &response)
 		if r.StatusCode != http.StatusCreated {
 			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
@@ -234,7 +234,7 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 
 	// Step 2: Get created post and compare it with returned in prev step one
 	{
-		var response ResponseSinglePost
+		var response ResponsePost
 
 		r := getPost(workingPost.ID)
 		defer func() {
@@ -243,7 +243,7 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 				panic(err)
 			}
 		}()
-		decodeSinglePostResponse(r.Body, &response)
+		decodePostResponse(r.Body, &response)
 		if r.StatusCode != http.StatusOK {
 			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
@@ -258,7 +258,7 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 
 	// Step 3: Update created post
 	{
-		var response ResponseSinglePost
+		var response ResponsePost
 
 		newPost := workingPost
 		newPost.Title = "newTitle"
@@ -271,7 +271,7 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 				panic(err)
 			}
 		}()
-		decodeSinglePostResponse(r.Body, &response)
+		decodePostResponse(r.Body, &response)
 		if r.StatusCode != http.StatusOK {
 			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
@@ -287,7 +287,7 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 
 	// Step 4: Get Updated post
 	{
-		var response ResponseSinglePost
+		var response ResponsePost
 
 		r := getPost(workingPost.ID)
 		defer func() {
@@ -296,7 +296,7 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 				panic(err)
 			}
 		}()
-		decodeSinglePostResponse(r.Body, &response)
+		decodePostResponse(r.Body, &response)
 		if r.StatusCode != http.StatusOK {
 			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
@@ -319,9 +319,9 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 			}
 		}()
 		if r.StatusCode != http.StatusOK {
-			var response ResponseSinglePost
+			var response ResponsePost
 
-			decodeSinglePostResponse(r.Body, &response)
+			decodePostResponse(r.Body, &response)
 
 			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
@@ -329,7 +329,7 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 
 	// Step 6: Get deleted post
 	{
-		var response ResponseSinglePostWithComments
+		var response ResponsePostWithComments
 
 		r := getPost(workingPost.ID)
 		defer func() {
@@ -338,7 +338,7 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 				panic(err)
 			}
 		}()
-		decodeSinglePostWithCommentsResponse(r.Body, &response)
+		decodePostWithCommentsResponse(r.Body, &response)
 		if r.StatusCode != http.StatusNotFound {
 			t.Fatalf("Error %d. Error message: %s", r.StatusCode, response.Error)
 		}
@@ -569,9 +569,9 @@ func TestGetRangeOfPostsWithCustomPostsPerPage(t *testing.T) {
 		currentPost.Title = "Title" + strconv.Itoa(i)
 		currentPost.Content = "Content" + strconv.Itoa(i)
 
-		var response ResponseSinglePost
+		var response ResponsePost
 		r := sendPostHandleMessage("POST", "http://"+Address+"/api/posts", currentPost)
-		decodeSinglePostResponse(r.Body, &response)
+		decodePostResponse(r.Body, &response)
 
 		workingPosts = append([]models.Post{response.Body}, workingPosts...)
 	}
@@ -599,9 +599,9 @@ func TestGetRangeOfPostsWithDefaultPostsPerPage(t *testing.T) {
 		currentPost.Title = "Title" + strconv.Itoa(i)
 		currentPost.Content = "Content" + strconv.Itoa(i)
 
-		var response ResponseSinglePost
+		var response ResponsePost
 		r := sendPostHandleMessage("POST", "http://"+Address+"/api/posts", currentPost)
-		decodeSinglePostResponse(r.Body, &response)
+		decodePostResponse(r.Body, &response)
 
 		workingPosts = append([]models.Post{response.Body}, workingPosts...)
 	}

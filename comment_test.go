@@ -26,8 +26,8 @@ func testCreateCommentFactory() models.CommentCreateRequest {
 	r := createPost(post)
 	checkNiceResponse(r, http.StatusCreated)
 
-	var responseCreatePost ResponseSinglePost
-	decodeSinglePostResponse(r.Body, &responseCreatePost)
+	var responseCreatePost ResponsePost
+	decodePostResponse(r.Body, &responseCreatePost)
 	createdPost := responseCreatePost.Body
 
 	var testComment models.CommentCreateRequest
@@ -176,7 +176,7 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 
 	// Step 2: Get post with comments and compare received comment with created one
 	{
-		var response ResponseSinglePostWithComments
+		var response ResponsePostWithComments
 
 		r := getPost(workingComment.PostID)
 		defer func() {
@@ -187,7 +187,7 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 		}()
 		checkNiceResponse(r, http.StatusOK)
 
-		decodeSinglePostWithCommentsResponse(r.Body, &response)
+		decodePostWithCommentsResponse(r.Body, &response)
 
 		comments := response.Body.Comments
 		receivedComment := comments[0]
@@ -226,7 +226,7 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 
 	// Step 4: Get post with comments and compare received comment with updated one
 	{
-		var response ResponseSinglePostWithComments
+		var response ResponsePostWithComments
 
 		r := getPost(workingComment.PostID)
 		defer func() {
@@ -237,7 +237,7 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 		}()
 		checkNiceResponse(r, http.StatusOK)
 
-		decodeSinglePostWithCommentsResponse(r.Body, &response)
+		decodePostWithCommentsResponse(r.Body, &response)
 
 		comments := response.Body.Comments
 		receivedComment := comments[0]
@@ -261,7 +261,7 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 
 	// Step 6: Get post with comments and ensure that there's no comments
 	{
-		var response ResponseSinglePostWithComments
+		var response ResponsePostWithComments
 
 		r := getPost(workingComment.PostID)
 		defer func() {
@@ -272,12 +272,11 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 		}()
 		checkNiceResponse(r, http.StatusOK)
 
-		decodeSinglePostWithCommentsResponse(r.Body, &response)
+		decodePostWithCommentsResponse(r.Body, &response)
 
 		comments := response.Body.Comments
-		receivedComment := comments[0]
-		if receivedComment.Deleted != true {
-			t.Fatalf("Received post has undeleted comment, but comment should be marked as deleted. Comments: %v",
+		if len(comments) != 0 {
+			t.Fatalf("Received post has comment, but comment should be deleted. Comments: %v",
 				comments)
 		}
 	}
@@ -511,7 +510,7 @@ func TestEnsureReceivedCommentsInAscOrder(t *testing.T) {
 	}
 }
 
-func TestEnsureDeletedCommentContentIsRemoved(t *testing.T) {
+func TestEnsureCommentWithNoChildsDeletedFromDB(t *testing.T) {
 	comment := testCreateCommentFactory()
 	comment.Author = "test author"
 	comment.Content = "test content"
@@ -530,16 +529,132 @@ func TestEnsureDeletedCommentContentIsRemoved(t *testing.T) {
 	r = deleteComment(createdComment.ID)
 	checkNiceResponse(r, http.StatusOK)
 
-	var response ResponseSinglePostWithComments
+	r = getPost(createdComment.PostID)
+	checkNiceResponse(r, http.StatusOK)
+
+	var response ResponsePostWithComments
+	decodePostWithCommentsResponse(r.Body, &response)
+
+	comments := response.Body.Comments
+	if len(comments) != 0 {
+		t.Fatalf("Post should have no comments. Comments: %v", comment)
+	}
+}
+
+func TestEnsureCommentWithChildsWasNotDeletedButHasDeletedContent(t *testing.T) {
+	comment := testCreateCommentFactory()
+	comment.Author = "test author"
+	comment.Content = "test content"
+
+	r := createComment(&comment)
+	checkNiceResponse(r, http.StatusCreated)
+	defer func() {
+		err := r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	createdComment := getCommentFromResponseBody(r)
+
+	comment = setCommentRequestParentID(comment, createdComment.ID)
+	r = createComment(&comment)
+	checkNiceResponse(r, http.StatusCreated)
+
+	r = deleteComment(createdComment.ID)
+	checkNiceResponse(r, http.StatusOK)
 
 	r = getPost(createdComment.PostID)
 	checkNiceResponse(r, http.StatusOK)
 
-	decodeSinglePostWithCommentsResponse(r.Body, &response)
+	var response ResponsePostWithComments
+	decodePostWithCommentsResponse(r.Body, &response)
+
+	comments := response.Body.Comments
+	if len(comments) == 0 {
+		t.Fatalf("Level 0 comment with childs should not be deleted but should has deleted comment")
+	}
+	if comments[0].Content != api.DeletedCommentContent {
+		t.Fatalf("Level 0 comment with childs should have deleted body\nChild comment: %v", comments[0])
+	}
+}
+
+func TestDeleteChildWithoutRepliesAndEnsureCommentHasNoChilds(t *testing.T) {
+	comment := testCreateCommentFactory()
+	comment.Author = "test author"
+	comment.Content = "test content"
+
+	r := createComment(&comment)
+	checkNiceResponse(r, http.StatusCreated)
+	createdComment := getCommentFromResponseBody(r)
+	comment = setCommentRequestParentID(comment, createdComment.ID)
+	r = createComment(&comment)
+	checkNiceResponse(r, http.StatusCreated)
+	replyComment := getCommentFromResponseBody(r)
+	defer func() {
+		err := r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	r = deleteComment(replyComment.ID)
+	checkNiceResponse(r, http.StatusOK)
+
+	var response ResponsePostWithComments
+
+	r = getPost(createdComment.PostID)
+	checkNiceResponse(r, http.StatusOK)
+
+	decodePostWithCommentsResponse(r.Body, &response)
 
 	comments := response.Body.Comments
 	receivedComment := comments[0]
-	if receivedComment.Content != api.DeletedCommentContent {
-		t.Fatalf("Deleted comment has content\nComment: %v", receivedComment)
+	if len(receivedComment.Childs) != 0 {
+		t.Fatalf("Comment should have no reply comments\nReply comments: %v", receivedComment.Childs)
+	}
+}
+
+func TestDeleteChildWithRepliesAndEnsureChildWasNotDeletedButHaveDeletedContent(t *testing.T) {
+	comment := testCreateCommentFactory()
+	comment.Author = "test author"
+	comment.Content = "test content"
+
+	r := createComment(&comment)
+	checkNiceResponse(r, http.StatusCreated)
+	createdComment := getCommentFromResponseBody(r)
+
+	comment = setCommentRequestParentID(comment, createdComment.ID)
+	r = createComment(&comment)
+	checkNiceResponse(r, http.StatusCreated)
+	replyComment1 := getCommentFromResponseBody(r)
+
+	comment = setCommentRequestParentID(comment, replyComment1.ID)
+	r = createComment(&comment)
+	checkNiceResponse(r, http.StatusCreated)
+	defer func() {
+		err := r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	r = deleteComment(replyComment1.ID)
+	checkNiceResponse(r, http.StatusOK)
+
+	r = getPost(createdComment.PostID)
+	checkNiceResponse(r, http.StatusOK)
+
+	var response ResponsePostWithComments
+	decodePostWithCommentsResponse(r.Body, &response)
+
+	comments := response.Body.Comments
+	if len(comments[0].Childs) == 0 {
+		t.Fatalf("Child Comment with childs should not be deleted, but only have deleted content")
+	}
+
+	child1 := comments[0].Childs[0]
+	if child1.Content != api.DeletedCommentContent {
+		t.Fatalf("Child Comment with childs should have deleted body\nChild comment: %v", child1)
 	}
 }
