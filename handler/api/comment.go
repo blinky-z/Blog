@@ -189,8 +189,8 @@ func (api *CommentAPI) UpdateComment() http.Handler {
 			return
 		}
 
-		id := mux.Vars(r)["id"]
-		validateIDError := ValidateID(id)
+		commendID := mux.Vars(r)["id"]
+		validateIDError := ValidateID(commendID)
 		if validateIDError != NoError {
 			env.LogInfo.Print("Can not UPDATE comment: ID of Comment to update is invalid")
 			RespondWithError(w, http.StatusBadRequest, validateIDError, env.LogError)
@@ -204,9 +204,9 @@ func (api *CommentAPI) UpdateComment() http.Handler {
 			return
 		}
 
-		if err := env.Db.QueryRow("select from comments where id = $1", id).Scan(); err != nil {
+		if err := env.Db.QueryRow("select from comments where id = $1", commendID).Scan(); err != nil {
 			if err == sql.ErrNoRows {
-				env.LogInfo.Printf("Can not UPDATE comment with id %s : comment does not exist", id)
+				env.LogInfo.Printf("Can not UPDATE comment with id %s : comment does not exist", commendID)
 				RespondWithError(w, http.StatusNotFound, NoSuchComment, env.LogError)
 				return
 			}
@@ -216,7 +216,7 @@ func (api *CommentAPI) UpdateComment() http.Handler {
 			return
 		}
 
-		env.LogInfo.Printf("Updating comment with ID %s in database", id)
+		env.LogInfo.Printf("Updating comment with ID %s in database", commendID)
 
 		var updatedComment models.Comment
 
@@ -226,7 +226,7 @@ func (api *CommentAPI) UpdateComment() http.Handler {
 			return
 		}
 		if err := env.Db.QueryRow("UPDATE comments SET content = $1 WHERE id = $2 RETURNING "+commentService.DbCommentFields,
-			html.EscapeString(comment.Content), id).
+			html.EscapeString(comment.Content), commendID).
 			Scan(&updatedComment.ID, &updatedComment.PostID, &updatedComment.ParentID, &updatedComment.Author,
 				&updatedComment.Date, &updatedComment.Content, &updatedComment.Deleted); err != nil {
 			env.LogError.Print(err)
@@ -239,7 +239,7 @@ func (api *CommentAPI) UpdateComment() http.Handler {
 			return
 		}
 
-		env.LogInfo.Printf("Comment with ID %s successfully updated", id)
+		env.LogInfo.Printf("Comment with ID %s successfully updated", commendID)
 
 		RespondWithBody(w, http.StatusOK, &updatedComment, env.LogError)
 	})
