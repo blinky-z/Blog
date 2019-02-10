@@ -8,10 +8,10 @@ import (
 	"github.com/blinky-z/Blog/models"
 	"github.com/blinky-z/Blog/postService"
 	"github.com/gorilla/mux"
-	"html/template"
 	"net/http"
 	"path/filepath"
 	"strings"
+	"text/template"
 	"time"
 )
 
