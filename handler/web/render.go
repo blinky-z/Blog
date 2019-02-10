@@ -3,10 +3,10 @@ package web
 import (
 	"database/sql"
 	"fmt"
-	"github.com/blinky-z/Blog/commentService"
 	"github.com/blinky-z/Blog/handler/api"
 	"github.com/blinky-z/Blog/models"
-	"github.com/blinky-z/Blog/postService"
+	"github.com/blinky-z/Blog/service/commentService"
+	"github.com/blinky-z/Blog/service/postService"
 	"github.com/gorilla/mux"
 	"net/http"
 	"path/filepath"

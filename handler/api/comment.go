@@ -3,8 +3,8 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
-	"github.com/blinky-z/Blog/commentService"
 	"github.com/blinky-z/Blog/models"
+	"github.com/blinky-z/Blog/service/commentService"
 	"github.com/gorilla/mux"
 	"html"
 	"net/http"

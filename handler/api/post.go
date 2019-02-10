@@ -3,9 +3,9 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
-	"github.com/blinky-z/Blog/commentService"
 	"github.com/blinky-z/Blog/models"
-	"github.com/blinky-z/Blog/postService"
+	"github.com/blinky-z/Blog/service/commentService"
+	"github.com/blinky-z/Blog/service/postService"
 	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"
