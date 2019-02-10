@@ -6,6 +6,7 @@ import (
 	"github.com/blinky-z/Blog/commentService"
 	"github.com/blinky-z/Blog/models"
 	"github.com/gorilla/mux"
+	"html"
 	"net/http"
 )
 
@@ -155,7 +156,7 @@ func (api *CommentAPI) CreateComment() http.Handler {
 		}
 		if err := env.Db.QueryRow("insert into comments("+commentService.DbCommentInputFields+") values($1, $2, $3, $4) "+
 			"RETURNING "+commentService.DbCommentFields,
-			comment.PostID, comment.ParentID.Value(), comment.Author, comment.Content).
+			comment.PostID, comment.ParentID.Value(), html.EscapeString(comment.Author), html.EscapeString(comment.Content)).
 			Scan(&createdComment.ID, &createdComment.PostID, &createdComment.ParentID, &createdComment.Author,
 				&createdComment.Date, &createdComment.Content, &createdComment.Deleted); err != nil {
 			env.LogError.Print(err)
@@ -225,7 +226,7 @@ func (api *CommentAPI) UpdateComment() http.Handler {
 			return
 		}
 		if err := env.Db.QueryRow("UPDATE comments SET content = $1 WHERE id = $2 RETURNING "+commentService.DbCommentFields,
-			comment.Content, id).
+			html.EscapeString(comment.Content), id).
 			Scan(&updatedComment.ID, &updatedComment.PostID, &updatedComment.ParentID, &updatedComment.Author,
 				&updatedComment.Date, &updatedComment.Content, &updatedComment.Deleted); err != nil {
 			env.LogError.Print(err)
@@ -257,17 +258,17 @@ func (api *CommentAPI) DeleteComment() http.Handler {
 			return
 		}
 
-		id := mux.Vars(r)["id"]
-		validateIDError := ValidateID(id)
+		commentID := mux.Vars(r)["id"]
+		validateIDError := ValidateID(commentID)
 		if validateIDError != NoError {
 			env.LogInfo.Print("Can not DELETE comment: ID of Comment to delete is invalid")
 			RespondWithError(w, http.StatusBadRequest, validateIDError, env.LogError)
 			return
 		}
 
-		if err := env.Db.QueryRow("select from comments where id = $1", id).Scan(); err != nil {
+		if err := env.Db.QueryRow("select from comments where id = $1", commentID).Scan(); err != nil {
 			if err == sql.ErrNoRows {
-				env.LogInfo.Printf("Can not DELETE comment with id %s : comment does not exist", id)
+				env.LogInfo.Printf("Can not DELETE comment with id %s : comment does not exist", commentID)
 				RespondWithError(w, http.StatusNotFound, NoSuchComment, env.LogError)
 				return
 			}
@@ -277,18 +278,34 @@ func (api *CommentAPI) DeleteComment() http.Handler {
 			return
 		}
 
-		env.LogInfo.Printf("Marking comment with ID %s as deleted in database", id)
+		env.LogInfo.Printf("Marking comment with ID %s as deleted in database", commentID)
+
+		var childsExists bool
+		if err := env.Db.QueryRow("select exists(select 1 from comments where parent_id = $1)", commentID).
+			Scan(&childsExists); err != nil {
+			env.LogError.Print(err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+			return
+		}
 
 		if _, err := env.Db.Exec("BEGIN TRANSACTION"); err != nil {
 			env.LogError.Print(err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
 			return
 		}
-		if _, err := env.Db.Exec("UPDATE comments SET deleted = TRUE, content = $1 WHERE id = $2",
-			DeletedCommentContent, id); err != nil {
-			env.LogError.Print(err)
-			RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
-			return
+		if childsExists {
+			if _, err := env.Db.Exec("UPDATE comments SET deleted = TRUE, content = $1 WHERE id = $2",
+				DeletedCommentContent, commentID); err != nil {
+				env.LogError.Print(err)
+				RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+				return
+			}
+		} else {
+			if _, err := env.Db.Exec("DELETE from comments where id = $1", commentID); err != nil {
+				env.LogError.Print(err)
+				RespondWithError(w, http.StatusInternalServerError, TechnicalError, env.LogError)
+				return
+			}
 		}
 		if _, err := env.Db.Exec("END TRANSACTION"); err != nil {
 			env.LogError.Print(err)
@@ -296,7 +313,7 @@ func (api *CommentAPI) DeleteComment() http.Handler {
 			return
 		}
 
-		env.LogInfo.Printf("Comment with ID %s successfully deleted", id)
+		env.LogInfo.Printf("Comment with ID %s successfully deleted", commentID)
 
 		Respond(w, http.StatusOK)
 	})
