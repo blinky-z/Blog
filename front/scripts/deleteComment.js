@@ -15,9 +15,9 @@ function deleteComment(deleteCommentButtonLink) {
                 xhr.setRequestHeader('Authorization', `bearer ${token}`);
             },
             success: function (data, textStatus, jqXHR) {
-                location.reload();
-
                 alert('Комментарий был успешно удален');
+
+                location.reload();
             },
             error: function (jqXHR) {
                 var response = JSON.parse(jqXHR.responseText);
