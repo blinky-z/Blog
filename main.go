@@ -38,7 +38,7 @@ var (
 	jwtMiddleware *jwtmiddleware.JWTMiddleware
 )
 
-// RunServer - run server function. Config file name and path should be passed
+// RunServer - server starting function. Config file name and path should be passed, or environment variables
 func RunServer(serverConfigPath, adminsConfigPath string) {
 	viper.SetConfigFile(serverConfigPath)
 	err := viper.ReadInConfig()
@@ -131,6 +131,8 @@ func RunServer(serverConfigPath, adminsConfigPath string) {
 	router.PathPrefix("/posts/{id}").Handler(web.GeneratePostPage(env))
 	router.PathPrefix("/").Handler(http.StripPrefix("/", web.HandleHTMLFile(env, frontFolder)))
 
+	logError.Printf("test error")
+
 	logInfo.Printf("listening on address %s", Address)
 	logError.Fatal(http.ListenAndServe(Address, router))
 }
@@ -140,6 +142,12 @@ func main() {
 		filepath.FromSlash("configs/config.json"), "config file path")
 	adminsListConfigPath := pflag.StringP("admins", "a",
 		filepath.FromSlash("configs/admins.json"), "admins list")
+
+	_ = viper.BindEnv("db_user", "db_user")
+	_ = viper.BindEnv("db_password", "db_password")
+	_ = viper.BindEnv("db_name", "db_name")
+	_ = viper.BindEnv("jwtSecretKey", "jwtSecretKey")
+	_ = viper.BindEnv("admins", "admins")
 
 	pflag.Parse()
 	RunServer(*userConfigPath, *adminsListConfigPath)
