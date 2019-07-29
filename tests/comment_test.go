@@ -1,138 +1,13 @@
-package main
+package tests
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"github.com/blinky-z/Blog/handler/api"
+	"github.com/blinky-z/Blog/handler/restApi"
 	"github.com/blinky-z/Blog/models"
 	"github.com/blinky-z/Blog/service/commentService"
-	"io"
 	"net/http"
 	"strings"
 	"testing"
 )
-
-type ResponseComment struct {
-	Error api.PostErrorCode
-	Body  models.Comment
-}
-
-func testCreateCommentFactory() models.CommentCreateRequest {
-	post := testPostFactory()
-	post.Title = "post for testing comments"
-	post.Content = "post for testing comments"
-
-	r := createPost(post)
-	checkNiceResponse(r, http.StatusCreated)
-
-	var responseCreatePost ResponsePost
-	decodePostResponse(r.Body, &responseCreatePost)
-	createdPost := responseCreatePost.Body
-
-	var testComment models.CommentCreateRequest
-
-	testComment.PostID = createdPost.ID
-
-	return testComment
-}
-
-func testUpdateCommentFactory() models.CommentUpdateRequest {
-	var testComment models.CommentUpdateRequest
-
-	return testComment
-}
-
-func getCommentFromResponseBody(r *http.Response) models.Comment {
-	var response ResponseComment
-	decodeCommentResponse(r.Body, &response)
-	comment := response.Body
-
-	return comment
-}
-
-func setCommentRequestParentID(comment models.CommentCreateRequest, parentID string) models.CommentCreateRequest {
-	comment.ParentID.Valid = true
-	comment.ParentID.String = parentID
-
-	return comment
-}
-
-// API for encoding and decoding messages
-
-func decodeCommentResponse(responseBody io.ReadCloser, response *ResponseComment) {
-	err := json.NewDecoder(responseBody).Decode(&response)
-	if err != nil {
-		panic(fmt.Sprintf("Error decoding received body. Error: %s", err))
-	}
-}
-
-// -----------
-// API for sending comments handling http requests
-
-func createComment(message interface{}) *http.Response {
-	return sendCommentHandleMessage("POST", "http://"+Address+"/api/comments", message)
-}
-
-func updateComment(id string, message interface{}) *http.Response {
-	return sendCommentHandleMessage("PUT", "http://"+Address+"/api/comments/"+id, message)
-}
-
-func deleteComment(id string) *http.Response {
-	return sendCommentHandleMessage("DELETE", "http://"+Address+"/api/comments/"+id, "")
-}
-
-func sendCommentHandleMessage(method, address string, message interface{}) *http.Response {
-	var response *http.Response
-
-	switch method {
-	case "POST":
-		encodedMessage := encodeMessage(message)
-
-		request, err := http.NewRequest("POST", address, bytes.NewReader(encodedMessage))
-		if err != nil {
-			panic(fmt.Sprintf("Can not create POST comment request. Error: %s", err))
-		}
-		request.Header.Set("Content-Type", "application/json")
-
-		response, err = client.Do(request)
-		if err != nil {
-			panic(fmt.Sprintf("Can not send POST comment request. Error: %s", err))
-		}
-	case "PUT":
-		encodedMessage := encodeMessage(message)
-
-		request, err := http.NewRequest("PUT", address, bytes.NewReader(encodedMessage))
-		if err != nil {
-			panic(fmt.Sprintf("Can not create UPDATE comment request. Error: %s", err))
-		}
-		request.Header.Set("Content-Type", "application/json")
-		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
-		request.AddCookie(ctxCookie)
-
-		response, err = client.Do(request)
-		if err != nil {
-			panic(fmt.Sprintf("Can not send UPDATE comment request. Error: %s", err))
-		}
-	case "DELETE":
-		request, err := http.NewRequest("DELETE", address, strings.NewReader(""))
-		if err != nil {
-			panic(fmt.Sprintf("Can not create DELETE comment request. Error: %s", err))
-		}
-		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
-		request.AddCookie(ctxCookie)
-
-		response, err = client.Do(request)
-		if err != nil {
-			panic(fmt.Sprintf("Can not send DELETE comment request. Error: %s", err))
-		}
-	}
-
-	return response
-}
-
-// -----------
-// tests
 
 func TestHandleCommentIntegrationTest(t *testing.T) {
 	var workingComment models.Comment
@@ -163,9 +38,9 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 				"Created comment: %v\n Source comment: %v", workingComment.PostID, sourceComment.PostID)
 		}
 
-		if workingComment.ParentID != sourceComment.ParentID {
+		if workingComment.ParentID != sourceComment.ParentCommentID {
 			t.Fatalf("Created comment Parent ID does not match source comment one\n"+
-				"Created comment: %v\n Source comment: %v", workingComment.ParentID, sourceComment.ParentID)
+				"Created comment: %v\n Source comment: %v", workingComment.ParentID, sourceComment.ParentCommentID)
 		}
 
 		if workingComment.Content != sourceComment.Content {
@@ -211,7 +86,7 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 				panic(err)
 			}
 		}()
-		checkNiceResponse(r, http.StatusOK)
+		checkNiceResponse(r, http.StatusCreated)
 
 		decodeCommentResponse(r.Body, &response)
 
@@ -295,13 +170,13 @@ func TestCreateCommentWithEmptyContent(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidContent)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidCommentContent)
 }
 
 func TestCreateCommentWithTooLongContent(t *testing.T) {
 	comment := testCreateCommentFactory()
 	comment.Author = "test author"
-	comment.Content = strings.Repeat("a", api.MaxCommentContentLen*2)
+	comment.Content = strings.Repeat("a", restApi.MaxCommentContentLen*2)
 
 	r := createComment(&comment)
 	defer func() {
@@ -311,7 +186,7 @@ func TestCreateCommentWithTooLongContent(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidContent)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidCommentContent)
 }
 
 func TestCreateCommentWithEmptyAuthor(t *testing.T) {
@@ -327,13 +202,13 @@ func TestCreateCommentWithEmptyAuthor(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidLogin)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidUsername)
 }
 
 func TestCreateCommentWithTooShortAuthor(t *testing.T) {
 	comment := testCreateCommentFactory()
 	comment.Content = "test content"
-	comment.Author = strings.Repeat("2", api.MinLoginLen-1)
+	comment.Author = strings.Repeat("2", restApi.MinUsernameLen-1)
 
 	r := createComment(&comment)
 	defer func() {
@@ -343,13 +218,13 @@ func TestCreateCommentWithTooShortAuthor(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidLogin)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidUsername)
 }
 
 func TestCreateCommentWithTooLongAuthor(t *testing.T) {
 	comment := testCreateCommentFactory()
 	comment.Content = "test content"
-	comment.Author = strings.Repeat("1", api.MaxLoginLen*2)
+	comment.Author = strings.Repeat("1", restApi.MaxUsernameLen*2)
 
 	r := createComment(&comment)
 	defer func() {
@@ -359,7 +234,7 @@ func TestCreateCommentWithTooLongAuthor(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidLogin)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidUsername)
 }
 
 func TestCreateCommentToNonexistentPost(t *testing.T) {
@@ -377,7 +252,7 @@ func TestCreateCommentToNonexistentPost(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusNotFound, api.NoSuchPost)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidRequest)
 }
 
 func TestReplyToComment(t *testing.T) {
@@ -437,7 +312,7 @@ func TestReplyToCommentBelongsToOtherPost(t *testing.T) {
 
 	r = createComment(&replyComment)
 
-	checkErrorResponse(r, http.StatusNotFound, api.NoSuchComment)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidRequest)
 }
 
 func TestUpdateCommentWithEmptyContent(t *testing.T) {
@@ -459,7 +334,7 @@ func TestUpdateCommentWithEmptyContent(t *testing.T) {
 	newComment.Content = ""
 	r = updateComment(createdComment.ID, &newComment)
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidContent)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidCommentContent)
 }
 
 func TestUpdateCommentWithTooLongContent(t *testing.T) {
@@ -478,10 +353,10 @@ func TestUpdateCommentWithTooLongContent(t *testing.T) {
 	createdComment := getCommentFromResponseBody(r)
 
 	newComment := testUpdateCommentFactory()
-	newComment.Content = strings.Repeat("s", api.MaxCommentContentLen*2)
+	newComment.Content = strings.Repeat("s", restApi.MaxCommentContentLen*2)
 	r = updateComment(createdComment.ID, &newComment)
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidContent)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidCommentContent)
 }
 
 func TestEnsureReceivedCommentsInAscOrder(t *testing.T) {
@@ -500,7 +375,7 @@ func TestEnsureReceivedCommentsInAscOrder(t *testing.T) {
 		}
 	}()
 
-	comments, _ := commentService.GetComments(env, comment.PostID)
+	comments, _ := commentService.GetAllByPostId(db, comment.PostID)
 	for i := 1; i < len(comments); i++ {
 		if !comments[i-1].Date.Before(comments[i].Date) {
 			t.Fatalf("Received comments from commentService should be sorted in ascending order, but "+
@@ -574,7 +449,7 @@ func TestEnsureCommentWithChildsWasNotDeletedButHasDeletedContent(t *testing.T) 
 	if len(comments) == 0 {
 		t.Fatalf("Level 0 comment with childs should not be deleted but should has deleted comment")
 	}
-	if comments[0].Content != api.DeletedCommentContent {
+	if comments[0].Content != commentService.DeletedCommentContent {
 		t.Fatalf("Level 0 comment with childs should have deleted body\nChild comment: %v", comments[0])
 	}
 }
@@ -654,7 +529,7 @@ func TestDeleteChildWithRepliesAndEnsureChildWasNotDeletedButHaveDeletedContent(
 	}
 
 	child1 := comments[0].Childs[0]
-	if child1.Content != api.DeletedCommentContent {
+	if child1.Content != commentService.DeletedCommentContent {
 		t.Fatalf("Child Comment with childs should have deleted body\nChild comment: %v", child1)
 	}
 }

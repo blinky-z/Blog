@@ -7,54 +7,113 @@ import (
 )
 
 const (
-	// DbPostInputFields - fields that should be filled while inserting new post
-	DbPostInputFields = "title, author, snippet, content, metadata"
-	// DbPostFields - all post fields
-	DbPostFields = "id, title, author, date, snippet, content, metadata"
+	// postsInsertFields - fields that should be filled while inserting a new entity
+	postsInsertFields = "title, author, snippet, content, metadata"
+	// postsAllFields - all entity fields
+	postsAllFields = "id, title, author, date, snippet, content, metadata"
 )
 
-// GetCertainPost - return post as models.Post. Used for sending post back to user using http with following client-side
-// rendering and also for server-side rendering of /posts/{id} page
-func GetCertainPost(env *models.Env, id string) (models.Post, error) {
-	env.LogInfo.Print("Got new Post GET job")
+// Save - saves a new post in database
+// returns a created post pointed to by 'createdPost' and error
+func Save(db *sql.DB, request *SaveRequest) (createdPost *models.Post, err error) {
+	createdPost = &models.Post{}
+	err = nil
 
-	var post models.Post
-
-	env.LogInfo.Printf("Getting post with ID %s from database", id)
+	encodedMetadata, err := json.Marshal(request.Metadata)
+	if err != nil {
+		return
+	}
 
 	var metadataAsJSONString string
-	if err := env.Db.QueryRow("select "+DbPostFields+" from posts where id = $1", id).
+	if err = db.QueryRow("insert into posts ("+postsInsertFields+") values($1, $2, $3, $4, $5) "+
+		"RETURNING "+postsAllFields, request.Title, request.Author, request.Snippet, request.Content, encodedMetadata).
+		Scan(&createdPost.ID, &createdPost.Title, &createdPost.Author, &createdPost.Date, &createdPost.Snippet,
+			&createdPost.Content, &metadataAsJSONString); err != nil {
+		return
+	}
+
+	err = json.Unmarshal([]byte(metadataAsJSONString), &createdPost.Metadata)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+// Update - updates post in database
+// returns an updated post pointed to by 'updatedPost' and error
+func Update(db *sql.DB, request *UpdateRequest) (updatedPost *models.Post, err error) {
+	updatedPost = &models.Post{}
+	err = nil
+
+	encodedMetadata, err := json.Marshal(request.Metadata)
+	if err != nil {
+		return
+	}
+
+	var metadataAsJSONString string
+	if err = db.QueryRow("UPDATE posts SET ("+postsInsertFields+") = ($1, $2, $3, $4, $5) "+
+		"WHERE id = $6 RETURNING "+postsAllFields, request.Title, request.Author, request.Snippet, request.Content,
+		encodedMetadata, request.ID).
+		Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Author, &updatedPost.Date, &updatedPost.Snippet, &updatedPost.Content,
+			&metadataAsJSONString); err != nil {
+		return
+	}
+	err = json.Unmarshal([]byte(metadataAsJSONString), &updatedPost.Metadata)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+// ExistsById - checks if post with the given ID exists in database
+// returns boolean indicating whether post exists or not and error
+func ExistsById(db *sql.DB, postId string) (bool, error) {
+	var postExists bool
+	err := db.QueryRow("select exists(select 1 from posts where id = $1)", postId).Scan(&postExists)
+	return postExists, err
+}
+
+// Delete - deletes post from database
+func Delete(db *sql.DB, postId string) error {
+	if _, err := db.Exec("DELETE FROM posts WHERE id = $1", postId); err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetById - retrieves post with the given ID from database
+func GetById(db *sql.DB, id string) (models.Post, error) {
+	var post models.Post
+
+	var metadataAsJSONString string
+	if err := db.QueryRow("select "+postsAllFields+" from posts where id = $1", id).
 		Scan(&post.ID, &post.Title, &post.Author, &post.Date, &post.Snippet, &post.Content, &metadataAsJSONString); err != nil {
 		if err == sql.ErrNoRows {
-			env.LogInfo.Printf("Can not GET post with ID %s : post does not exist", id)
 			return post, err
 		}
 
-		env.LogError.Print(err)
 		return post, err
 	}
 
-	env.LogInfo.Printf("Post with ID %s succesfully arrived from database", id)
-
-	_ = json.Unmarshal([]byte(metadataAsJSONString), &post.Metadata)
+	err := json.Unmarshal([]byte(metadataAsJSONString), &post.Metadata)
+	if err != nil {
+		return post, err
+	}
 
 	return post, nil
 }
 
-// GetPosts - return posts list as models.Post array. Used for sending posts back to user using http with following client-side
-// rendering and also for server-side rendering of index page
-func GetPosts(env *models.Env, page, postsPerPage int) ([]models.Post, error) {
-	env.LogInfo.Print("Got new Range of Posts GET job")
-
+// GetPostsInRange - retrieves all posts in the given range
+// Range is described by page and entities per page args
+// returns slice which len is equal to `postsPerPage` and error
+func GetPostsInRange(db *sql.DB, page, postsPerPage int) ([]models.Post, error) {
 	var posts []models.Post
 
-	env.LogInfo.Printf("Getting Range of Posts with following params: (page: %d, posts per page: %d) from database",
-		page, postsPerPage)
-
-	rows, err := env.Db.Query("select "+DbPostFields+" from posts order by id DESC offset $1 limit $2",
+	rows, err := db.Query("select "+postsAllFields+" from posts order by id DESC offset $1 limit $2",
 		page*postsPerPage, postsPerPage)
 	if err != nil {
-		env.LogError.Print(err)
 		return posts, err
 	}
 
@@ -63,16 +122,16 @@ func GetPosts(env *models.Env, page, postsPerPage int) ([]models.Post, error) {
 		var metadataAsJSONString string
 		if err = rows.Scan(&currentPost.ID, &currentPost.Title, &currentPost.Author, &currentPost.Date,
 			&currentPost.Snippet, &currentPost.Content, &metadataAsJSONString); err != nil {
-			env.LogError.Print(err)
 			return posts, err
 		}
 
-		_ = json.Unmarshal([]byte(metadataAsJSONString), &currentPost.Metadata)
+		err = json.Unmarshal([]byte(metadataAsJSONString), &currentPost.Metadata)
+		if err != nil {
+			return posts, err
+		}
 
 		posts = append(posts, currentPost)
 	}
-
-	env.LogInfo.Print("Range of Posts successfully arrived from database")
 
 	return posts, nil
 }

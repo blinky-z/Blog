@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// Comment - represents user's comment
+// Comment - represents user comment
 type Comment struct {
 	ID       string     `json:"id"`
 	PostID   string     `json:"postID"`
@@ -15,21 +15,21 @@ type Comment struct {
 	Deleted  bool       `json:"deleted"`
 }
 
-// represents comment with childs (reply comments)
+// CreateCommentRequest - represents comment creation request
+type CreateCommentRequest struct {
+	PostID          string     `json:"postID"`
+	ParentCommentID NullString `json:"parentCommentID"`
+	Author          string     `json:"author"`
+	Content         string     `json:"content"`
+}
+
+// UpdateCommentRequest - represents comment update request
+type UpdateCommentRequest struct {
+	Content string `json:"content"`
+}
+
+// represents a comment with childs (reply comments)
 type CommentWithChilds struct {
 	Comment
 	Childs []*CommentWithChilds `json:"childs"`
-}
-
-// CommentCreateRequest - represents comment creation request
-type CommentCreateRequest struct {
-	PostID   string     `json:"postID"`
-	ParentID NullString `json:"parentID"`
-	Author   string     `json:"author"`
-	Content  string     `json:"content"`
-}
-
-// CommentUpdateRequest - represents comment update request
-type CommentUpdateRequest struct {
-	Content string `json:"content"`
 }

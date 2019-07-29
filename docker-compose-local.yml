@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  blog:
+    build: .
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=postgres
+      - DB_HOST=localhost
+      - DB_PORT=5432
+      - JWT_SECRET_KEY=superSecretKey
+      - ADMINS=admin1, admin2
+      - SERVER_PORT=8080
+    restart: always
+    ports:
+      - 8080:8080
+    container_name: blog
+    network_mode: host

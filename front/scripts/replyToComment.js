@@ -22,10 +22,10 @@ function replyToComment(commentReplyButtonLink) {
 
     var postID = window.location.pathname.substr(window.location.pathname.lastIndexOf('/') + 1);
 
-    var commentCreateRequest = {PostID: '', ParentID: '', Author: '', Content: ''};
+    var commentCreateRequest = {PostID: '', parentCommentID: '', Author: '', Content: ''};
 
     commentCreateRequest.PostID = postID;
-    commentCreateRequest.ParentID = commentID;
+    commentCreateRequest.parentCommentID = commentID;
     commentCreateRequest.Author = currentComment.getElementsByClassName("comment-author-reply-input")[0].value;
     commentCreateRequest.Content = currentComment.getElementsByClassName("comment-content-reply-textarea")[0].value;
 

@@ -1,200 +1,15 @@
-package main
-
-// Posts handling tests
+package tests
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"github.com/blinky-z/Blog/handler/api"
+	"github.com/blinky-z/Blog/handler/restApi"
 	"github.com/blinky-z/Blog/models"
 	"gotest.tools/assert"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"testing"
 )
-
-type ResponsePost struct {
-	Error api.PostErrorCode
-	Body  models.Post
-}
-
-type ResponsePostWithComments struct {
-	Error api.PostErrorCode
-	Body  models.CertainPostResponse
-}
-
-type ResponseRangePosts struct {
-	Error api.PostErrorCode
-	Body  []models.Post
-}
-
-// -----------
-// Work with posts
-func comparePosts(l models.Post, r models.Post) bool {
-	if l.ID != r.ID || l.Title != r.Title || l.Date != r.Date || l.Content != r.Content {
-		return false
-	}
-
-	if l.Metadata.Description != r.Metadata.Description {
-		return false
-	}
-
-	if len(l.Metadata.Keywords) != len(r.Metadata.Keywords) {
-		return false
-	}
-	for currentKeywordNum := 0; currentKeywordNum < len(l.Metadata.Keywords); currentKeywordNum += 1 {
-		if l.Metadata.Keywords[currentKeywordNum] != r.Metadata.Keywords[currentKeywordNum] {
-			return false
-		}
-	}
-
-	return true
-}
-
-func comparePostLists(lList, rList []models.Post) bool {
-	if len(lList) != len(rList) {
-		return false
-	}
-
-	for currentPost := 0; currentPost < len(lList); currentPost++ {
-		if !comparePosts(lList[currentPost], rList[currentPost]) {
-			return false
-		}
-	}
-
-	return true
-}
-
-func testPostFactory() models.Post {
-	var testPost models.Post
-	testPost.Author = "test author"
-	testPost.Snippet = "test snippet"
-	testPost.Title = "test title"
-	testPost.Content = "test content"
-	testPost.Metadata.Keywords = []string{"testMetadata1", "testMetadata2"}
-	testPost.Metadata.Description = "test meta description"
-
-	return testPost
-}
-
-// API for encoding and decoding messages
-
-func decodePostResponse(responseBody io.ReadCloser, r *ResponsePost) {
-	err := json.NewDecoder(responseBody).Decode(r)
-	if err != nil {
-		panic(fmt.Sprintf("Error decoding received body. Error: %s", err))
-	}
-}
-
-func decodePostWithCommentsResponse(responseBody io.ReadCloser, r *ResponsePostWithComments) {
-	err := json.NewDecoder(responseBody).Decode(r)
-	if err != nil {
-		panic(fmt.Sprintf("Error decoding received body. Error: %s", err))
-	}
-}
-
-func decodeRangePostsResponse(responseBody io.ReadCloser, r *ResponseRangePosts) {
-	err := json.NewDecoder(responseBody).Decode(r)
-	if err != nil {
-		panic(fmt.Sprintf("Error decoding received body. Error: %s", err))
-	}
-}
-
-// -----------
-// API for sending posts handling http requests
-
-func getPost(postID string) *http.Response {
-	return sendPostHandleMessage("GET", "http://"+Address+"/api/posts/"+postID, "")
-}
-
-func getPosts(page string, postsPerPage string) *http.Response {
-	if len(postsPerPage) != 0 {
-		return sendPostHandleMessage(
-			"GET", "http://"+Address+"/api/posts?page="+page+"&posts-per-page="+postsPerPage, "")
-	} else {
-		return sendPostHandleMessage("GET", "http://"+Address+"/api/posts?page="+page, "")
-	}
-}
-
-func createPost(message interface{}) *http.Response {
-	return sendPostHandleMessage("POST", "http://"+Address+"/api/posts", message)
-}
-
-func updatePost(postID string, message interface{}) *http.Response {
-	return sendPostHandleMessage("PUT", "http://"+Address+"/api/posts/"+postID, message)
-}
-
-func deletePost(postID string) *http.Response {
-	return sendPostHandleMessage("DELETE", "http://"+Address+"/api/posts/"+postID, "")
-}
-
-func sendPostHandleMessage(method, address string, message interface{}) *http.Response {
-	var response *http.Response
-
-	switch method {
-	case "GET":
-		request, err := http.NewRequest("GET", address, strings.NewReader(""))
-		if err != nil {
-			panic(fmt.Sprintf("Can not create request. Error: %s", err))
-		}
-
-		response, err = client.Do(request)
-		if err != nil {
-			panic(fmt.Sprintf("Can not send request. Error: %s", err))
-		}
-	case "POST":
-		encodedMessage := encodeMessage(message)
-
-		request, err := http.NewRequest("POST", address, bytes.NewReader(encodedMessage))
-		if err != nil {
-			panic(fmt.Sprintf("Can not create request. Error: %s", err))
-		}
-		request.Header.Set("Content-Type", "application/json")
-		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
-		request.AddCookie(ctxCookie)
-
-		response, err = client.Do(request)
-		if err != nil {
-			panic(fmt.Sprintf("Can not send request. Error: %s", err))
-		}
-	case "PUT":
-		encodedMessage := encodeMessage(message)
-
-		request, err := http.NewRequest("PUT", address, bytes.NewReader(encodedMessage))
-		if err != nil {
-			panic(fmt.Sprintf("Can not create request. Error: %s", err))
-		}
-		request.Header.Set("Content-Type", "application/json")
-		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
-		request.AddCookie(ctxCookie)
-
-		response, err = client.Do(request)
-		if err != nil {
-			panic(fmt.Sprintf("Can not send request. Error: %s", err))
-		}
-	case "DELETE":
-		request, err := http.NewRequest("DELETE", address, strings.NewReader(""))
-		if err != nil {
-			panic(fmt.Sprintf("Can not create request. Error: %s", err))
-		}
-		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
-		request.AddCookie(ctxCookie)
-
-		response, err = client.Do(request)
-		if err != nil {
-			panic(fmt.Sprintf("Can not send request. Error: %s", err))
-		}
-	}
-
-	return response
-}
-
-// -----------
-// tests
 
 func TestHandlePostIntegrationTest(t *testing.T) {
 	workingPost := testPostFactory()
@@ -204,8 +19,6 @@ func TestHandlePostIntegrationTest(t *testing.T) {
 		var response ResponsePost
 
 		sourcePost := testPostFactory()
-		sourcePost.Title = "Title1"
-		sourcePost.Content = "Content1 Content2 Content3"
 
 		r := createPost(sourcePost)
 		defer func() {
@@ -356,7 +169,7 @@ func TestCreatePostWithInvalidRequestBody(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.BadRequestBody)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.BadRequestBody)
 }
 
 func TestCreatePostWithNullTitle(t *testing.T) {
@@ -373,12 +186,12 @@ func TestCreatePostWithNullTitle(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidTitle)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidPostTitle)
 }
 
 func TestCreatePostWithTooLongTitle(t *testing.T) {
 	message := map[string]interface{}{
-		"title":   strings.Repeat("a", api.MaxPostTitleLen*2),
+		"title":   strings.Repeat("a", restApi.MaxPostTitleLen*2),
 		"content": "Content1 Content2 Content3",
 	}
 
@@ -390,12 +203,11 @@ func TestCreatePostWithTooLongTitle(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidTitle)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidPostTitle)
 }
 
 func TestCreatePostWithNullContent(t *testing.T) {
 	post := testPostFactory()
-	post.Title = "Title1"
 	post.Content = ""
 
 	r := createPost(post)
@@ -406,7 +218,7 @@ func TestCreatePostWithNullContent(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidContent)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidPostContent)
 }
 
 func TestGetPostWithInvalidID(t *testing.T) {
@@ -418,7 +230,7 @@ func TestGetPostWithInvalidID(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidID)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidID)
 }
 
 func TestGetNonexistentPost(t *testing.T) {
@@ -432,7 +244,7 @@ func TestGetNonexistentPost(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusNotFound, api.NoSuchPost)
+	checkErrorResponse(r, http.StatusNotFound, restApi.NoSuchPost)
 }
 
 func TestUpdatePostWithInvalidRequestBody(t *testing.T) {
@@ -446,13 +258,12 @@ func TestUpdatePostWithInvalidRequestBody(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.BadRequestBody)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.BadRequestBody)
 }
 
 func TestUpdatePostWithNullTitle(t *testing.T) {
 	post := testPostFactory()
 	post.Title = ""
-	post.Content = "Content1 Content2 Content3"
 
 	r := updatePost("1", post)
 	defer func() {
@@ -462,13 +273,12 @@ func TestUpdatePostWithNullTitle(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidTitle)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidPostTitle)
 }
 
 func TestUpdatePostWithTooLongTitle(t *testing.T) {
 	post := testPostFactory()
-	post.Title = strings.Repeat("a", api.MaxPostTitleLen*2)
-	post.Content = "Content1 Content2 Content3"
+	post.Title = strings.Repeat("a", restApi.MaxPostTitleLen*2)
 
 	r := updatePost("1", post)
 	defer func() {
@@ -478,12 +288,11 @@ func TestUpdatePostWithTooLongTitle(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidTitle)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidPostTitle)
 }
 
 func TestUpdatePostWithNullContent(t *testing.T) {
 	post := testPostFactory()
-	post.Title = "TITLE2"
 	post.Content = ""
 
 	r := updatePost("1", post)
@@ -494,15 +303,13 @@ func TestUpdatePostWithNullContent(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidContent)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidPostContent)
 }
 
 func TestUpdatePostNonexistentPost(t *testing.T) {
 	deletePost("0")
 
 	post := testPostFactory()
-	post.Title = "TITLE2"
-	post.Content = "Content1 Content2 Content3"
 
 	r := updatePost("0", post)
 	defer func() {
@@ -512,13 +319,11 @@ func TestUpdatePostNonexistentPost(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusNotFound, api.NoSuchPost)
+	checkErrorResponse(r, http.StatusNotFound, restApi.NoSuchPost)
 }
 
 func TestUpdatePostWithInvalidID(t *testing.T) {
 	post := testPostFactory()
-	post.Title = "TITLE2"
-	post.Content = "Content1 Content2 Content3"
 
 	r := updatePost("post1", post)
 	defer func() {
@@ -528,7 +333,7 @@ func TestUpdatePostWithInvalidID(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidID)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidID)
 }
 
 func TestDeletePostNonexistentPost(t *testing.T) {
@@ -556,7 +361,7 @@ func TestDeletePostWithInvalidID(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidID)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidID)
 }
 
 func TestGetRangeOfPostsWithCustomPostsPerPage(t *testing.T) {
@@ -566,11 +371,9 @@ func TestGetRangeOfPostsWithCustomPostsPerPage(t *testing.T) {
 
 	for i := 0; i < testPostsNumber; i++ {
 		currentPost := testPostFactory()
-		currentPost.Title = "Title" + strconv.Itoa(i)
-		currentPost.Content = "Content" + strconv.Itoa(i)
 
 		var response ResponsePost
-		r := sendPostHandleMessage("POST", "http://"+Address+"/api/posts", currentPost)
+		r := sendPostHandleMessage("POST", "http://"+address+"/api/posts", currentPost)
 		decodePostResponse(r.Body, &response)
 
 		workingPosts = append([]models.Post{response.Body}, workingPosts...)
@@ -596,11 +399,9 @@ func TestGetRangeOfPostsWithDefaultPostsPerPage(t *testing.T) {
 
 	for i := 0; i < testPostsNumber; i++ {
 		currentPost := testPostFactory()
-		currentPost.Title = "Title" + strconv.Itoa(i)
-		currentPost.Content = "Content" + strconv.Itoa(i)
 
 		var response ResponsePost
-		r := sendPostHandleMessage("POST", "http://"+Address+"/api/posts", currentPost)
+		r := sendPostHandleMessage("POST", "http://"+address+"/api/posts", currentPost)
 		decodePostResponse(r.Body, &response)
 
 		workingPosts = append([]models.Post{response.Body}, workingPosts...)
@@ -628,7 +429,7 @@ func TestGetRangeOfPostsWithNegativePage(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidRange)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidPostsRange)
 }
 
 func TestGetRangeOfPostsWithNonNumberPage(t *testing.T) {
@@ -640,11 +441,11 @@ func TestGetRangeOfPostsWithNonNumberPage(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidRange)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidPostsRange)
 }
 
 func TestGetRangeOfPostsWithTooLongPostsPerPage(t *testing.T) {
-	r := getPosts("0", strconv.Itoa(api.MaxPostsPerPage*2))
+	r := getPosts("0", strconv.Itoa(restApi.MaxPostsPerPage*2))
 	defer func() {
 		err := r.Body.Close()
 		if err != nil {
@@ -652,7 +453,7 @@ func TestGetRangeOfPostsWithTooLongPostsPerPage(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidRange)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidPostsRange)
 }
 
 func TestGetRangeOfPostsWithNonNumberPostsPerPage(t *testing.T) {
@@ -664,7 +465,7 @@ func TestGetRangeOfPostsWithNonNumberPostsPerPage(t *testing.T) {
 		}
 	}()
 
-	checkErrorResponse(r, http.StatusBadRequest, api.InvalidRange)
+	checkErrorResponse(r, http.StatusBadRequest, restApi.InvalidPostsRange)
 }
 
 func TestGetRangeOfPostsGetEmptyPage(t *testing.T) {

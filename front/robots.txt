@@ -1,6 +1,6 @@
 User-agent: *
 Allow: /$
-Allow: /?page=1$
+Allow: /?page=*
+Allow: /posts/*
 Disallow: /api*
 Disallow: /admin*
-Disallow: /?page=*
