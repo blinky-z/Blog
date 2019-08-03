@@ -125,8 +125,7 @@ func GetPostsInRange(db *sql.DB, page, postsPerPage int) ([]models.Post, error) 
 			return posts, err
 		}
 
-		err = json.Unmarshal([]byte(metadataAsJSONString), &currentPost.Metadata)
-		if err != nil {
+		if err = json.Unmarshal([]byte(metadataAsJSONString), &currentPost.Metadata); err != nil {
 			return posts, err
 		}
 

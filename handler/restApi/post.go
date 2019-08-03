@@ -38,8 +38,6 @@ type GetPostsRequestQueryParams struct {
 const (
 	// InvalidPostTitle - invalid post title
 	InvalidPostTitle RequestErrorCode = "INVALID_TITLE"
-	// InvalidID - invalid post id
-	InvalidID RequestErrorCode = "INVALID_ID" // TODO: решить что делать с ID. ID есть везде, а не только в постах
 	// InvalidPostSnippet - invalid post snippet
 	InvalidPostSnippet RequestErrorCode = "INVALID_SNIPPET"
 	// InvalidPostContent - invalid post content
@@ -49,7 +47,7 @@ const (
 	// NoSuchPost - post does not exist
 	NoSuchPost RequestErrorCode = "NO_SUCH_POST"
 	// InvalidPostsRange - invalid range of posts
-	InvalidPostsRange RequestErrorCode = "INVALID_POSTS_RANGE" // TODO: нужно ли это вообще?
+	InvalidPostsRange RequestErrorCode = "INVALID_POSTS_RANGE"
 )
 
 // constants for use in validator methods
@@ -87,8 +85,8 @@ const (
 
 // other API constants
 const (
-	defaultPage         string = "0"
-	defaultPostsPerPage string = "10"
+	DefaultPage         string = "0"
+	DefaultPostsPerPage string = "10"
 )
 
 // ValidateGetPostsRequestQueryParams - validate query params of GET request for range of posts
@@ -193,28 +191,16 @@ func validateUpdatePostRequest(request *models.UpdatePostRequest) RequestErrorCo
 	return NoError
 }
 
-// TODO: тоже не должно здесь быть
-// ValidateID - validates id of post or comment
-func ValidateID(idAsString string) (validateError RequestErrorCode) {
-	validateError = NoError
-
-	if len(idAsString) == 0 {
-		validateError = InvalidID
-		return
+func IsPostIdValid(id string) bool {
+	if id == "" {
+		return false
+	}
+	num, err := strconv.Atoi(id)
+	if err != nil || num < 0 {
+		return false
 	}
 
-	num, err := strconv.Atoi(idAsString)
-	if err != nil {
-		validateError = InvalidID
-		return
-	}
-
-	if num < 0 {
-		validateError = InvalidID
-		return
-	}
-
-	return
+	return true
 }
 
 // CreatePostHandler - this handler server post creation requests
@@ -285,10 +271,9 @@ func (api *PostApiHandler) UpdatePostHandler() http.Handler {
 		postId := mux.Vars(r)["id"]
 		logInfo.Printf("Got new post update request. Post ID: %s", postId)
 
-		validateIDError := ValidateID(postId)
-		if validateIDError != NoError {
+		if !IsPostIdValid(postId) {
 			logError.Printf("Can't update post: invalid post ID. Post ID: %s", postId)
-			RespondWithError(w, http.StatusBadRequest, validateIDError)
+			RespondWithError(w, http.StatusBadRequest, InvalidRequest)
 			return
 		}
 
@@ -346,10 +331,9 @@ func (api *PostApiHandler) DeletePostHandler() http.Handler {
 		postId := mux.Vars(r)["id"]
 		logInfo.Printf("Got new post deletion request. Post ID: %s", postId)
 
-		validateIDError := ValidateID(postId)
-		if validateIDError != NoError {
+		if !IsPostIdValid(postId) {
 			logError.Printf("Can't delete post: invalid post ID. Post ID: %s", postId)
-			RespondWithError(w, http.StatusBadRequest, validateIDError)
+			RespondWithError(w, http.StatusBadRequest, InvalidRequest)
 			return
 		}
 
@@ -370,10 +354,9 @@ func (api *PostApiHandler) GetCertainPostHandler() http.Handler {
 		postId := mux.Vars(r)["id"]
 		logInfo.Printf("Got single post retrieve request. Post ID: %s", postId)
 
-		validateIDError := ValidateID(postId)
-		if validateIDError != NoError {
+		if !IsPostIdValid(postId) {
 			logError.Printf("Can't retrieve post: invalid post ID. Post ID: %s", postId)
-			RespondWithError(w, http.StatusBadRequest, validateIDError)
+			RespondWithError(w, http.StatusBadRequest, InvalidRequest)
 			return
 		}
 
@@ -382,7 +365,7 @@ func (api *PostApiHandler) GetCertainPostHandler() http.Handler {
 			switch err {
 			case sql.ErrNoRows:
 				logError.Printf("Can't retrieve post: no such post. Post ID: %s", postId)
-				RespondWithError(w, http.StatusBadRequest, NoSuchPost)
+				RespondWithError(w, http.StatusNotFound, NoSuchPost)
 				return
 			default:
 				logError.Printf("Error retrieving post from database. Post ID: %s. Error: %s", postId, err)
@@ -399,7 +382,7 @@ func (api *PostApiHandler) GetCertainPostHandler() http.Handler {
 			return
 		}
 
-		certainPostResponse := &models.CertainPostResponse{
+		certainPostResponse := &models.CertainPost{
 			Post:     post,
 			Comments: comments,
 		}
@@ -429,16 +412,17 @@ func (api *PostApiHandler) GetPostsHandler() http.Handler {
 		// set default values if params are missed
 		pageAsString := rangeParams.Page
 		postsPerPageAsString := rangeParams.PostsPerPage
+
 		if pageAsString == "" {
-			pageAsString = defaultPage
+			pageAsString = DefaultPage
 		}
 		if postsPerPageAsString == "" {
-			postsPerPageAsString = defaultPostsPerPage
+			postsPerPageAsString = DefaultPostsPerPage
 		}
 
-		// we know that params are valid, so ignore the errors
+		// we know that params are valid so ignore the errors
 		pageAsInt, _ := strconv.Atoi(pageAsString)
-		postsPerPageAsInt, _ := strconv.Atoi(pageAsString)
+		postsPerPageAsInt, _ := strconv.Atoi(postsPerPageAsString)
 
 		posts, err := postService.GetPostsInRange(api.db, pageAsInt, postsPerPageAsInt)
 		if err != nil {

@@ -1,3 +1,4 @@
+# for running with traefik enabled
 version: '3'
 
 services:
@@ -17,7 +18,7 @@ services:
       - web
     labels:
       - "traefik.backend=blog"
-      - "traefik.frontend.rule=Host:progbloom.dev"
+      - "traefik.frontend.rule=Host:"
       - "traefik.docker.network=web"
       - "traefik.port=8080"
     container_name: blog

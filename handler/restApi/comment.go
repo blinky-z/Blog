@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -37,6 +38,8 @@ const (
 
 // constants for use in validator methods
 const (
+	// MinCommentContentLen - comment's content max length
+	MinCommentContentLen int = 10
 	// MaxCommentContentLen - comment's content max length
 	MaxCommentContentLen int = 4096
 )
@@ -44,7 +47,7 @@ const (
 func validateCommentContent(content string) RequestErrorCode {
 	content = strings.TrimSpace(content)
 	contentLen := len(content)
-	if contentLen > MaxCommentContentLen || contentLen == 0 {
+	if contentLen > MaxCommentContentLen || contentLen < MinCommentContentLen {
 		return InvalidCommentContent
 	}
 
@@ -52,11 +55,11 @@ func validateCommentContent(content string) RequestErrorCode {
 }
 
 func validateCreateCommentRequest(request models.CreateCommentRequest) RequestErrorCode {
-	if validatePostIDError := ValidateID(request.PostID); validatePostIDError != NoError {
+	if !isCommentIdValid(request.PostID) {
 		return InvalidRequest
 	}
-	if request.ParentCommentID.Valid {
-		if validateParentIDError := ValidateID(request.ParentCommentID.Value().(string)); validateParentIDError != NoError {
+	if request.ParentCommentID != nil {
+		if !isCommentIdValid(request.ParentCommentID.(string)) {
 			return InvalidRequest
 		}
 	}
@@ -76,6 +79,18 @@ func validateUpdateCommentRequest(request models.UpdateCommentRequest) RequestEr
 	}
 
 	return NoError
+}
+
+func isCommentIdValid(id string) bool {
+	if id == "" {
+		return false
+	}
+	num, err := strconv.Atoi(id)
+	if err != nil || num < 0 {
+		return false
+	}
+
+	return true
 }
 
 // CreateCommentHandler - this handler serves comment creation requests
@@ -101,23 +116,19 @@ func (api *CommentApiHandler) CreateCommentHandler() http.Handler {
 
 		postId := request.PostID
 
-		isPostExists, err := postService.ExistsById(api.db, postId)
-		if err != nil {
+		if isPostExists, err := postService.ExistsById(api.db, postId); err != nil {
 			logError.Printf("Can't create comment: error checking post for presence. Post ID: %s. Error: %s",
 				postId, err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 			return
-		}
-		if !isPostExists {
+		} else if !isPostExists {
 			logError.Printf("Can't create comment: post does not exist. Post ID: %s", postId)
 			RespondWithError(w, http.StatusBadRequest, InvalidRequest)
 			return
 		}
 
-		parentCommentIdAsSqlNullString := request.ParentCommentID
-
-		if parentCommentIdAsSqlNullString.Valid {
-			parentCommentId := parentCommentIdAsSqlNullString.Value().(string)
+		if request.ParentCommentID != nil {
+			parentCommentId := request.ParentCommentID.(string)
 			parentComment, err := commentService.GetById(api.db, parentCommentId)
 			if err != nil {
 				if err == sql.ErrNoRows {
@@ -142,12 +153,9 @@ func (api *CommentApiHandler) CreateCommentHandler() http.Handler {
 
 		saveRequest := &commentService.SaveRequest{
 			PostID:          postId,
-			ParentCommentID: nil, // TODO: проверить этот момент, убедиться что сохраняется NULL
+			ParentCommentID: request.ParentCommentID,
 			Author:          request.Author,
 			Content:         request.Content,
-		}
-		if parentCommentIdAsSqlNullString.Valid {
-			saveRequest.ParentCommentID = parentCommentIdAsSqlNullString.Value()
 		}
 		createdComment, err := commentService.Save(api.db, saveRequest)
 		if err != nil {
@@ -176,10 +184,9 @@ func (api *CommentApiHandler) UpdateCommentHandler() http.Handler {
 		commentID := mux.Vars(r)["id"]
 		logInfo.Printf("Got new comment update request. Comment ID: %s, Request: %+v", commentID, request)
 
-		validateIDError := ValidateID(commentID)
-		if validateIDError != NoError {
+		if !isCommentIdValid(commentID) {
 			logError.Printf("Can't update comment: invalid comment ID. Comment ID: %s", commentID)
-			RespondWithError(w, http.StatusBadRequest, validateIDError)
+			RespondWithError(w, http.StatusBadRequest, InvalidRequest)
 			return
 		}
 
@@ -240,10 +247,9 @@ func (api *CommentApiHandler) DeleteCommentHandler() http.Handler {
 		commentId := mux.Vars(r)["id"]
 		logInfo.Printf("Got new comment deletion request. Comment ID: %s", commentId)
 
-		validateIDError := ValidateID(commentId)
-		if validateIDError != NoError {
+		if !isCommentIdValid(commentId) {
 			logError.Printf("Can't delete comment: invalid comment ID. Comment ID: %s", commentId)
-			RespondWithError(w, http.StatusBadRequest, validateIDError)
+			RespondWithError(w, http.StatusBadRequest, InvalidRequest)
 			return
 		}
 

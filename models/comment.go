@@ -17,10 +17,10 @@ type Comment struct {
 
 // CreateCommentRequest - represents comment creation request
 type CreateCommentRequest struct {
-	PostID          string     `json:"postID"`
-	ParentCommentID NullString `json:"parentCommentID"`
-	Author          string     `json:"author"`
-	Content         string     `json:"content"`
+	PostID          string      `json:"postID"`
+	ParentCommentID interface{} `json:"parentCommentID"` // may be nil
+	Author          string      `json:"author"`
+	Content         string      `json:"content"`
 }
 
 // UpdateCommentRequest - represents comment update request

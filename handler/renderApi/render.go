@@ -93,8 +93,7 @@ func (renderApi *RenderApiHandler) RenderPostPageHandler() http.Handler {
 	logError := renderApi.logError
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		postID := mux.Vars(r)["id"]
-		validateIDError := restApi.ValidateID(postID)
-		if validateIDError != restApi.NoError {
+		if !restApi.IsPostIdValid(postID) {
 			restApi.Respond(w, http.StatusNotFound)
 			return
 		}

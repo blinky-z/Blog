@@ -2,6 +2,7 @@ package restApi
 
 import (
 	"encoding/json"
+	"github.com/blinky-z/Blog/models"
 	"net/http"
 )
 
@@ -27,13 +28,6 @@ func Respond(w http.ResponseWriter, code int) {
 	w.WriteHeader(code)
 }
 
-// Response - struct for sending payload from server and more info about occurred error
-// It behaves like Either Monad: 'Error' field is set if error occurred, otherwise 'Body' contains payload
-type Response struct {
-	Error RequestErrorCode `json:"error"`
-	Body  interface{}      `json:"body"`
-}
-
 func respondWithJSON(w http.ResponseWriter, code int, body []byte) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
@@ -43,7 +37,7 @@ func respondWithJSON(w http.ResponseWriter, code int, body []byte) {
 // RespondWithError - helper function for responding with error in body
 // This function uses special 'Response' struct. See above
 func RespondWithError(w http.ResponseWriter, code int, errorCode RequestErrorCode) {
-	response := &Response{
+	response := &models.Response{
 		Error: errorCode,
 	}
 	encodedResponse, err := json.Marshal(response)
@@ -58,7 +52,7 @@ func RespondWithError(w http.ResponseWriter, code int, errorCode RequestErrorCod
 // RespondWithBody - helper function for responding with payload in body
 // This function uses special 'Response' struct. See above
 func RespondWithBody(w http.ResponseWriter, code int, payload interface{}) {
-	response := &Response{
+	response := &models.Response{
 		Body: payload,
 	}
 	encodedResponse, err := json.Marshal(response)

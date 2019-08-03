@@ -60,7 +60,6 @@ func Delete(db *sql.DB, commentId string) error {
 		return err
 	}
 
-	// TODO: написать тест на то что удаление несуществующего коммента не дает исключения
 	if childsExists {
 		if _, err := db.Exec("UPDATE comments SET deleted = TRUE, content = $1 WHERE id = $2",
 			DeletedCommentContent, commentId); err != nil {

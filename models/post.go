@@ -31,8 +31,8 @@ type UpdatePostRequest struct {
 	Metadata MetaData `json:"metadata"`
 }
 
-// CertainPostResponse - this struct is used to return not only post data, but also comments of this post
-type CertainPostResponse struct {
+// CertainPost - this struct is used to return not only post data, but also comments of this post
+type CertainPost struct {
 	Post
 	Comments []*CommentWithChilds `json:"comments"`
 }
