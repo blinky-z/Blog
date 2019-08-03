@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/blinky-z/Blog/handler/restApi"
+	"github.com/blinky-z/Blog/handler/restapi"
 	"github.com/blinky-z/Blog/models"
 	"io"
 	"io/ioutil"
@@ -28,31 +28,31 @@ var (
 
 // Response - generic struct for storing deserialized response body
 type Response struct {
-	Error restApi.RequestErrorCode
+	Error restapi.RequestErrorCode
 	Body  interface{}
 }
 
 // ResponseWithPost - struct for storing returned post
 type ResponseWithPost struct {
-	Error restApi.RequestErrorCode
+	Error restapi.RequestErrorCode
 	Body  models.Post
 }
 
 // ResponseWithCertainPost - struct for storing returned post with comments
 type ResponseWithCertainPost struct {
-	Error restApi.RequestErrorCode
+	Error restapi.RequestErrorCode
 	Body  models.CertainPost
 }
 
 // ResponseWithRangeOfPosts - struct for storing returned range of posts
 type ResponseWithRangeOfPosts struct {
-	Error restApi.RequestErrorCode
+	Error restapi.RequestErrorCode
 	Body  []models.Post
 }
 
 // ResponseWithComment - struct for storing returned comment
 type ResponseWithComment struct {
-	Error restApi.RequestErrorCode
+	Error restapi.RequestErrorCode
 	Body  models.Comment
 }
 
@@ -69,8 +69,8 @@ func generateRandomAlphanumericString(l int) string {
 	return string(b)
 }
 
-//// decodeResponse - usually you don't want to use this function, because it will deserialize json into generic Response type
-//// but you want to use deserialize functions for concrete types
+// decodeResponse - usually you don't want to use this function as it will deserialize JSON into generic
+// Response type, but you want to use deserializing functions for concrete types
 func decodeResponse(responseBody io.ReadCloser) *Response {
 	bodyBytes, _ := ioutil.ReadAll(responseBody)
 	responseBodyCopy := ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
@@ -145,7 +145,7 @@ func sendMessage(method, address string, message interface{}, addAuthData bool) 
 	var response *http.Response
 	var err error
 
-	encodedMessage := encodeMessageIntoJson(message)
+	encodedMessage := encodeMessageIntoJSON(message)
 	body := bytes.NewReader(encodedMessage)
 
 	switch method {
@@ -225,7 +225,7 @@ func addAuthDataToRequest(r *http.Request) {
 
 // assertErrorResponse - asserts that response has expected status code and error code
 // Use this function for asserting only error responses
-func assertErrorResponse(r *http.Response, expectedStatusCode int, expectedErrorCode restApi.RequestErrorCode) {
+func assertErrorResponse(r *http.Response, expectedStatusCode int, expectedErrorCode restapi.RequestErrorCode) {
 	resp := decodeResponse(r.Body)
 
 	receivedStatusCode := r.StatusCode
@@ -254,7 +254,7 @@ func assertNiceResponse(r *http.Response, expectedStatusCode int) {
 // -----------
 // API for encoding and decoding messages into/from JSON
 
-func encodeMessageIntoJson(message interface{}) []byte {
+func encodeMessageIntoJSON(message interface{}) []byte {
 	encodedMessage, err := json.Marshal(message)
 	if err != nil {
 		panic(fmt.Sprintf("Error encoding message.\nMessage: %v\n. Error: %s", message, err))
@@ -289,26 +289,26 @@ func comparePosts(l, r models.Post) bool {
 
 func createPostRequestFactory() models.CreatePostRequest {
 	return models.CreatePostRequest{
-		Title:   generateRandomAlphanumericString(restApi.MinPostTitleLen),
-		Author:  generateRandomAlphanumericString(restApi.MinUsernameLen),
-		Snippet: generateRandomAlphanumericString(restApi.MinSnippetLen),
-		Content: generateRandomAlphanumericString(restApi.MinSnippetLen),
+		Title:   generateRandomAlphanumericString(restapi.MinPostTitleLen),
+		Author:  generateRandomAlphanumericString(restapi.MinUsernameLen),
+		Snippet: generateRandomAlphanumericString(restapi.MinSnippetLen),
+		Content: generateRandomAlphanumericString(restapi.MinSnippetLen),
 		Metadata: models.MetaData{
-			Description: generateRandomAlphanumericString(restApi.MinMetaDescriptionLen),
-			Keywords:    []string{generateRandomAlphanumericString(restApi.MinMetaKeywordLen)},
+			Description: generateRandomAlphanumericString(restapi.MinMetaDescriptionLen),
+			Keywords:    []string{generateRandomAlphanumericString(restapi.MinMetaKeywordLen)},
 		},
 	}
 }
 
 func updatePostRequestFactory() models.UpdatePostRequest {
 	return models.UpdatePostRequest{
-		Title:   generateRandomAlphanumericString(restApi.MinPostTitleLen),
-		Author:  generateRandomAlphanumericString(restApi.MinUsernameLen),
-		Snippet: generateRandomAlphanumericString(restApi.MinSnippetLen),
-		Content: generateRandomAlphanumericString(restApi.MinSnippetLen),
+		Title:   generateRandomAlphanumericString(restapi.MinPostTitleLen),
+		Author:  generateRandomAlphanumericString(restapi.MinUsernameLen),
+		Snippet: generateRandomAlphanumericString(restapi.MinSnippetLen),
+		Content: generateRandomAlphanumericString(restapi.MinSnippetLen),
 		Metadata: models.MetaData{
-			Description: generateRandomAlphanumericString(restApi.MinMetaDescriptionLen),
-			Keywords:    []string{generateRandomAlphanumericString(restApi.MinMetaKeywordLen)},
+			Description: generateRandomAlphanumericString(restapi.MinMetaDescriptionLen),
+			Keywords:    []string{generateRandomAlphanumericString(restapi.MinMetaKeywordLen)},
 		},
 	}
 }
@@ -345,24 +345,24 @@ func deletePost(postID string) *http.Response {
 
 // factory methods
 
-func createCommentRequestFactory(postId string) models.CreateCommentRequest {
+func createCommentRequestFactory(postID string) models.CreateCommentRequest {
 	return models.CreateCommentRequest{
-		PostID:          postId,
+		PostID:          postID,
 		ParentCommentID: nil,
-		Author:          generateRandomAlphanumericString(restApi.MinUsernameLen),
-		Content:         generateRandomAlphanumericString(restApi.MinCommentContentLen),
+		Author:          generateRandomAlphanumericString(restapi.MinUsernameLen),
+		Content:         generateRandomAlphanumericString(restapi.MinCommentContentLen),
 	}
 }
 
-func createCommentWithParentRequestFactory(postId string, parentCommentId string) models.CreateCommentRequest {
-	request := createCommentRequestFactory(postId)
+func createCommentWithParentRequestFactory(postID string, parentCommentId string) models.CreateCommentRequest {
+	request := createCommentRequestFactory(postID)
 	request.ParentCommentID = parentCommentId
 	return request
 }
 
 func updateCommentRequestFactory() models.UpdateCommentRequest {
 	return models.UpdateCommentRequest{
-		Content: generateRandomAlphanumericString(restApi.MinCommentContentLen),
+		Content: generateRandomAlphanumericString(restapi.MinCommentContentLen),
 	}
 }
 

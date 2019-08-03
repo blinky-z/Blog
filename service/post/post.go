@@ -1,4 +1,4 @@
-package postService
+package post
 
 import (
 	"database/sql"
@@ -55,8 +55,8 @@ func Update(db *sql.DB, request *UpdateRequest) (updatedPost *models.Post, err e
 	if err = db.QueryRow("UPDATE posts SET ("+postsInsertFields+") = ($1, $2, $3, $4, $5) "+
 		"WHERE id = $6 RETURNING "+postsAllFields, request.Title, request.Author, request.Snippet, request.Content,
 		encodedMetadata, request.ID).
-		Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Author, &updatedPost.Date, &updatedPost.Snippet, &updatedPost.Content,
-			&metadataAsJSONString); err != nil {
+		Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Author, &updatedPost.Date, &updatedPost.Snippet,
+			&updatedPost.Content, &metadataAsJSONString); err != nil {
 		return
 	}
 	err = json.Unmarshal([]byte(metadataAsJSONString), &updatedPost.Metadata)
@@ -67,24 +67,24 @@ func Update(db *sql.DB, request *UpdateRequest) (updatedPost *models.Post, err e
 	return
 }
 
-// ExistsById - checks if post with the given ID exists in database
+// ExistsByID - checks if post with the given ID exists in database
 // returns boolean indicating whether post exists or not and error
-func ExistsById(db *sql.DB, postId string) (bool, error) {
+func ExistsByID(db *sql.DB, postID string) (bool, error) {
 	var postExists bool
-	err := db.QueryRow("select exists(select 1 from posts where id = $1)", postId).Scan(&postExists)
+	err := db.QueryRow("select exists(select 1 from posts where id = $1)", postID).Scan(&postExists)
 	return postExists, err
 }
 
 // Delete - deletes post from database
-func Delete(db *sql.DB, postId string) error {
-	if _, err := db.Exec("DELETE FROM posts WHERE id = $1", postId); err != nil {
+func Delete(db *sql.DB, postID string) error {
+	if _, err := db.Exec("DELETE FROM posts WHERE id = $1", postID); err != nil {
 		return err
 	}
 	return nil
 }
 
-// GetById - retrieves post with the given ID from database
-func GetById(db *sql.DB, id string) (models.Post, error) {
+// GetByID - retrieves post with the given ID from database
+func GetByID(db *sql.DB, id string) (models.Post, error) {
 	var post models.Post
 
 	var metadataAsJSONString string

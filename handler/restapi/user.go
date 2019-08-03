@@ -1,4 +1,4 @@
-package restApi
+package restapi
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"github.com/blinky-z/Blog/models"
-	"github.com/blinky-z/Blog/service/userService"
+	"github.com/blinky-z/Blog/service/user"
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 	"log"
@@ -24,8 +24,8 @@ const (
 	CtxRoleKey = ctxRoleKey("role")
 )
 
-// UserApiHandler - environment container struct to declare all auth handlers as methods
-type UserApiHandler struct {
+// UserAPIHandler - environment container struct to declare all auth handlers as methods
+type UserAPIHandler struct {
 	db              *sql.DB
 	jwtSecret       []byte
 	admins          *[]string
@@ -34,9 +34,9 @@ type UserApiHandler struct {
 	jwtUserProperty string
 }
 
-func NewUserApiHandler(db *sql.DB, jwtSecret []byte, admins *[]string, jwtUserProperty string,
-	logInfo, logError *log.Logger) *UserApiHandler {
-	return &UserApiHandler{
+func NewUserAPIHandler(db *sql.DB, jwtSecret []byte, admins *[]string, jwtUserProperty string,
+	logInfo, logError *log.Logger) *UserAPIHandler {
+	return &UserAPIHandler{
 		db:              db,
 		jwtSecret:       jwtSecret,
 		admins:          admins,
@@ -154,7 +154,7 @@ func validateLoginRequest(request models.LoginRequest) RequestErrorCode {
 
 // FgpAuthentication - middleware for checking fingerprint
 // This handler should be a next step after JWT token checking
-func (api *UserApiHandler) FgpAuthentication(next http.Handler) http.Handler {
+func (api *UserAPIHandler) FgpAuthentication(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := r.Context().Value(api.jwtUserProperty).(*jwt.Token)
 		tokenClaims := token.Claims.(jwt.MapClaims)
@@ -184,7 +184,7 @@ func (api *UserApiHandler) FgpAuthentication(next http.Handler) http.Handler {
 // RegisterUserHandler - serves registration requests
 // This function generates hashed password with bcrypt library before saving user in database, so to compare password
 // use bcrypt.CompareHashAndPassword function to compare password from login form with actual hashed password
-func (api *UserApiHandler) RegisterUserHandler() http.Handler {
+func (api *UserAPIHandler) RegisterUserHandler() http.Handler {
 	logInfo := api.logInfo
 	logError := api.logError
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -207,7 +207,7 @@ func (api *UserApiHandler) RegisterUserHandler() http.Handler {
 		username := strings.TrimSpace(request.Username)
 		password := []byte(request.Password)
 
-		isUserExists, err := userService.ExistsByUsernameOrEmail(api.db, username, email)
+		isUserExists, err := user.ExistsByUsernameOrEmail(api.db, username, email)
 		if err != nil {
 			logError.Printf("Can't register user: error checking user for presence. Username: %s. Error: %s",
 				username, err)
@@ -229,7 +229,7 @@ func (api *UserApiHandler) RegisterUserHandler() http.Handler {
 			return
 		}
 
-		if err := userService.Save(api.db, username, email, string(hashedPassword)); err != nil {
+		if err := user.Save(api.db, username, email, string(hashedPassword)); err != nil {
 			logError.Printf("Error saving user in database. Username: %s. Error: %s", username, err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 			return
@@ -264,7 +264,7 @@ func IsUserAdmin(username string, admins *[]string) bool {
 
 // generateJwtToken - generates JWT token
 // Generate and hash fingerprint before calling this function
-func generateJwtToken(login, fgp string, api *UserApiHandler) (string, error) {
+func generateJwtToken(login, fgp string, api *UserAPIHandler) (string, error) {
 	var claims models.TokenClaims
 
 	// set required claims
@@ -283,7 +283,7 @@ func generateJwtToken(login, fgp string, api *UserApiHandler) (string, error) {
 
 // LoginUserHandler - serves user login request
 // This function sends back generated JWT token as payload
-func (api *UserApiHandler) LoginUserHandler() http.Handler {
+func (api *UserAPIHandler) LoginUserHandler() http.Handler {
 	logInfo := api.logInfo
 	logError := api.logError
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -343,7 +343,7 @@ func (api *UserApiHandler) LoginUserHandler() http.Handler {
 		logInfo.Printf("Generating fingerprint for user login. Username: %s, email: %s", username, email)
 		rawFgp, err := generateRandomContext()
 		if err != nil {
-			logError.Printf("Bad login: error generating fingerpint. Username: %s, email: %s. Error: %s",
+			logError.Printf("Bad login: error generating fingerprint. Username: %s, email: %s. Error: %s",
 				username, email, err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 			return
@@ -378,7 +378,7 @@ func (api *UserApiHandler) LoginUserHandler() http.Handler {
 			return
 		}
 
-		logInfo.Printf("Successfull login. Username: %s, email: %s", username, email)
+		logInfo.Printf("Successful login. Username: %s, email: %s", username, email)
 		RespondWithBody(w, http.StatusOK, token)
 	})
 }

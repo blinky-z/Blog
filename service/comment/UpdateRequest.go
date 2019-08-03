@@ -1,6 +1,6 @@
-package commentService
+package comment
 
 type UpdateRequest struct {
-	CommentId  string
+	CommentID  string
 	NewContent string
 }

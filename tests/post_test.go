@@ -1,7 +1,7 @@
 package tests
 
 import (
-	"github.com/blinky-z/Blog/handler/restApi"
+	"github.com/blinky-z/Blog/handler/restapi"
 	"github.com/blinky-z/Blog/models"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -71,7 +71,7 @@ func TestPostIntegrationTest(t *testing.T) {
 	// Step 6: Get deleted post
 	{
 		r := getCertainPost(workingPost.ID)
-		assertErrorResponse(r, http.StatusNotFound, restApi.NoSuchPost)
+		assertErrorResponse(r, http.StatusNotFound, restapi.NoSuchPost)
 	}
 }
 
@@ -79,13 +79,13 @@ func TestCreatePostWithInvalidRequestBody(t *testing.T) {
 	message := `{"bad request body"}`
 	r := createPost(message)
 
-	assertErrorResponse(r, http.StatusBadRequest, restApi.BadRequestBody)
+	assertErrorResponse(r, http.StatusBadRequest, restapi.BadRequestBody)
 }
 
 func TestGetPostWithInvalidID(t *testing.T) {
 	r := getCertainPost("post1")
 
-	assertErrorResponse(r, http.StatusBadRequest, restApi.InvalidRequest)
+	assertErrorResponse(r, http.StatusBadRequest, restapi.InvalidRequest)
 }
 
 func TestGetNotExistingPost(t *testing.T) {
@@ -100,7 +100,7 @@ func TestGetNotExistingPost(t *testing.T) {
 	// get deleted post
 	r = getCertainPost(post.ID)
 
-	assertErrorResponse(r, http.StatusNotFound, restApi.NoSuchPost)
+	assertErrorResponse(r, http.StatusNotFound, restapi.NoSuchPost)
 }
 
 func TestUpdatePostSetInvalidRequestBody(t *testing.T) {
@@ -112,7 +112,7 @@ func TestUpdatePostSetInvalidRequestBody(t *testing.T) {
 	message := `{"bad request body":"asd"}`
 	r := updatePost(post.ID, message)
 
-	assertErrorResponse(r, http.StatusBadRequest, restApi.BadRequestBody)
+	assertErrorResponse(r, http.StatusBadRequest, restapi.BadRequestBody)
 }
 
 func TestUpdateNotExistingPost(t *testing.T) {
@@ -127,14 +127,14 @@ func TestUpdateNotExistingPost(t *testing.T) {
 	updatePostRequest := updatePostRequestFactory()
 	r := updatePost(post.ID, updatePostRequest)
 
-	assertErrorResponse(r, http.StatusBadRequest, restApi.NoSuchPost)
+	assertErrorResponse(r, http.StatusBadRequest, restapi.NoSuchPost)
 }
 
 func TestUpdatePostWithInvalidID(t *testing.T) {
 	updatePostRequest := updatePostRequestFactory()
 	r := updatePost("post1", updatePostRequest)
 
-	assertErrorResponse(r, http.StatusBadRequest, restApi.InvalidRequest)
+	assertErrorResponse(r, http.StatusBadRequest, restapi.InvalidRequest)
 }
 
 func TestDeleteNotExistingPostShouldBeIdempotent(t *testing.T) {
@@ -154,7 +154,7 @@ func TestDeleteNotExistingPostShouldBeIdempotent(t *testing.T) {
 func TestDeletePostWithInvalidID(t *testing.T) {
 	r := deletePost("post1")
 
-	assertErrorResponse(r, http.StatusBadRequest, restApi.InvalidRequest)
+	assertErrorResponse(r, http.StatusBadRequest, restapi.InvalidRequest)
 }
 
 func TestGetRangeOfPostsWithCustomPostsPerPage(t *testing.T) {
@@ -181,7 +181,7 @@ func TestGetRangeOfPostsWithCustomPostsPerPage(t *testing.T) {
 func TestGetRangeOfPostsWithDefaultPostsPerPage(t *testing.T) {
 	var workingPosts []models.Post
 
-	postsToCreateAsString := restApi.DefaultPostsPerPage
+	postsToCreateAsString := restapi.DefaultPostsPerPage
 	postsToCreate, _ := strconv.Atoi(postsToCreateAsString)
 
 	for i := 0; i < postsToCreate; i++ {

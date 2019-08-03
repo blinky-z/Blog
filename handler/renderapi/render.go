@@ -1,12 +1,12 @@
-package renderApi
+package renderapi
 
 import (
 	"database/sql"
 	"fmt"
-	"github.com/blinky-z/Blog/handler/restApi"
+	"github.com/blinky-z/Blog/handler/restapi"
 	"github.com/blinky-z/Blog/models"
-	"github.com/blinky-z/Blog/service/commentService"
-	"github.com/blinky-z/Blog/service/postService"
+	"github.com/blinky-z/Blog/service/comment"
+	"github.com/blinky-z/Blog/service/post"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -17,15 +17,15 @@ import (
 	"time"
 )
 
-type RenderApiHandler struct {
+type Handler struct {
 	db       *sql.DB
 	admins   *[]string
 	logInfo  *log.Logger
 	logError *log.Logger
 }
 
-func NewRenderApiHandler(db *sql.DB, admins *[]string, logInfo, logError *log.Logger) *RenderApiHandler {
-	return &RenderApiHandler{
+func NewRenderAPIHandler(db *sql.DB, admins *[]string, logInfo, logError *log.Logger) *Handler {
+	return &Handler{
 		db:       db,
 		admins:   admins,
 		logInfo:  logInfo,
@@ -47,10 +47,10 @@ const (
 
 // pageSelector - represents page selector on index page
 type pageSelector struct {
-	HasNewerPosts  bool
 	NewerPostsLink string
-	HasOlderPosts  bool
 	OlderPostsLink string
+	HasNewerPosts  bool
+	HasOlderPosts  bool
 }
 
 // indexPage - represents index page
@@ -89,12 +89,12 @@ var convertTimeTemplateFunc = template.FuncMap{
 }
 
 // RenderPostPageHandler - handler for server-side rendering of /posts/{id} page
-func (renderApi *RenderApiHandler) RenderPostPageHandler() http.Handler {
+func (renderApi *Handler) RenderPostPageHandler() http.Handler {
 	logError := renderApi.logError
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		postID := mux.Vars(r)["id"]
-		if !restApi.IsPostIdValid(postID) {
-			restApi.Respond(w, http.StatusNotFound)
+		if !restapi.IsPostIDValid(postID) {
+			restapi.Respond(w, http.StatusNotFound)
 			return
 		}
 
@@ -104,17 +104,17 @@ func (renderApi *RenderApiHandler) RenderPostPageHandler() http.Handler {
 		if err != nil {
 			isUserAdmin = false
 		} else {
-			isUserAdmin = restApi.IsUserAdmin(usernameCookie.Value, renderApi.admins)
+			isUserAdmin = restapi.IsUserAdmin(usernameCookie.Value, renderApi.admins)
 		}
 
-		post, err := postService.GetById(renderApi.db, postID)
+		post, err := post.GetByID(renderApi.db, postID)
 		if err != nil {
 			switch err {
 			case sql.ErrNoRows:
-				restApi.Respond(w, http.StatusNotFound)
+				restapi.Respond(w, http.StatusNotFound)
 				return
 			default:
-				restApi.Respond(w, http.StatusInternalServerError)
+				restapi.Respond(w, http.StatusInternalServerError)
 				return
 			}
 		}
@@ -138,15 +138,15 @@ func (renderApi *RenderApiHandler) RenderPostPageHandler() http.Handler {
 			ParseFiles(templatesFolder+"header.html", templatesFolder+"comments-list.html", templatesFolder+"comment.html",
 				templatesFolder+"postPage.html", templatesFolder+"footer.html")
 		if err != nil {
-			restApi.Respond(w, http.StatusInternalServerError)
+			restapi.Respond(w, http.StatusInternalServerError)
 			return
 		}
 
 		var data postPage
 
-		comments, err := commentService.GetAllByPostId(renderApi.db, postID)
+		comments, err := comment.GetAllByPostID(renderApi.db, postID)
 		if err != nil {
-			restApi.Respond(w, http.StatusInternalServerError)
+			restapi.Respond(w, http.StatusInternalServerError)
 			return
 		}
 
@@ -159,37 +159,37 @@ func (renderApi *RenderApiHandler) RenderPostPageHandler() http.Handler {
 		if err := postTemplate. /*Funcs(incTemplateFunc).Funcs(passArgsTemplateFunc).Funcs(convertTimeTemplateFunc).*/
 					ExecuteTemplate(w, "postPage", data); err != nil {
 			logError.Printf("Error rendering single post page: %s", err)
-			restApi.Respond(w, http.StatusInternalServerError)
+			restapi.Respond(w, http.StatusInternalServerError)
 		}
 	})
 }
 
 // renderIndexPageHandler - handler for server-side rendering of index page
-func (renderApi *RenderApiHandler) renderIndexPageHandler() http.Handler {
+func (renderApi *Handler) renderIndexPageHandler() http.Handler {
 	logError := renderApi.logError
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rangeParams := &restApi.GetPostsRequestQueryParams{
+		rangeParams := &restapi.GetPostsRequestQueryParams{
 			Page:         r.FormValue("page"),
 			PostsPerPage: "",
 		}
 
-		validateQueryParamsError := restApi.ValidateGetPostsRequestQueryParams(rangeParams)
-		if validateQueryParamsError != restApi.NoError {
-			restApi.Respond(w, http.StatusNotFound)
+		validateQueryParamsError := restapi.ValidateGetPostsRequestQueryParams(rangeParams)
+		if validateQueryParamsError != restapi.NoError {
+			restapi.Respond(w, http.StatusNotFound)
 			return
 		}
 		page, _ := strconv.Atoi(rangeParams.Page)
 
-		posts, err := postService.GetPostsInRange(renderApi.db, page, postsPerPageDefault+1)
+		posts, err := post.GetPostsInRange(renderApi.db, page, postsPerPageDefault+1)
 		if err != nil {
-			restApi.Respond(w, http.StatusInternalServerError)
+			restapi.Respond(w, http.StatusInternalServerError)
 			return
 		}
 
 		indexTemplate, err := template.New("").Funcs(convertTimeTemplateFunc).
 			ParseFiles(templatesFolder+"header.html", templatesFolder+"indexPage.html", templatesFolder+"footer.html")
 		if err != nil {
-			restApi.Respond(w, http.StatusInternalServerError)
+			restapi.Respond(w, http.StatusInternalServerError)
 			return
 		}
 
@@ -219,13 +219,13 @@ func (renderApi *RenderApiHandler) renderIndexPageHandler() http.Handler {
 
 		if err := indexTemplate. /*.Funcs(convertTimeTemplateFunc)*/ ExecuteTemplate(w, "indexPage", data); err != nil {
 			logError.Printf("Error rendering index page: %s", err)
-			restApi.Respond(w, http.StatusInternalServerError)
+			restapi.Respond(w, http.StatusInternalServerError)
 		}
 	})
 }
 
 // HandleHTMLFile - render html page
-func HandleHTMLFile(renderApi *RenderApiHandler, frontFolder string) http.Handler {
+func HandleHTMLFile(renderAPI *Handler, frontFolder string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		currentURLPath := r.URL.Path
 		currentURLPath = strings.TrimSuffix(currentURLPath, ".html")
@@ -233,7 +233,7 @@ func HandleHTMLFile(renderApi *RenderApiHandler, frontFolder string) http.Handle
 
 		var fileName string
 		if currentURLPath == "" || currentURLPath == "index" {
-			renderApi.renderIndexPageHandler().ServeHTTP(w, r)
+			renderAPI.renderIndexPageHandler().ServeHTTP(w, r)
 			return
 		}
 

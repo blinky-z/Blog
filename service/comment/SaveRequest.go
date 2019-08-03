@@ -1,4 +1,4 @@
-package commentService
+package comment
 
 type SaveRequest struct {
 	PostID          string

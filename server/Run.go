@@ -4,11 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	jwtmiddleware "github.com/auth0/go-jwt-middleware"
-	"github.com/blinky-z/Blog/handler/renderApi"
-	"github.com/blinky-z/Blog/handler/restApi"
+	"github.com/blinky-z/Blog/handler/renderapi"
+	"github.com/blinky-z/Blog/handler/restapi"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
-	_ "github.com/lib/pq"
+	_ "github.com/lib/pq" // import postgres driver
 	"github.com/spf13/viper"
 	"log"
 	"net/http"
@@ -90,24 +90,24 @@ func RunServer() {
 			return jwtSecret, nil
 		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err string) {
-			restApi.RespondWithError(w, http.StatusUnauthorized, restApi.InvalidToken)
+			restapi.RespondWithError(w, http.StatusUnauthorized, restapi.InvalidToken)
 		},
 		SigningMethod: jwt.SigningMethodHS256,
 	})
 
-	commentApiHandler := restApi.NewCommentApiHandler(Db,
+	commentAPIHandler := restapi.NewCommentAPIHandler(Db,
 		log.New(os.Stdout, "[api.comment] INFO: ", log.Ltime),
 		log.New(os.Stderr, "[api.comment] ERROR: ", log.Ltime))
-	postApiHandler := restApi.NewPostApiHandler(Db,
+	postAPIHandler := restapi.NewPostAPIHandler(Db,
 		log.New(os.Stdout, "[api.post] INFO: ", log.Ltime),
 		log.New(os.Stderr, "[api.post] ERROR: ", log.Ltime))
-	userApiHandler := restApi.NewUserApiHandler(Db,
+	userAPIHandler := restapi.NewUserAPIHandler(Db,
 		jwtSecret,
 		&admins,
 		jwtUserPropety,
 		log.New(os.Stdout, "[api.user] INFO: ", log.Ltime),
 		log.New(os.Stderr, "[api.user] ERROR: ", log.Ltime))
-	renderApiHandler := renderApi.NewRenderApiHandler(Db,
+	renderAPIHandler := renderapi.NewRenderAPIHandler(Db,
 		&admins,
 		log.New(os.Stdout, "[renderApi.render] INFO: ", log.Ltime),
 		log.New(os.Stderr, "[renderApi.render] ERROR: ", log.Ltime))
@@ -115,26 +115,26 @@ func RunServer() {
 	router := mux.NewRouter()
 
 	// set api handlers
-	router.Handle("/api/posts", postApiHandler.GetPostsHandler()).Queries("page", "{page}",
+	router.Handle("/api/posts", postAPIHandler.GetPostsHandler()).Queries("page", "{page}",
 		"posts-per-page", "{posts-per-page}").Methods("GET")
-	router.Handle("/api/posts", postApiHandler.GetPostsHandler()).Queries("page", "{page}").Methods("GET")
-	router.Handle("/api/posts/{id}", postApiHandler.GetCertainPostHandler()).Methods("GET")
+	router.Handle("/api/posts", postAPIHandler.GetPostsHandler()).Queries("page", "{page}").Methods("GET")
+	router.Handle("/api/posts/{id}", postAPIHandler.GetCertainPostHandler()).Methods("GET")
 	router.Handle("/api/posts",
-		jwtMiddleware.Handler(userApiHandler.FgpAuthentication(postApiHandler.CreatePostHandler()))).Methods("POST")
+		jwtMiddleware.Handler(userAPIHandler.FgpAuthentication(postAPIHandler.CreatePostHandler()))).Methods("POST")
 	router.Handle("/api/posts/{id}",
-		jwtMiddleware.Handler(userApiHandler.FgpAuthentication(postApiHandler.UpdatePostHandler()))).Methods("PUT")
+		jwtMiddleware.Handler(userAPIHandler.FgpAuthentication(postAPIHandler.UpdatePostHandler()))).Methods("PUT")
 	router.Handle("/api/posts/{id}",
-		jwtMiddleware.Handler(userApiHandler.FgpAuthentication(postApiHandler.DeletePostHandler()))).Methods("DELETE")
+		jwtMiddleware.Handler(userAPIHandler.FgpAuthentication(postAPIHandler.DeletePostHandler()))).Methods("DELETE")
 	router.HandleFunc("/api/hc", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Methods("GET")
-	router.Handle("/api/user/register", userApiHandler.RegisterUserHandler()).Methods("POST")
-	router.Handle("/api/user/login", userApiHandler.LoginUserHandler()).Methods("POST")
-	router.Handle("/api/comments", commentApiHandler.CreateCommentHandler()).Methods("POST")
+	router.Handle("/api/user/register", userAPIHandler.RegisterUserHandler()).Methods("POST")
+	router.Handle("/api/user/login", userAPIHandler.LoginUserHandler()).Methods("POST")
+	router.Handle("/api/comments", commentAPIHandler.CreateCommentHandler()).Methods("POST")
 	router.Handle("/api/comments/{id}",
-		jwtMiddleware.Handler(userApiHandler.FgpAuthentication(commentApiHandler.UpdateCommentHandler()))).Methods("PUT")
+		jwtMiddleware.Handler(userAPIHandler.FgpAuthentication(commentAPIHandler.UpdateCommentHandler()))).Methods("PUT")
 	router.Handle("/api/comments/{id}",
-		jwtMiddleware.Handler(userApiHandler.FgpAuthentication(commentApiHandler.DeleteCommentHandler()))).Methods("DELETE")
+		jwtMiddleware.Handler(userAPIHandler.FgpAuthentication(commentAPIHandler.DeleteCommentHandler()))).Methods("DELETE")
 
 	// set frontend files paths
 	router.PathPrefix("/css").Handler(
@@ -145,8 +145,8 @@ func RunServer() {
 		http.StripPrefix("/images", http.FileServer(http.Dir(frontendFolderPath+"/images"))))
 
 	// set pages rendering handlers
-	router.PathPrefix("/posts/{id}").Handler(renderApiHandler.RenderPostPageHandler())
-	router.PathPrefix("/").Handler(http.StripPrefix("/", renderApi.HandleHTMLFile(renderApiHandler, frontendFolderPath)))
+	router.PathPrefix("/posts/{id}").Handler(renderAPIHandler.RenderPostPageHandler())
+	router.PathPrefix("/").Handler(http.StripPrefix("/", renderapi.HandleHTMLFile(renderAPIHandler, frontendFolderPath)))
 
 	serverPort := viper.GetString(serverPortEnvKey)
 	logInfo.Printf("Starting server on port %s", serverPort)

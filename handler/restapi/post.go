@@ -1,11 +1,11 @@
-package restApi
+package restapi
 
 import (
 	"database/sql"
 	"encoding/json"
 	"github.com/blinky-z/Blog/models"
-	"github.com/blinky-z/Blog/service/commentService"
-	"github.com/blinky-z/Blog/service/postService"
+	"github.com/blinky-z/Blog/service/comment"
+	"github.com/blinky-z/Blog/service/post"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -13,15 +13,15 @@ import (
 	"strings"
 )
 
-// PostApiHandler - used for dependency injection
-type PostApiHandler struct {
+// PostAPIHandler - used for dependency injection
+type PostAPIHandler struct {
 	db       *sql.DB
 	logInfo  *log.Logger
 	logError *log.Logger
 }
 
-func NewPostApiHandler(db *sql.DB, logInfo, logError *log.Logger) *PostApiHandler {
-	return &PostApiHandler{
+func NewPostAPIHandler(db *sql.DB, logInfo, logError *log.Logger) *PostAPIHandler {
+	return &PostAPIHandler{
 		db:       db,
 		logInfo:  logInfo,
 		logError: logError,
@@ -191,7 +191,7 @@ func validateUpdatePostRequest(request *models.UpdatePostRequest) RequestErrorCo
 	return NoError
 }
 
-func IsPostIdValid(id string) bool {
+func IsPostIDValid(id string) bool {
 	if id == "" {
 		return false
 	}
@@ -204,7 +204,7 @@ func IsPostIdValid(id string) bool {
 }
 
 // CreatePostHandler - this handler server post creation requests
-func (api *PostApiHandler) CreatePostHandler() http.Handler {
+func (api *PostAPIHandler) CreatePostHandler() http.Handler {
 	logInfo := api.logInfo
 	logError := api.logError
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -231,14 +231,14 @@ func (api *PostApiHandler) CreatePostHandler() http.Handler {
 			return
 		}
 
-		saveRequest := &postService.SaveRequest{
+		saveRequest := &post.SaveRequest{
 			Title:    request.Title,
 			Author:   request.Author,
 			Snippet:  request.Snippet,
 			Content:  request.Content,
 			Metadata: request.Metadata,
 		}
-		createdPost, err := postService.Save(api.db, saveRequest)
+		createdPost, err := post.Save(api.db, saveRequest)
 		if err != nil {
 			logError.Printf("Error saving post in database: %s", err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
@@ -251,7 +251,7 @@ func (api *PostApiHandler) CreatePostHandler() http.Handler {
 }
 
 // UpdatePostHandler - this handler serves post update requests
-func (api *PostApiHandler) UpdatePostHandler() http.Handler {
+func (api *PostAPIHandler) UpdatePostHandler() http.Handler {
 	logInfo := api.logInfo
 	logError := api.logError
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -268,44 +268,44 @@ func (api *PostApiHandler) UpdatePostHandler() http.Handler {
 			return
 		}
 
-		postId := mux.Vars(r)["id"]
-		logInfo.Printf("Got new post update request. Post ID: %s", postId)
+		postID := mux.Vars(r)["id"]
+		logInfo.Printf("Got new post update request. Post ID: %s", postID)
 
-		if !IsPostIdValid(postId) {
-			logError.Printf("Can't update post: invalid post ID. Post ID: %s", postId)
+		if !IsPostIDValid(postID) {
+			logError.Printf("Can't update post: invalid post ID. Post ID: %s", postID)
 			RespondWithError(w, http.StatusBadRequest, InvalidRequest)
 			return
 		}
 
 		validatePostError := validateUpdatePostRequest(&request)
 		if validatePostError != NoError {
-			logInfo.Printf("Can't update post: invalid request. Post ID: %s. Error: %s", postId, validatePostError)
+			logInfo.Printf("Can't update post: invalid request. Post ID: %s. Error: %s", postID, validatePostError)
 			RespondWithError(w, http.StatusBadRequest, validatePostError)
 			return
 		}
 
-		isPostExists, err := postService.ExistsById(api.db, postId)
+		isPostExists, err := post.ExistsByID(api.db, postID)
 		if err != nil {
 			logError.Printf("Can't update post: error checking post for presence. Post ID: %s. Error: %s",
-				postId, err)
+				postID, err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 			return
 		}
 		if !isPostExists {
-			logInfo.Printf("Can't update post: post does not exist. Post ID: %s", postId)
+			logInfo.Printf("Can't update post: post does not exist. Post ID: %s", postID)
 			RespondWithError(w, http.StatusBadRequest, NoSuchPost)
 			return
 		}
 
-		updateRequest := &postService.UpdateRequest{
-			ID:       postId,
+		updateRequest := &post.UpdateRequest{
+			ID:       postID,
 			Title:    request.Title,
 			Author:   request.Author,
 			Snippet:  request.Snippet,
 			Content:  request.Content,
 			Metadata: request.Metadata,
 		}
-		updatedPost, err := postService.Update(api.db, updateRequest)
+		updatedPost, err := post.Update(api.db, updateRequest)
 		if err != nil {
 			logError.Printf("Error updating post in database: %s", err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
@@ -318,7 +318,7 @@ func (api *PostApiHandler) UpdatePostHandler() http.Handler {
 }
 
 // DeletePostHandler - this handler serves post deletion requests
-func (api *PostApiHandler) DeletePostHandler() http.Handler {
+func (api *PostAPIHandler) DeletePostHandler() http.Handler {
 	logInfo := api.logInfo
 	logError := api.logError
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -328,56 +328,56 @@ func (api *PostApiHandler) DeletePostHandler() http.Handler {
 			return
 		}
 
-		postId := mux.Vars(r)["id"]
-		logInfo.Printf("Got new post deletion request. Post ID: %s", postId)
+		postID := mux.Vars(r)["id"]
+		logInfo.Printf("Got new post deletion request. Post ID: %s", postID)
 
-		if !IsPostIdValid(postId) {
-			logError.Printf("Can't delete post: invalid post ID. Post ID: %s", postId)
+		if !IsPostIDValid(postID) {
+			logError.Printf("Can't delete post: invalid post ID. Post ID: %s", postID)
 			RespondWithError(w, http.StatusBadRequest, InvalidRequest)
 			return
 		}
 
-		if err := postService.Delete(api.db, postId); err != nil {
-			logError.Printf("Error deleting post. Post ID: %s. Error: %s", postId, err)
+		if err := post.Delete(api.db, postID); err != nil {
+			logError.Printf("Error deleting post. Post ID: %s. Error: %s", postID, err)
 		}
 
-		logInfo.Printf("Post deleted. Post ID: %s", postId)
+		logInfo.Printf("Post deleted. Post ID: %s", postID)
 		Respond(w, http.StatusOK)
 	})
 }
 
 // GetCertainPostHandler - this handler serves GET request for single post
-func (api *PostApiHandler) GetCertainPostHandler() http.Handler {
+func (api *PostAPIHandler) GetCertainPostHandler() http.Handler {
 	logInfo := api.logInfo
 	logError := api.logError
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		postId := mux.Vars(r)["id"]
-		logInfo.Printf("Got single post retrieve request. Post ID: %s", postId)
+		postID := mux.Vars(r)["id"]
+		logInfo.Printf("Got single post retrieve request. Post ID: %s", postID)
 
-		if !IsPostIdValid(postId) {
-			logError.Printf("Can't retrieve post: invalid post ID. Post ID: %s", postId)
+		if !IsPostIDValid(postID) {
+			logError.Printf("Can't retrieve post: invalid post ID. Post ID: %s", postID)
 			RespondWithError(w, http.StatusBadRequest, InvalidRequest)
 			return
 		}
 
-		post, err := postService.GetById(api.db, postId)
+		post, err := post.GetByID(api.db, postID)
 		if err != nil {
 			switch err {
 			case sql.ErrNoRows:
-				logError.Printf("Can't retrieve post: no such post. Post ID: %s", postId)
+				logError.Printf("Can't retrieve post: no such post. Post ID: %s", postID)
 				RespondWithError(w, http.StatusNotFound, NoSuchPost)
 				return
 			default:
-				logError.Printf("Error retrieving post from database. Post ID: %s. Error: %s", postId, err)
+				logError.Printf("Error retrieving post from database. Post ID: %s. Error: %s", postID, err)
 				RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 				return
 			}
 		}
 
-		comments, err := commentService.GetAllByPostId(api.db, postId)
+		comments, err := comment.GetAllByPostID(api.db, postID)
 		if err != nil {
 			logError.Printf("Error retrieving post from database: error retrieving comments. Post ID: %s. Error: %s",
-				postId, err)
+				postID, err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 			return
 		}
@@ -391,7 +391,7 @@ func (api *PostApiHandler) GetCertainPostHandler() http.Handler {
 }
 
 // GetPostsHandler - this handler serves GET request for all posts in the given range
-func (api *PostApiHandler) GetPostsHandler() http.Handler {
+func (api *PostAPIHandler) GetPostsHandler() http.Handler {
 	logInfo := api.logInfo
 	logError := api.logError
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -424,7 +424,7 @@ func (api *PostApiHandler) GetPostsHandler() http.Handler {
 		pageAsInt, _ := strconv.Atoi(pageAsString)
 		postsPerPageAsInt, _ := strconv.Atoi(postsPerPageAsString)
 
-		posts, err := postService.GetPostsInRange(api.db, pageAsInt, postsPerPageAsInt)
+		posts, err := post.GetPostsInRange(api.db, pageAsInt, postsPerPageAsInt)
 		if err != nil {
 			logError.Printf("Error retrieving range of posts from database: %s", err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)

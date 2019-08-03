@@ -1,9 +1,9 @@
 package tests
 
 import (
-	"github.com/blinky-z/Blog/handler/restApi"
+	"github.com/blinky-z/Blog/handler/restapi"
 	"github.com/blinky-z/Blog/models"
-	"github.com/blinky-z/Blog/service/commentService"
+	"github.com/blinky-z/Blog/service/comment"
 	"gotest.tools/assert"
 	"net/http"
 	"testing"
@@ -109,7 +109,7 @@ func TestCreateCommentToNonexistentPost(t *testing.T) {
 	request := createCommentRequestFactory(post.ID)
 	r := createComment(request)
 
-	assertErrorResponse(r, http.StatusBadRequest, restApi.InvalidRequest)
+	assertErrorResponse(r, http.StatusBadRequest, restapi.InvalidRequest)
 }
 
 func TestReplyToComment(t *testing.T) {
@@ -144,7 +144,7 @@ func TestEnsureReceivedCommentsInAscOrder(t *testing.T) {
 		assertNiceResponse(r, http.StatusCreated)
 	}
 
-	comments, _ := commentService.GetAllByPostId(db, post.ID)
+	comments, _ := comment.GetAllByPostID(db, post.ID)
 	for i := 1; i < len(comments); i++ {
 		if !comments[i-1].Date.Before(comments[i].Date) {
 			t.Fatalf("Comments returned from comment serivce should be sorted in ascending order")
@@ -202,7 +202,7 @@ func TestEnsureCommentWithChildsWasNotDeletedButContentReplaced(t *testing.T) {
 	actualParentComment := comments[0]
 	assert.Assert(t, len(actualParentComment.Childs) == 1, "Parent comment should contain reply comment")
 
-	if actualParentComment.Content != commentService.DeletedCommentContent {
+	if actualParentComment.Content != comment.DeletedCommentContent {
 		t.Fatalf("Parent comment's content should be replaced with special deletion message, but was: %v", actualParentComment)
 	}
 }

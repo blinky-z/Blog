@@ -1,4 +1,4 @@
-package userService
+package user
 
 import (
 	"database/sql"

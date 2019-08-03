@@ -1,4 +1,4 @@
-package postService
+package post
 
 import (
 	"github.com/blinky-z/Blog/models"
