@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"github.com/blinky-z/Blog/server"
 	"github.com/google/uuid"
 	"net/http"
@@ -35,13 +36,17 @@ func TestMain(m *testing.M) {
 	// register a new user for tests
 	{
 		r := registerUser(loginUsername, loginEmail, loginPassword)
-		assertNiceResponse(r, http.StatusOK)
+		if r.StatusCode != http.StatusOK {
+			panic(fmt.Sprintf("Error registering user. Received status code was not 200 OK: %d", r.StatusCode))
+		}
 	}
 
 	// login with registered user and save auth data
 	{
 		r := loginUser("", loginEmail, loginPassword)
-		assertNiceResponse(r, http.StatusOK)
+		if r.StatusCode != http.StatusOK {
+			panic(fmt.Sprintf("Error logining user. Received status code was not 200 OK: %d", r.StatusCode))
+		}
 		setNewAuthData(r)
 	}
 

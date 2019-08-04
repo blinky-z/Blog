@@ -35,19 +35,19 @@ type GetPostsRequestQueryParams struct {
 }
 
 // error codes for this API
-const (
+var (
 	// InvalidPostTitle - invalid post title
-	InvalidPostTitle RequestErrorCode = "INVALID_TITLE"
+	InvalidPostTitle models.RequestErrorCode = models.NewRequestErrorCode("INVALID_TITLE")
 	// InvalidPostSnippet - invalid post snippet
-	InvalidPostSnippet RequestErrorCode = "INVALID_SNIPPET"
+	InvalidPostSnippet models.RequestErrorCode = models.NewRequestErrorCode("INVALID_SNIPPET")
 	// InvalidPostContent - invalid post content
-	InvalidPostContent RequestErrorCode = "INVALID_CONTENT"
+	InvalidPostContent models.RequestErrorCode = models.NewRequestErrorCode("INVALID_CONTENT")
 	// InvalidPostMetadata - invalid meta description or keywords
-	InvalidPostMetadata RequestErrorCode = "INVALID_METADATA"
+	InvalidPostMetadata models.RequestErrorCode = models.NewRequestErrorCode("INVALID_METADATA")
 	// NoSuchPost - post does not exist
-	NoSuchPost RequestErrorCode = "NO_SUCH_POST"
+	NoSuchPost models.RequestErrorCode = models.NewRequestErrorCode("NO_SUCH_POST")
 	// InvalidPostsRange - invalid range of posts
-	InvalidPostsRange RequestErrorCode = "INVALID_POSTS_RANGE"
+	InvalidPostsRange models.RequestErrorCode = models.NewRequestErrorCode("INVALID_POSTS_RANGE")
 )
 
 // constants for use in validator methods
@@ -90,7 +90,7 @@ const (
 )
 
 // ValidateGetPostsRequestQueryParams - validate query params of GET request for range of posts
-func ValidateGetPostsRequestQueryParams(rangeParams *GetPostsRequestQueryParams) RequestErrorCode {
+func ValidateGetPostsRequestQueryParams(rangeParams *GetPostsRequestQueryParams) models.RequestErrorCode {
 	pageAsString := rangeParams.Page
 	if pageAsString != "" {
 		if pageAsInt, err := strconv.Atoi(pageAsString); err != nil || pageAsInt < 0 {
@@ -105,18 +105,18 @@ func ValidateGetPostsRequestQueryParams(rangeParams *GetPostsRequestQueryParams)
 		}
 	}
 
-	return NoError
+	return nil
 }
 
-func validatePostTitle(title *string) RequestErrorCode {
+func validatePostTitle(title *string) models.RequestErrorCode {
 	titleLen := len(strings.TrimSpace(*title))
 	if titleLen > MaxPostTitleLen || titleLen < MinPostTitleLen {
 		return InvalidPostTitle
 	}
-	return NoError
+	return nil
 }
 
-func validatePostMetadata(metadata *models.MetaData) RequestErrorCode {
+func validatePostMetadata(metadata *models.MetaData) models.RequestErrorCode {
 	descriptionLen := len(strings.TrimSpace(metadata.Description))
 	if descriptionLen > MaxMetaDescriptionLen || descriptionLen < MinMetaDescriptionLen {
 		return InvalidPostMetadata
@@ -133,62 +133,62 @@ func validatePostMetadata(metadata *models.MetaData) RequestErrorCode {
 			return InvalidPostMetadata
 		}
 	}
-	return NoError
+	return nil
 }
 
-func validatePostSnippet(snippet *string) RequestErrorCode {
+func validatePostSnippet(snippet *string) models.RequestErrorCode {
 	snippetLen := len(strings.TrimSpace(*snippet))
 	if snippetLen > MaxSnippetLen || snippetLen < MinSnippetLen {
 		return InvalidPostSnippet
 	}
-	return NoError
+	return nil
 }
 
-func validatePostContent(content *string) RequestErrorCode {
+func validatePostContent(content *string) models.RequestErrorCode {
 	if len(*content) == 0 {
 		return InvalidPostContent
 	}
-	return NoError
+	return nil
 }
 
-func validateCreatePostRequest(request *models.CreatePostRequest) RequestErrorCode {
-	if err := validatePostTitle(&request.Title); err != NoError {
+func validateCreatePostRequest(request *models.CreatePostRequest) models.RequestErrorCode {
+	if err := validatePostTitle(&request.Title); err != nil {
 		return err
 	}
-	if err := validatePostMetadata(&request.Metadata); err != NoError {
+	if err := validatePostMetadata(&request.Metadata); err != nil {
 		return err
 	}
-	if err := validateUsername(request.Author); err != NoError {
+	if err := validateUsername(request.Author); err != nil {
 		return err
 	}
-	if err := validatePostSnippet(&request.Snippet); err != NoError {
+	if err := validatePostSnippet(&request.Snippet); err != nil {
 		return err
 	}
-	if err := validatePostContent(&request.Content); err != NoError {
+	if err := validatePostContent(&request.Content); err != nil {
 		return err
 	}
 
-	return NoError
+	return nil
 }
 
-func validateUpdatePostRequest(request *models.UpdatePostRequest) RequestErrorCode {
-	if err := validatePostTitle(&request.Title); err != NoError {
+func validateUpdatePostRequest(request *models.UpdatePostRequest) models.RequestErrorCode {
+	if err := validatePostTitle(&request.Title); err != nil {
 		return err
 	}
-	if err := validatePostMetadata(&request.Metadata); err != NoError {
+	if err := validatePostMetadata(&request.Metadata); err != nil {
 		return err
 	}
-	if err := validateUsername(request.Author); err != NoError {
+	if err := validateUsername(request.Author); err != nil {
 		return err
 	}
-	if err := validatePostSnippet(&request.Snippet); err != NoError {
+	if err := validatePostSnippet(&request.Snippet); err != nil {
 		return err
 	}
-	if err := validatePostContent(&request.Content); err != NoError {
+	if err := validatePostContent(&request.Content); err != nil {
 		return err
 	}
 
-	return NoError
+	return nil
 }
 
 func IsPostIDValid(id string) bool {
@@ -225,7 +225,7 @@ func (api *PostAPIHandler) CreatePostHandler() http.Handler {
 		logInfo.Printf("Got new post creation request. Request: %+v", request)
 
 		validatePostError := validateCreatePostRequest(&request)
-		if validatePostError != NoError {
+		if validatePostError != nil {
 			logError.Printf("Can't create post: invalid request. Error: %s", validatePostError)
 			RespondWithError(w, http.StatusBadRequest, validatePostError)
 			return
@@ -278,7 +278,7 @@ func (api *PostAPIHandler) UpdatePostHandler() http.Handler {
 		}
 
 		validatePostError := validateUpdatePostRequest(&request)
-		if validatePostError != NoError {
+		if validatePostError != nil {
 			logInfo.Printf("Can't update post: invalid request. Post ID: %s. Error: %s", postID, validatePostError)
 			RespondWithError(w, http.StatusBadRequest, validatePostError)
 			return
@@ -403,7 +403,7 @@ func (api *PostAPIHandler) GetPostsHandler() http.Handler {
 		logInfo.Printf("Got range of posts retrieve request. Range params: %+v", rangeParams)
 
 		validateQueryParamsError := ValidateGetPostsRequestQueryParams(rangeParams)
-		if validateQueryParamsError != NoError {
+		if validateQueryParamsError != nil {
 			logError.Printf("Can't retrieve range of posts: invalid query params. Error: %s", validateQueryParamsError)
 			RespondWithError(w, http.StatusBadRequest, validateQueryParamsError)
 			return

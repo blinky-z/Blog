@@ -15,7 +15,7 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 	// create post for creating comments
 	createPostRequest := createPostRequestFactory()
 	createPostResponse := createPost(createPostRequest)
-	assertNiceResponse(createPostResponse, http.StatusCreated)
+	assertNiceResponse(t, createPostResponse, http.StatusCreated)
 	post := decodeResponseWithPostBody(createPostResponse.Body).Body
 	postId := post.ID
 
@@ -24,7 +24,7 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 		request := createCommentRequestFactory(postId)
 
 		r := createComment(request)
-		assertNiceResponse(r, http.StatusCreated)
+		assertNiceResponse(t, r, http.StatusCreated)
 
 		resp := decodeResponseWithCommentBody(r.Body)
 
@@ -34,7 +34,7 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 	// Step 2: Get post with comments and compare received comment with created one
 	{
 		r := getCertainPost(postId)
-		assertNiceResponse(r, http.StatusOK)
+		assertNiceResponse(t, r, http.StatusOK)
 
 		resp := decodeResponseWithCertainPostBody(r.Body)
 		post := resp.Body
@@ -53,7 +53,7 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 	{
 		request := updateCommentRequestFactory()
 		r := updateComment(workingComment.ID, request)
-		assertNiceResponse(r, http.StatusCreated)
+		assertNiceResponse(t, r, http.StatusCreated)
 
 		resp := decodeResponseWithCommentBody(r.Body)
 
@@ -63,7 +63,7 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 	// Step 4: Get post with comments and compare received comment with updated one
 	{
 		r := getCertainPost(postId)
-		assertNiceResponse(r, http.StatusOK)
+		assertNiceResponse(t, r, http.StatusOK)
 
 		resp := decodeResponseWithCertainPostBody(r.Body)
 		post := resp.Body
@@ -80,13 +80,13 @@ func TestHandleCommentIntegrationTest(t *testing.T) {
 	// Step 5: Delete updated comments
 	{
 		r := deleteComment(workingComment.ID)
-		assertNiceResponse(r, http.StatusOK)
+		assertNiceResponse(t, r, http.StatusOK)
 	}
 
 	// Step 6: Get post with comments and assert there are no comments
 	{
 		r := getCertainPost(postId)
-		assertNiceResponse(r, http.StatusOK)
+		assertNiceResponse(t, r, http.StatusOK)
 
 		resp := decodeResponseWithCertainPostBody(r.Body)
 		post := resp.Body
@@ -109,7 +109,7 @@ func TestCreateCommentToNonexistentPost(t *testing.T) {
 	request := createCommentRequestFactory(post.ID)
 	r := createComment(request)
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.InvalidRequest)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.InvalidRequest)
 }
 
 func TestReplyToComment(t *testing.T) {
@@ -119,12 +119,12 @@ func TestReplyToComment(t *testing.T) {
 
 	firstCommentRequest := createCommentRequestFactory(post.ID)
 	r := createComment(firstCommentRequest)
-	assertNiceResponse(r, http.StatusCreated)
+	assertNiceResponse(t, r, http.StatusCreated)
 	parentComment := decodeResponseWithCommentBody(r.Body).Body
 
 	replyCommentRequest := createCommentWithParentRequestFactory(post.ID, parentComment.ID)
 	r = createComment(replyCommentRequest)
-	assertNiceResponse(r, http.StatusCreated)
+	assertNiceResponse(t, r, http.StatusCreated)
 	replyComment := decodeResponseWithCommentBody(r.Body).Body
 
 	assert.Assert(t, replyComment.ParentID.Valid == true, "Reply comment should contain parent")
@@ -141,7 +141,7 @@ func TestEnsureReceivedCommentsInAscOrder(t *testing.T) {
 	for currentComment := 0; currentComment < commentsToCreate; currentComment++ {
 		request := createCommentRequestFactory(post.ID)
 		r := createComment(request)
-		assertNiceResponse(r, http.StatusCreated)
+		assertNiceResponse(t, r, http.StatusCreated)
 	}
 
 	comments, _ := comment.GetAllByPostID(db, post.ID)
@@ -159,14 +159,14 @@ func TestEnsureCommentWithNoChildsDeletedFromDB(t *testing.T) {
 
 	request := createCommentRequestFactory(post.ID)
 	r := createComment(request)
-	assertNiceResponse(r, http.StatusCreated)
+	assertNiceResponse(t, r, http.StatusCreated)
 	comment := decodeResponseWithCommentBody(r.Body).Body
 
 	r = deleteComment(comment.ID)
-	assertNiceResponse(r, http.StatusOK)
+	assertNiceResponse(t, r, http.StatusOK)
 
 	r = getCertainPost(post.ID)
-	assertNiceResponse(r, http.StatusOK)
+	assertNiceResponse(t, r, http.StatusOK)
 	returnedPost := decodeResponseWithCertainPostBody(r.Body).Body
 
 	comments := returnedPost.Comments
@@ -182,18 +182,18 @@ func TestEnsureCommentWithChildsWasNotDeletedButContentReplaced(t *testing.T) {
 
 	parentCommentRequest := createCommentRequestFactory(post.ID)
 	r := createComment(parentCommentRequest)
-	assertNiceResponse(r, http.StatusCreated)
+	assertNiceResponse(t, r, http.StatusCreated)
 	parentComment := decodeResponseWithCommentBody(r.Body).Body
 
 	replyCommentRequest := createCommentWithParentRequestFactory(post.ID, parentComment.ID)
 	r = createComment(replyCommentRequest)
-	assertNiceResponse(r, http.StatusCreated)
+	assertNiceResponse(t, r, http.StatusCreated)
 
 	r = deleteComment(parentComment.ID)
-	assertNiceResponse(r, http.StatusOK)
+	assertNiceResponse(t, r, http.StatusOK)
 
 	r = getCertainPost(post.ID)
-	assertNiceResponse(r, http.StatusOK)
+	assertNiceResponse(t, r, http.StatusOK)
 	actualPost := decodeResponseWithCertainPostBody(r.Body).Body
 
 	comments := actualPost.Comments

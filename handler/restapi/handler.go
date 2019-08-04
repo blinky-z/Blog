@@ -2,26 +2,22 @@ package restapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/blinky-z/Blog/models"
 	"net/http"
 )
 
 // general error codes
-const (
+var (
 	// TechnicalError - internal server error
-	TechnicalError RequestErrorCode = "TECHNICAL_ERROR"
+	TechnicalError models.RequestErrorCode = models.NewRequestErrorCode("TECHNICAL_ERROR")
 	// BadRequestBody - invalid body
-	BadRequestBody RequestErrorCode = "BAD_BODY"
+	BadRequestBody models.RequestErrorCode = models.NewRequestErrorCode("BAD_BODY")
 	// NoPermissions - user doesn't permissions to create/update/delete resource
-	NoPermissions RequestErrorCode = "NO_PERMISSIONS"
+	NoPermissions models.RequestErrorCode = models.NewRequestErrorCode("NO_PERMISSIONS")
 	// InvalidRequest - error code for other errors
-	InvalidRequest RequestErrorCode = "INVALID_REQUEST"
-	// NoError - no error occurred while handling request. Should not be exposed but only used internally
-	NoError RequestErrorCode = ""
+	InvalidRequest models.RequestErrorCode = models.NewRequestErrorCode("INVALID_REQUEST")
 )
-
-// RequestErrorCode - special type for error codes
-type RequestErrorCode string
 
 // Respond - helper function for responding with only status code
 func Respond(w http.ResponseWriter, code int) {
@@ -36,15 +32,18 @@ func respondWithJSON(w http.ResponseWriter, code int, body []byte) {
 
 // RespondWithError - helper function for responding with error in body
 // This function uses special 'Response' struct. See above
-func RespondWithError(w http.ResponseWriter, code int, errorCode RequestErrorCode) {
+func RespondWithError(w http.ResponseWriter, code int, errorCode models.RequestErrorCode) {
 	response := &models.Response{
 		Error: errorCode,
+		Body:  nil,
 	}
 	encodedResponse, err := json.Marshal(response)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	fmt.Printf("Built response: %v\n", string(encodedResponse))
 
 	respondWithJSON(w, code, encodedResponse)
 }
@@ -53,13 +52,16 @@ func RespondWithError(w http.ResponseWriter, code int, errorCode RequestErrorCod
 // This function uses special 'Response' struct. See above
 func RespondWithBody(w http.ResponseWriter, code int, payload interface{}) {
 	response := &models.Response{
-		Body: payload,
+		Error: nil,
+		Body:  payload,
 	}
 	encodedResponse, err := json.Marshal(response)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	fmt.Printf("Built response: %v\n", string(encodedResponse))
 
 	respondWithJSON(w, code, encodedResponse)
 }

@@ -20,7 +20,7 @@ func TestRegisterUserWithExistingEmail(t *testing.T) {
 
 	r := registerUser(username, loginEmail, loginPassword)
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.UserAlreadyRegistered)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.UserAlreadyRegistered)
 }
 
 func TestRegisterUserWithExistingLogin(t *testing.T) {
@@ -28,7 +28,7 @@ func TestRegisterUserWithExistingLogin(t *testing.T) {
 
 	r := registerUser(loginUsername, email, loginPassword)
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.UserAlreadyRegistered)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.UserAlreadyRegistered)
 }
 
 func TestRegisterUserWithTooLongUsername(t *testing.T) {
@@ -36,7 +36,7 @@ func TestRegisterUserWithTooLongUsername(t *testing.T) {
 
 	r := registerUser(username, loginEmail, loginPassword)
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.InvalidUsername)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.InvalidUsername)
 }
 
 func TestRegisterUserWithTooShortUsername(t *testing.T) {
@@ -44,7 +44,7 @@ func TestRegisterUserWithTooShortUsername(t *testing.T) {
 
 	r := registerUser(username, loginEmail, loginPassword)
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.InvalidUsername)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.InvalidUsername)
 }
 
 func TestRegisterUserWithTooLongPassword(t *testing.T) {
@@ -52,7 +52,7 @@ func TestRegisterUserWithTooLongPassword(t *testing.T) {
 
 	r := registerUser(loginUsername, loginEmail, password)
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.InvalidPassword)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.InvalidPassword)
 }
 
 func TestRegisterUserWithTooShortPassword(t *testing.T) {
@@ -60,25 +60,25 @@ func TestRegisterUserWithTooShortPassword(t *testing.T) {
 
 	r := registerUser(loginUsername, loginEmail, password)
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.InvalidPassword)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.InvalidPassword)
 }
 
 func TestRegisterUserWithEmptyUsername(t *testing.T) {
 	r := registerUser("", loginEmail, loginPassword)
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.IncompleteCredentials)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.IncompleteCredentials)
 }
 
 func TestRegisterUserWithEmptyEmail(t *testing.T) {
 	r := registerUser(loginUsername, "", loginPassword)
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.IncompleteCredentials)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.IncompleteCredentials)
 }
 
 func TestRegisterUserWithEmptyPassword(t *testing.T) {
 	r := registerUser(loginUsername, loginEmail, "")
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.IncompleteCredentials)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.IncompleteCredentials)
 }
 
 func TestRegisterUserWithBadRequestBody(t *testing.T) {
@@ -95,7 +95,7 @@ func TestRegisterUserWithBadRequestBody(t *testing.T) {
 		panic(fmt.Sprintf("Can not send request. Error: %s", err))
 	}
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.BadRequestBody)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.BadRequestBody)
 }
 
 // Log In tests
@@ -103,37 +103,37 @@ func TestRegisterUserWithBadRequestBody(t *testing.T) {
 func TestLoginUserWithUsername(t *testing.T) {
 	r := loginUser(loginUsername, "", loginPassword)
 
-	assertNiceResponse(r, http.StatusOK)
+	assertNiceResponse(t, r, http.StatusOK)
 }
 
 func TestLoginUserWithWrongUsername(t *testing.T) {
 	r := loginUser("abcdef", "", loginPassword)
 
-	assertErrorResponse(r, http.StatusUnauthorized, restapi.WrongCredentials)
+	assertErrorResponse(t, r, http.StatusUnauthorized, restapi.WrongCredentials)
 }
 
 func TestLoginUserWithWrongEmail(t *testing.T) {
 	r := loginUser("", "abcd@gmail.com", loginPassword)
 
-	assertErrorResponse(r, http.StatusUnauthorized, restapi.WrongCredentials)
+	assertErrorResponse(t, r, http.StatusUnauthorized, restapi.WrongCredentials)
 }
 
 func TestLoginUserWithWrongPassword(t *testing.T) {
 	r := loginUser("", loginEmail, "abcde1fZ")
 
-	assertErrorResponse(r, http.StatusUnauthorized, restapi.WrongCredentials)
+	assertErrorResponse(t, r, http.StatusUnauthorized, restapi.WrongCredentials)
 }
 
 func TestLoginUserWithEmptyLoginAndEmail(t *testing.T) {
 	r := loginUser("", "", "abcd")
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.IncompleteCredentials)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.IncompleteCredentials)
 }
 
 func TestLoginUserWithEmptyPassword(t *testing.T) {
 	r := loginUser("", loginEmail, "")
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.IncompleteCredentials)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.IncompleteCredentials)
 }
 
 // Test JWT tokens
@@ -145,13 +145,13 @@ func TestRegisterNotAdmin(t *testing.T) {
 
 	r := registerUser(loginUsername, loginEmail, loginPassword)
 
-	assertNiceResponse(r, http.StatusOK)
+	assertNiceResponse(t, r, http.StatusOK)
 }
 
 func TestInitNotAdminUser(t *testing.T) {
 	r := loginUser("", loginEmail, loginPassword)
 
-	assertNiceResponse(r, http.StatusOK)
+	assertNiceResponse(t, r, http.StatusOK)
 
 	setNewAuthData(r)
 }
@@ -169,7 +169,7 @@ func TestCreatePostWithNotAdminUser(t *testing.T) {
 		}
 	}()
 
-	assertErrorResponse(r, http.StatusForbidden, restapi.NoPermissions)
+	assertErrorResponse(t, r, http.StatusForbidden, restapi.NoPermissions)
 }
 
 func TestUpdatePostWithNotAdminUser(t *testing.T) {
@@ -185,7 +185,7 @@ func TestUpdatePostWithNotAdminUser(t *testing.T) {
 		}
 	}()
 
-	assertErrorResponse(r, http.StatusForbidden, restapi.NoPermissions)
+	assertErrorResponse(t, r, http.StatusForbidden, restapi.NoPermissions)
 }
 
 func TestDeletePostWithNotAdminUser(t *testing.T) {
@@ -197,7 +197,7 @@ func TestDeletePostWithNotAdminUser(t *testing.T) {
 		}
 	}()
 
-	assertErrorResponse(r, http.StatusForbidden, restapi.NoPermissions)
+	assertErrorResponse(t, r, http.StatusForbidden, restapi.NoPermissions)
 }
 
 func TestInitInvalidJwtToken(t *testing.T) {
@@ -229,7 +229,7 @@ func TestCreatePostWithInvalidJwtToken(t *testing.T) {
 		}
 	}()
 
-	assertErrorResponse(r, http.StatusUnauthorized, restapi.InvalidToken)
+	assertErrorResponse(t, r, http.StatusUnauthorized, restapi.InvalidToken)
 }
 
 func TestUpdatePostWithInvalidJwtToken(t *testing.T) {
@@ -245,7 +245,7 @@ func TestUpdatePostWithInvalidJwtToken(t *testing.T) {
 		}
 	}()
 
-	assertErrorResponse(r, http.StatusUnauthorized, restapi.InvalidToken)
+	assertErrorResponse(t, r, http.StatusUnauthorized, restapi.InvalidToken)
 }
 
 func TestDeletePostWithInvalidJwtToken(t *testing.T) {
@@ -257,7 +257,7 @@ func TestDeletePostWithInvalidJwtToken(t *testing.T) {
 		}
 	}()
 
-	assertErrorResponse(r, http.StatusUnauthorized, restapi.InvalidToken)
+	assertErrorResponse(t, r, http.StatusUnauthorized, restapi.InvalidToken)
 }
 
 func TestCreatePostWithMissingToken(t *testing.T) {
@@ -275,7 +275,7 @@ func TestCreatePostWithMissingToken(t *testing.T) {
 		}
 	}()
 
-	assertErrorResponse(r, http.StatusUnauthorized, restapi.InvalidToken)
+	assertErrorResponse(t, r, http.StatusUnauthorized, restapi.InvalidToken)
 }
 
 func TestCreatePostWhenMissingAuthorizationHeader(t *testing.T) {
@@ -303,5 +303,5 @@ func TestCreatePostWhenMissingAuthorizationHeader(t *testing.T) {
 		}
 	}()
 
-	assertErrorResponse(r, http.StatusUnauthorized, restapi.InvalidToken)
+	assertErrorResponse(t, r, http.StatusUnauthorized, restapi.InvalidToken)
 }

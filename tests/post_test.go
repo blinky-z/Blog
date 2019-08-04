@@ -18,7 +18,7 @@ func TestPostIntegrationTest(t *testing.T) {
 
 		r := createPost(request)
 		resp := decodeResponseWithPostBody(r.Body)
-		assertNiceResponse(r, http.StatusCreated)
+		assertNiceResponse(t, r, http.StatusCreated)
 
 		workingPost = resp.Body
 	}
@@ -27,7 +27,7 @@ func TestPostIntegrationTest(t *testing.T) {
 	{
 		r := getCertainPost(workingPost.ID)
 		resp := decodeResponseWithPostBody(r.Body)
-		assertNiceResponse(r, http.StatusOK)
+		assertNiceResponse(t, r, http.StatusOK)
 
 		receivedPost := resp.Body
 
@@ -43,7 +43,7 @@ func TestPostIntegrationTest(t *testing.T) {
 
 		r := updatePost(workingPost.ID, request)
 		resp := decodeResponseWithPostBody(r.Body)
-		assertNiceResponse(r, http.StatusCreated)
+		assertNiceResponse(t, r, http.StatusCreated)
 
 		workingPost = resp.Body
 	}
@@ -52,7 +52,7 @@ func TestPostIntegrationTest(t *testing.T) {
 	{
 		r := getCertainPost(workingPost.ID)
 		resp := decodeResponseWithCertainPostBody(r.Body)
-		assertNiceResponse(r, http.StatusOK)
+		assertNiceResponse(t, r, http.StatusOK)
 
 		receivedPost := resp.Body.Post
 
@@ -65,13 +65,13 @@ func TestPostIntegrationTest(t *testing.T) {
 	// Step 5: Delete post
 	{
 		r := deletePost(workingPost.ID)
-		assertNiceResponse(r, http.StatusOK)
+		assertNiceResponse(t, r, http.StatusOK)
 	}
 
 	// Step 6: Get deleted post
 	{
 		r := getCertainPost(workingPost.ID)
-		assertErrorResponse(r, http.StatusNotFound, restapi.NoSuchPost)
+		assertErrorResponse(t, r, http.StatusNotFound, restapi.NoSuchPost)
 	}
 }
 
@@ -79,13 +79,13 @@ func TestCreatePostWithInvalidRequestBody(t *testing.T) {
 	message := `{"bad request body"}`
 	r := createPost(message)
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.BadRequestBody)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.BadRequestBody)
 }
 
 func TestGetPostWithInvalidID(t *testing.T) {
 	r := getCertainPost("post1")
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.InvalidRequest)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.InvalidRequest)
 }
 
 func TestGetNotExistingPost(t *testing.T) {
@@ -100,7 +100,7 @@ func TestGetNotExistingPost(t *testing.T) {
 	// get deleted post
 	r = getCertainPost(post.ID)
 
-	assertErrorResponse(r, http.StatusNotFound, restapi.NoSuchPost)
+	assertErrorResponse(t, r, http.StatusNotFound, restapi.NoSuchPost)
 }
 
 func TestUpdatePostSetInvalidRequestBody(t *testing.T) {
@@ -112,7 +112,7 @@ func TestUpdatePostSetInvalidRequestBody(t *testing.T) {
 	message := `{"bad request body":"asd"}`
 	r := updatePost(post.ID, message)
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.BadRequestBody)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.BadRequestBody)
 }
 
 func TestUpdateNotExistingPost(t *testing.T) {
@@ -127,14 +127,14 @@ func TestUpdateNotExistingPost(t *testing.T) {
 	updatePostRequest := updatePostRequestFactory()
 	r := updatePost(post.ID, updatePostRequest)
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.NoSuchPost)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.NoSuchPost)
 }
 
 func TestUpdatePostWithInvalidID(t *testing.T) {
 	updatePostRequest := updatePostRequestFactory()
 	r := updatePost("post1", updatePostRequest)
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.InvalidRequest)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.InvalidRequest)
 }
 
 func TestDeleteNotExistingPostShouldBeIdempotent(t *testing.T) {
@@ -148,13 +148,13 @@ func TestDeleteNotExistingPostShouldBeIdempotent(t *testing.T) {
 
 	r := deletePost(post.ID)
 
-	assertNiceResponse(r, http.StatusOK)
+	assertNiceResponse(t, r, http.StatusOK)
 }
 
 func TestDeletePostWithInvalidID(t *testing.T) {
 	r := deletePost("post1")
 
-	assertErrorResponse(r, http.StatusBadRequest, restapi.InvalidRequest)
+	assertErrorResponse(t, r, http.StatusBadRequest, restapi.InvalidRequest)
 }
 
 func TestGetRangeOfPostsWithCustomPostsPerPage(t *testing.T) {

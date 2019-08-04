@@ -29,11 +29,11 @@ func NewCommentAPIHandler(db *sql.DB, logInfo, logError *log.Logger) *CommentAPI
 }
 
 // error codes for this API
-const (
+var (
 	//NoSuchComment - comment does not exist
-	NoSuchComment RequestErrorCode = "NO_SUCH_COMMENT"
+	NoSuchComment models.RequestErrorCode = models.NewRequestErrorCode("NO_SUCH_COMMENT")
 	// InvalidCommentContent - invalid comment content
-	InvalidCommentContent RequestErrorCode = "Invalid comment content"
+	InvalidCommentContent models.RequestErrorCode = models.NewRequestErrorCode("INVALID_COMMENT_CONTENT")
 )
 
 // constants for use in validator methods
@@ -44,17 +44,17 @@ const (
 	MaxCommentContentLen int = 4096
 )
 
-func validateCommentContent(content string) RequestErrorCode {
+func validateCommentContent(content string) models.RequestErrorCode {
 	content = strings.TrimSpace(content)
 	contentLen := len(content)
 	if contentLen > MaxCommentContentLen || contentLen < MinCommentContentLen {
 		return InvalidCommentContent
 	}
 
-	return NoError
+	return nil
 }
 
-func validateCreateCommentRequest(request models.CreateCommentRequest) RequestErrorCode {
+func validateCreateCommentRequest(request models.CreateCommentRequest) models.RequestErrorCode {
 	if !isCommentIDValid(request.PostID) {
 		return InvalidRequest
 	}
@@ -63,22 +63,22 @@ func validateCreateCommentRequest(request models.CreateCommentRequest) RequestEr
 			return InvalidRequest
 		}
 	}
-	if validateAuthorError := validateUsername(request.Author); validateAuthorError != NoError {
+	if validateAuthorError := validateUsername(request.Author); validateAuthorError != nil {
 		return validateAuthorError
 	}
-	if validateContentError := validateCommentContent(request.Content); validateContentError != NoError {
+	if validateContentError := validateCommentContent(request.Content); validateContentError != nil {
 		return validateContentError
 	}
 
-	return NoError
+	return nil
 }
 
-func validateUpdateCommentRequest(request models.UpdateCommentRequest) RequestErrorCode {
-	if validateCommentContentError := validateCommentContent(request.Content); validateCommentContentError != NoError {
+func validateUpdateCommentRequest(request models.UpdateCommentRequest) models.RequestErrorCode {
+	if validateCommentContentError := validateCommentContent(request.Content); validateCommentContentError != nil {
 		return validateCommentContentError
 	}
 
-	return NoError
+	return nil
 }
 
 func isCommentIDValid(id string) bool {
@@ -108,7 +108,7 @@ func (api *CommentAPIHandler) CreateCommentHandler() http.Handler {
 		logInfo.Printf("Got new comment creation request. Request: %+v", request)
 
 		validateRequestError := validateCreateCommentRequest(request)
-		if validateRequestError != NoError {
+		if validateRequestError != nil {
 			logError.Printf("Can't create comment: invalid request. Error: %s", validateRequestError)
 			RespondWithError(w, http.StatusBadRequest, validateRequestError)
 			return
@@ -191,7 +191,7 @@ func (api *CommentAPIHandler) UpdateCommentHandler() http.Handler {
 		}
 
 		validateRequestError := validateUpdateCommentRequest(request)
-		if validateRequestError != NoError {
+		if validateRequestError != nil {
 			logError.Printf("Can't update comment: invalid request. Comment ID: %s. Error: %s",
 				commentID, validateRequestError)
 			RespondWithError(w, http.StatusBadRequest, validateRequestError)

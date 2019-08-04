@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"testing"
 )
 
 var (
@@ -28,31 +29,31 @@ var (
 
 // Response - generic struct for storing deserialized response body
 type Response struct {
-	Error restapi.RequestErrorCode
+	Error interface{}
 	Body  interface{}
 }
 
 // ResponseWithPost - struct for storing returned post
 type ResponseWithPost struct {
-	Error restapi.RequestErrorCode
+	Error interface{}
 	Body  models.Post
 }
 
 // ResponseWithCertainPost - struct for storing returned post with comments
 type ResponseWithCertainPost struct {
-	Error restapi.RequestErrorCode
+	Error interface{}
 	Body  models.CertainPost
 }
 
 // ResponseWithRangeOfPosts - struct for storing returned range of posts
 type ResponseWithRangeOfPosts struct {
-	Error restapi.RequestErrorCode
+	Error interface{}
 	Body  []models.Post
 }
 
 // ResponseWithComment - struct for storing returned comment
 type ResponseWithComment struct {
-	Error restapi.RequestErrorCode
+	Error interface{}
 	Body  models.Comment
 }
 
@@ -225,25 +226,28 @@ func addAuthDataToRequest(r *http.Request) {
 
 // assertErrorResponse - asserts that response has expected status code and error code
 // Use this function for asserting only error responses
-func assertErrorResponse(r *http.Response, expectedStatusCode int, expectedErrorCode restapi.RequestErrorCode) {
+func assertErrorResponse(t *testing.T, r *http.Response, expectedStatusCode int, expectedErrorCode models.RequestErrorCode) {
 	resp := decodeResponse(r.Body)
 
 	receivedStatusCode := r.StatusCode
 	if receivedStatusCode != expectedStatusCode {
-		panic(fmt.Sprintf("Received status code does not match expected one\n. Received: %d\nExpected: %d\n",
-			receivedStatusCode, expectedStatusCode))
+		t.Fatalf("Received status code does not match expected one\n. Received: %d\nExpected: %d\n",
+			receivedStatusCode, expectedStatusCode)
 	}
 
 	receivedErrorCode := resp.Error
-	if resp.Error != expectedErrorCode {
-		panic(fmt.Sprintf("Received error code does not match expected one\n. Received: %s\nExpected: %s\n",
-			receivedErrorCode, expectedErrorCode))
+	if receivedErrorCode == nil {
+		t.Fatalf("Response should contain error code in the body, but was <nil>")
+	}
+	if receivedErrorCode != expectedErrorCode.Error() {
+		t.Fatalf("Received error code does not match expected one\n. Received: %s\nExpected: %s\n",
+			receivedErrorCode, expectedErrorCode)
 	}
 }
 
 // assertNiceResponse - asserts that response has expected status code
 // Use this function for asserting only non-error responses
-func assertNiceResponse(r *http.Response, expectedStatusCode int) {
+func assertNiceResponse(t *testing.T, r *http.Response, expectedStatusCode int) {
 	receivedStatusCode := r.StatusCode
 	if receivedStatusCode != expectedStatusCode {
 		panic(fmt.Sprintf("Received status code does not match expected one\n. Received: %d\nExpected: %d\n",

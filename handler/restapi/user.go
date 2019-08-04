@@ -47,23 +47,23 @@ func NewUserAPIHandler(db *sql.DB, jwtSecret []byte, admins *[]string, jwtUserPr
 }
 
 // error codes for this API
-const (
+var (
 	// WrongCredentials - user inputs wrong password or login or email while logging in
-	WrongCredentials RequestErrorCode = "WRONG_CREDENTIALS"
+	WrongCredentials models.RequestErrorCode = models.NewRequestErrorCode("WRONG_CREDENTIALS")
 	// InvalidEmail - user inputs invalid email while registration or logging in
-	InvalidEmail RequestErrorCode = "INVALID_EMAIL"
+	InvalidEmail models.RequestErrorCode = models.NewRequestErrorCode("INVALID_EMAIL")
 	// InvalidUsername - user inputs invalid username while registration
-	InvalidUsername RequestErrorCode = "INVALID_LOGIN"
+	InvalidUsername models.RequestErrorCode = models.NewRequestErrorCode("INVALID_LOGIN")
 	// InvalidPassword - user inputs invalid password while registration
-	InvalidPassword RequestErrorCode = "INVALID_PASSWORD"
+	InvalidPassword models.RequestErrorCode = models.NewRequestErrorCode("INVALID_PASSWORD")
 	// UserAlreadyRegistered - user trying to register account while already registered
-	UserAlreadyRegistered RequestErrorCode = "USER_ALREADY_REGISTERED"
+	UserAlreadyRegistered models.RequestErrorCode = models.NewRequestErrorCode("USER_ALREADY_REGISTERED")
 	// IncompleteCredentials - user do not input full credentials: login, email, password
-	IncompleteCredentials RequestErrorCode = "INCOMPLETE_CREDENTIALS"
+	IncompleteCredentials models.RequestErrorCode = models.NewRequestErrorCode("INCOMPLETE_CREDENTIALS")
 	// InvalidFingerprint - user provided non-authentic or malformed fingerprint
-	InvalidFingerprint RequestErrorCode = "INVALID_FINGERPRINT"
+	InvalidFingerprint models.RequestErrorCode = models.NewRequestErrorCode("INVALID_FINGERPRINT")
 	// InvalidToken - user provided non-authentic or malformed token
-	InvalidToken RequestErrorCode = "INVALID_TOKEN"
+	InvalidToken models.RequestErrorCode = models.NewRequestErrorCode("INVALID_TOKEN")
 )
 
 // constants for use in validator methods
@@ -88,32 +88,32 @@ const (
 	roleUser  = models.UserRole("user")
 )
 
-func validateEmail(email string) RequestErrorCode {
+func validateEmail(email string) models.RequestErrorCode {
 	email = strings.TrimSpace(email)
 	if strings.Count(email, "@") != 1 || len(email) > MaxEmailLen || email[0] == '@' || email[len(email)-1] == '@' {
 		return InvalidEmail
 	}
-	return NoError
+	return nil
 }
 
-func validateUsername(username string) RequestErrorCode {
+func validateUsername(username string) models.RequestErrorCode {
 	authorLen := len(strings.TrimSpace(username))
 	if authorLen > MaxUsernameLen || authorLen < MinUsernameLen {
 		return InvalidUsername
 	}
 
-	return NoError
+	return nil
 }
 
-func validatePassword(password string) RequestErrorCode {
+func validatePassword(password string) models.RequestErrorCode {
 	passwordLen := len(password)
 	if passwordLen < MinPwdLen || passwordLen > MaxPwdLen {
 		return InvalidPassword
 	}
-	return NoError
+	return nil
 }
 
-func validateRegistrationRequest(request models.RegistrationRequest) RequestErrorCode {
+func validateRegistrationRequest(request models.RegistrationRequest) models.RequestErrorCode {
 	username := request.Username
 	email := request.Email
 	password := request.Password
@@ -121,16 +121,16 @@ func validateRegistrationRequest(request models.RegistrationRequest) RequestErro
 	if username == "" || email == "" || password == "" {
 		return IncompleteCredentials
 	}
-	if err := validateEmail(email); err != NoError {
+	if err := validateEmail(email); err != nil {
 		return err
 	}
-	if err := validateUsername(username); err != NoError {
+	if err := validateUsername(username); err != nil {
 		return err
 	}
 	return validatePassword(password)
 }
 
-func validateLoginRequest(request models.LoginRequest) RequestErrorCode {
+func validateLoginRequest(request models.LoginRequest) models.RequestErrorCode {
 	username := request.Username
 	email := request.Email
 	password := request.Password
@@ -141,11 +141,11 @@ func validateLoginRequest(request models.LoginRequest) RequestErrorCode {
 	}
 
 	if email != "" {
-		if err := validateEmail(email); err != NoError {
+		if err := validateEmail(email); err != nil {
 			return err
 		}
 	} else {
-		if err := validateUsername(username); err != NoError {
+		if err := validateUsername(username); err != nil {
 			return err
 		}
 	}
@@ -197,7 +197,7 @@ func (api *UserAPIHandler) RegisterUserHandler() http.Handler {
 		logInfo.Printf("Got new user registration request. Request: %+v", request)
 
 		validateError := validateRegistrationRequest(request)
-		if validateError != NoError {
+		if validateError != nil {
 			logError.Printf("Can't register user: invalid request. Error: %s", validateError)
 			RespondWithError(w, http.StatusBadRequest, validateError)
 			return
@@ -240,9 +240,9 @@ func (api *UserAPIHandler) RegisterUserHandler() http.Handler {
 	})
 }
 
-// generateRandomContext - generates fingerprint
+// generateFingerprint - generates fingerprint
 // This function uses cryptographically secure random number generator
-func generateRandomContext() (string, error) {
+func generateFingerprint() (string, error) {
 	bytes := make([]byte, 32)
 	_, err := rand.Read(bytes)
 	if err != nil {
@@ -300,7 +300,7 @@ func (api *UserAPIHandler) LoginUserHandler() http.Handler {
 		password := request.Password
 
 		validateError := validateLoginRequest(request)
-		if validateError != NoError {
+		if validateError != nil {
 			logInfo.Printf("Bad login: invalid credentials. Username: %s, email: %s", username, email)
 			RespondWithError(w, http.StatusBadRequest, validateError)
 			return
@@ -341,7 +341,7 @@ func (api *UserAPIHandler) LoginUserHandler() http.Handler {
 		}
 
 		logInfo.Printf("Generating fingerprint for user login. Username: %s, email: %s", username, email)
-		rawFgp, err := generateRandomContext()
+		rawFgp, err := generateFingerprint()
 		if err != nil {
 			logError.Printf("Bad login: error generating fingerprint. Username: %s, email: %s. Error: %s",
 				username, email, err)

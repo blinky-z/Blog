@@ -11,8 +11,7 @@ const (
 
 // Save - saves a new user in database
 func Save(db *sql.DB, username, email, password string) error {
-	_, err := db.Exec("insert into users ("+usersInsertFields+") values($1, $2, $3)",
-		username, email, password)
+	_, err := db.Exec("insert into users ("+usersInsertFields+") values ($1, $2, $3)", username, email, password)
 	return err
 }
 

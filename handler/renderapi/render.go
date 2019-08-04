@@ -174,7 +174,7 @@ func (renderApi *Handler) renderIndexPageHandler() http.Handler {
 		}
 
 		validateQueryParamsError := restapi.ValidateGetPostsRequestQueryParams(rangeParams)
-		if validateQueryParamsError != restapi.NoError {
+		if validateQueryParamsError != nil {
 			restapi.Respond(w, http.StatusNotFound)
 			return
 		}
