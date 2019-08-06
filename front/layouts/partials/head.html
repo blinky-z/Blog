@@ -1,0 +1,22 @@
+{{define "head"}}
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="{{.Head.Metadata.Description}}">
+    <meta name="keywords"
+          content="{{range $i, $keyword := .Head.Metadata.Keywords}}{{if $i}},{{end}}{{$keyword}}{{end}}">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <title>{{- .Head.Title -}}</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,300italic,400italic|Raleway:500,100,300"
+          rel="stylesheet">
+    <link rel="stylesheet" type="text/css" media="screen" href="/css/normalize.css"/>
+    <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css"/>
+
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="/js/feather.min.js"></script>
+    <script src="/js/main.js"></script>
+</head>
+{{end}}

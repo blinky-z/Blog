@@ -1,0 +1,26 @@
+{{define "all-posts"}}
+    <!DOCTYPE html>
+    <html lang="ru">
+    {{ template "head" . }}
+    <body>
+    <div class="container wrapper list">
+        {{ template "header" . }}
+
+        {{if eq .Data.Type "Tagged"}}
+            <h1>Entries tagged - "{{.Data.Tag}}"</h1>
+        {{else}}
+            <h1 class="page-title">All Articles</h1>
+        {{end}}
+
+        <ul class="posts">
+            {{ range .Data.Posts }}
+                <li class="post">
+                    <a href="/posts/{{.ID}}">{{.Title}}</a> <span class="meta">{{ convertTime .Date }}</span>
+                </li>
+            {{- end -}}
+        </ul>
+    </div>
+    {{ template "footer" . }}
+    </body>
+    </html>
+{{end}}

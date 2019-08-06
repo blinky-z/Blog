@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/blinky-z/Blog/models"
-	"github.com/blinky-z/Blog/service/comment"
-	"github.com/blinky-z/Blog/service/post"
+	"github.com/blinky-z/Blog/service/commentService"
+	"github.com/blinky-z/Blog/service/postService"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -116,7 +116,7 @@ func (api *CommentAPIHandler) CreateCommentHandler() http.Handler {
 
 		postID := request.PostID
 
-		if isPostExists, err := post.ExistsByID(api.db, postID); err != nil {
+		if isPostExists, err := postService.ExistsByID(api.db, postID); err != nil {
 			logError.Printf("Can't create comment: error checking post for presence. Post ID: %s. Error: %s",
 				postID, err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
@@ -129,7 +129,7 @@ func (api *CommentAPIHandler) CreateCommentHandler() http.Handler {
 
 		if request.ParentCommentID != nil {
 			parentCommentID := request.ParentCommentID.(string)
-			parentComment, err := comment.GetByID(api.db, parentCommentID)
+			parentComment, err := commentService.GetByID(api.db, parentCommentID)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					logError.Printf("Can't create comment: parent comment does not exist. Parent comment ID: %s",
@@ -151,13 +151,13 @@ func (api *CommentAPIHandler) CreateCommentHandler() http.Handler {
 			}
 		}
 
-		saveRequest := &comment.SaveRequest{
+		saveRequest := &commentService.SaveRequest{
 			PostID:          postID,
 			ParentCommentID: request.ParentCommentID,
 			Author:          request.Author,
 			Content:         request.Content,
 		}
-		createdComment, err := comment.Save(api.db, saveRequest)
+		createdComment, err := commentService.Save(api.db, saveRequest)
 		if err != nil {
 			logError.Printf("Error saving comment in database: %s", err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
@@ -204,7 +204,7 @@ func (api *CommentAPIHandler) UpdateCommentHandler() http.Handler {
 			return
 		}
 
-		isCommentExists, err := comment.ExistsByID(api.db, commentID)
+		isCommentExists, err := commentService.ExistsByID(api.db, commentID)
 		if err != nil {
 			logError.Printf("Can't update comment: error checking comment for presence. Comment ID: %s. Error: %s",
 				commentID, err)
@@ -217,11 +217,11 @@ func (api *CommentAPIHandler) UpdateCommentHandler() http.Handler {
 			return
 		}
 
-		updateRequest := &comment.UpdateRequest{
+		updateRequest := &commentService.UpdateRequest{
 			CommentID:  commentID,
 			NewContent: request.Content,
 		}
-		updatedComment, err := comment.Update(api.db, updateRequest)
+		updatedComment, err := commentService.Update(api.db, updateRequest)
 		if err != nil {
 			logError.Printf("Error updating comment in database. Comment ID: %s. Error: %s", commentID, err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
@@ -253,7 +253,7 @@ func (api *CommentAPIHandler) DeleteCommentHandler() http.Handler {
 			return
 		}
 
-		if err := comment.Delete(api.db, commentID); err != nil {
+		if err := commentService.Delete(api.db, commentID); err != nil {
 			logError.Printf("Error deleting comment from database. Comment ID: %s. Error: %s", commentID, err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 			return

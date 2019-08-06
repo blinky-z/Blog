@@ -11,6 +11,7 @@ type Post struct {
 	Snippet  string    `json:"snippet"`
 	Content  string    `json:"content"`
 	Metadata MetaData  `json:"metadata"`
+	Tags     []string  `json:"tags"`
 }
 
 //CreatePostRequest - represents post creation request
@@ -20,6 +21,7 @@ type CreatePostRequest struct {
 	Snippet  string   `json:"snippet"`
 	Content  string   `json:"content"`
 	Metadata MetaData `json:"metadata"`
+	Tags     []string `json:"tags"`
 }
 
 //UpdatePostRequest - represents post update request
@@ -29,6 +31,7 @@ type UpdatePostRequest struct {
 	Snippet  string   `json:"snippet"`
 	Content  string   `json:"content"`
 	Metadata MetaData `json:"metadata"`
+	Tags     []string `json:"tags"`
 }
 
 // CertainPost - this struct is used to return not only post data, but also comments of this post

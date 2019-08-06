@@ -7,7 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"github.com/blinky-z/Blog/models"
-	"github.com/blinky-z/Blog/service/user"
+	"github.com/blinky-z/Blog/service/userService"
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 	"log"
@@ -207,7 +207,7 @@ func (api *UserAPIHandler) RegisterUserHandler() http.Handler {
 		username := strings.TrimSpace(request.Username)
 		password := []byte(request.Password)
 
-		isUserExists, err := user.ExistsByUsernameOrEmail(api.db, username, email)
+		isUserExists, err := userService.ExistsByUsernameOrEmail(api.db, username, email)
 		if err != nil {
 			logError.Printf("Can't register user: error checking user for presence. Username: %s. Error: %s",
 				username, err)
@@ -229,7 +229,7 @@ func (api *UserAPIHandler) RegisterUserHandler() http.Handler {
 			return
 		}
 
-		if err := user.Save(api.db, username, email, string(hashedPassword)); err != nil {
+		if err := userService.Save(api.db, username, email, string(hashedPassword)); err != nil {
 			logError.Printf("Error saving user in database. Username: %s. Error: %s", username, err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 			return

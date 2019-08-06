@@ -20,9 +20,10 @@ var (
 	logInfo  = log.New(os.Stdout, "INFO: ", log.Ltime)
 	logError = log.New(os.Stderr, "ERROR: ", log.Ltime)
 
-	Db                 *sql.DB
-	frontendFolderPath = filepath.FromSlash("front/")
-	jwtMiddleware      *jwtmiddleware.JWTMiddleware
+	Db                  *sql.DB
+	frontendLayoutsPath = filepath.FromSlash("front/layouts/")
+	frontendStaticPath  = filepath.FromSlash("front/static/")
+	jwtMiddleware       *jwtmiddleware.JWTMiddleware
 )
 
 // keys to access env variables
@@ -109,6 +110,7 @@ func RunServer() {
 		log.New(os.Stderr, "[api.user] ERROR: ", log.Ltime))
 	renderAPIHandler := renderapi.NewRenderAPIHandler(Db,
 		&admins,
+		frontendLayoutsPath,
 		log.New(os.Stdout, "[renderApi.render] INFO: ", log.Ltime),
 		log.New(os.Stderr, "[renderApi.render] ERROR: ", log.Ltime))
 
@@ -138,15 +140,21 @@ func RunServer() {
 
 	// set frontend files paths
 	router.PathPrefix("/css").Handler(
-		http.StripPrefix("/css", http.FileServer(http.Dir(frontendFolderPath+"/css"))))
-	router.PathPrefix("/scripts").Handler(
-		http.StripPrefix("/scripts", http.FileServer(http.Dir(frontendFolderPath+"/scripts"))))
+		http.StripPrefix("/css", http.FileServer(http.Dir(frontendStaticPath+"/css"))))
+	router.PathPrefix("/js").Handler(
+		http.StripPrefix("/js", http.FileServer(http.Dir(frontendStaticPath+"/js"))))
 	router.PathPrefix("/images").Handler(
-		http.StripPrefix("/images", http.FileServer(http.Dir(frontendFolderPath+"/images"))))
+		http.StripPrefix("/images", http.FileServer(http.Dir(frontendStaticPath+"/images"))))
 
 	// set pages rendering handlers
-	router.PathPrefix("/posts/{id}").Handler(renderAPIHandler.RenderPostPageHandler())
-	router.PathPrefix("/").Handler(http.StripPrefix("/", renderapi.HandleHTMLFile(renderAPIHandler, frontendFolderPath)))
+	router.Path("/posts/{id}").Handler(renderAPIHandler.RenderPostPageHandler())
+	router.Path("/posts").Handler(renderAPIHandler.RenderAllPostsPageHandler())
+	router.Path("/tags/{tag}").Handler(renderAPIHandler.RenderAllPostsPageHandler())
+	router.Path("/tags").Handler(renderAPIHandler.RenderAllTagsPageHandler())
+	router.Path("/admin").Handler(renderAPIHandler.RenderAdminPageHandler())
+	router.Path("/about").Handler(renderAPIHandler.RenderAboutPageHandler())
+	router.Path("/index").Handler(renderAPIHandler.RenderIndexPageHandler())
+	router.Path("/").Handler(renderAPIHandler.RenderIndexPageHandler())
 
 	serverPort := viper.GetString(serverPortEnvKey)
 	logInfo.Printf("Starting server on port %s", serverPort)

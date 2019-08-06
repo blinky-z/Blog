@@ -3,7 +3,7 @@ package tests
 import (
 	"github.com/blinky-z/Blog/handler/restapi"
 	"github.com/blinky-z/Blog/models"
-	"github.com/blinky-z/Blog/service/comment"
+	"github.com/blinky-z/Blog/service/commentService"
 	"gotest.tools/assert"
 	"net/http"
 	"testing"
@@ -144,7 +144,7 @@ func TestEnsureReceivedCommentsInAscOrder(t *testing.T) {
 		assertNiceResponse(t, r, http.StatusCreated)
 	}
 
-	comments, _ := comment.GetAllByPostID(db, post.ID)
+	comments, _ := commentService.GetAllByPostID(db, post.ID)
 	for i := 1; i < len(comments); i++ {
 		if !comments[i-1].Date.Before(comments[i].Date) {
 			t.Fatalf("Comments returned from comment serivce should be sorted in ascending order")
@@ -202,7 +202,7 @@ func TestEnsureCommentWithChildsWasNotDeletedButContentReplaced(t *testing.T) {
 	actualParentComment := comments[0]
 	assert.Assert(t, len(actualParentComment.Childs) == 1, "Parent comment should contain reply comment")
 
-	if actualParentComment.Content != comment.DeletedCommentContent {
+	if actualParentComment.Content != commentService.DeletedCommentContent {
 		t.Fatalf("Parent comment's content should be replaced with special deletion message, but was: %v", actualParentComment)
 	}
 }

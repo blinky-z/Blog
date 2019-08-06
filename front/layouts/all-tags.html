@@ -1,0 +1,20 @@
+{{define "all-tags"}}
+    <!DOCTYPE html>
+    <html lang="ru">
+    {{ template "head" . }}
+    <body>
+    <div class="container wrapper tags">
+        {{ template "header" . }}
+
+        <h1 class="page-title">All tags</h1>
+
+        <div class="tag-cloud">
+            {{ range .Data.Tags }}
+                <a style="font-size: 1rem;" href="/tags/{{.}}">{{ . }}</a>
+            {{ end }}
+        </div>
+    </div>
+    {{ template "footer" . }}
+    </body>
+    </html>
+{{end}}

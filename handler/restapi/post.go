@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/blinky-z/Blog/models"
-	"github.com/blinky-z/Blog/service/comment"
-	"github.com/blinky-z/Blog/service/post"
+	"github.com/blinky-z/Blog/service/commentService"
+	"github.com/blinky-z/Blog/service/postService"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -231,14 +231,14 @@ func (api *PostAPIHandler) CreatePostHandler() http.Handler {
 			return
 		}
 
-		saveRequest := &post.SaveRequest{
+		saveRequest := &postService.SaveRequest{
 			Title:    request.Title,
 			Author:   request.Author,
 			Snippet:  request.Snippet,
 			Content:  request.Content,
 			Metadata: request.Metadata,
 		}
-		createdPost, err := post.Save(api.db, saveRequest)
+		createdPost, err := postService.Save(api.db, saveRequest)
 		if err != nil {
 			logError.Printf("Error saving post in database: %s", err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
@@ -284,7 +284,7 @@ func (api *PostAPIHandler) UpdatePostHandler() http.Handler {
 			return
 		}
 
-		isPostExists, err := post.ExistsByID(api.db, postID)
+		isPostExists, err := postService.ExistsByID(api.db, postID)
 		if err != nil {
 			logError.Printf("Can't update post: error checking post for presence. Post ID: %s. Error: %s",
 				postID, err)
@@ -297,7 +297,7 @@ func (api *PostAPIHandler) UpdatePostHandler() http.Handler {
 			return
 		}
 
-		updateRequest := &post.UpdateRequest{
+		updateRequest := &postService.UpdateRequest{
 			ID:       postID,
 			Title:    request.Title,
 			Author:   request.Author,
@@ -305,7 +305,7 @@ func (api *PostAPIHandler) UpdatePostHandler() http.Handler {
 			Content:  request.Content,
 			Metadata: request.Metadata,
 		}
-		updatedPost, err := post.Update(api.db, updateRequest)
+		updatedPost, err := postService.Update(api.db, updateRequest)
 		if err != nil {
 			logError.Printf("Error updating post in database: %s", err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
@@ -337,7 +337,7 @@ func (api *PostAPIHandler) DeletePostHandler() http.Handler {
 			return
 		}
 
-		if err := post.Delete(api.db, postID); err != nil {
+		if err := postService.Delete(api.db, postID); err != nil {
 			logError.Printf("Error deleting post. Post ID: %s. Error: %s", postID, err)
 		}
 
@@ -360,7 +360,7 @@ func (api *PostAPIHandler) GetCertainPostHandler() http.Handler {
 			return
 		}
 
-		post, err := post.GetByID(api.db, postID)
+		post, err := postService.GetByID(api.db, postID)
 		if err != nil {
 			switch err {
 			case sql.ErrNoRows:
@@ -374,7 +374,7 @@ func (api *PostAPIHandler) GetCertainPostHandler() http.Handler {
 			}
 		}
 
-		comments, err := comment.GetAllByPostID(api.db, postID)
+		comments, err := commentService.GetAllByPostID(api.db, postID)
 		if err != nil {
 			logError.Printf("Error retrieving post from database: error retrieving comments. Post ID: %s. Error: %s",
 				postID, err)
@@ -424,7 +424,7 @@ func (api *PostAPIHandler) GetPostsHandler() http.Handler {
 		pageAsInt, _ := strconv.Atoi(pageAsString)
 		postsPerPageAsInt, _ := strconv.Atoi(postsPerPageAsString)
 
-		posts, err := post.GetPostsInRange(api.db, pageAsInt, postsPerPageAsInt)
+		posts, err := postService.GetPostsInRange(api.db, pageAsInt, postsPerPageAsInt)
 		if err != nil {
 			logError.Printf("Error retrieving range of posts from database: %s", err)
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)

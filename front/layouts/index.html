@@ -1,0 +1,29 @@
+{{define "index"}}
+    <!DOCTYPE html>
+    <html lang="ru">
+    {{ template "head" . }}
+    <body>
+    <div class="container wrapper">
+        {{ template "header" . }}
+
+        <div class="recent-posts section">
+            <h2 class="section-header">
+                Recent posts
+            </h2>
+            <div class="posts">
+                {{ range .Data.Posts }}
+                    <div class="post">
+                        <div class="meta">{{ convertTime .Date }}</div>
+                        <a class="title" href="posts/{{.ID}}">{{.Title}}</a> &mdash;
+                        <span class="description">{{- .Snippet -}}</span>
+                    </div>
+                {{- end -}}
+
+                <a href="/posts">All articles →</a>
+            </div>
+        </div>
+    </div>
+    {{ template "footer" . }}
+    </body>
+    </html>
+{{end}}

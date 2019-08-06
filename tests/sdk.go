@@ -250,8 +250,8 @@ func assertErrorResponse(t *testing.T, r *http.Response, expectedStatusCode int,
 func assertNiceResponse(t *testing.T, r *http.Response, expectedStatusCode int) {
 	receivedStatusCode := r.StatusCode
 	if receivedStatusCode != expectedStatusCode {
-		panic(fmt.Sprintf("Received status code does not match expected one\n. Received: %d\nExpected: %d\n",
-			receivedStatusCode, expectedStatusCode))
+		t.Fatalf("Received status code does not match expected one\n. Received: %d\nExpected: %d\n",
+			receivedStatusCode, expectedStatusCode)
 	}
 }
 
