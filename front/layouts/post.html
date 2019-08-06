@@ -14,6 +14,17 @@
         <div class="markdown">
             {{ .Data.Post.Content }}
         </div>
+
+        <br>
+        <hr>
+
+        <script src="https://utteranc.es/client.js"
+                repo="blinky-z/BlogComments"
+                issue-term="pathname"
+                theme="github-light"
+                crossorigin="anonymous"
+                async>
+        </script>
     </div>
     {{ template "footer" . }}
     </body>
