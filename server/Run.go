@@ -156,11 +156,15 @@ func RunServer() {
 	mainRouter.Path("/sitemap").HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		http.ServeFile(writer, request, "sitemap.xml")
 	}).Methods("GET")
+	domain.String()
 
 	adminRouter := router.Host("admin." + domain.Host).Subrouter()
 	adminRouter.Path("/").Handler(renderAPIHandler.RenderAdminPageHandler()).Methods("GET")
 	adminRouter.Path("/editor").Handler(renderAPIHandler.RenderAdminEditorPageHandler()).Methods("GET")
 	adminRouter.Path("/manage-posts").Handler(renderAPIHandler.RenderAdminManagePostsPageHandler()).Methods("GET")
+	adminRouter.Path("/robots.txt").HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		http.ServeFile(writer, request, "robots_admin.txt")
+	}).Methods("GET")
 
 	// set blog posts related rest api
 	adminRouter.Handle("/api/posts", postAPIHandler.CreatePostHandler()).Methods("POST")

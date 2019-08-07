@@ -366,3 +366,7 @@ ul {
 .footer {
     text-align: center;
 }
+
+.tag-cloud a {
+    font-size: 1rem;
+}

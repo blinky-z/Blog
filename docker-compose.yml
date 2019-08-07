@@ -21,6 +21,7 @@ services:
       - "traefik.docker.network=web"
       - "traefik.port=8080"
       - "traefik.site.frontend.rule=Host:example.com"
+      - "traefik.adminRobot.frontend.rule=Host:admin.example.com;Path:/robots.txt"
       - "traefik.admin.frontend.rule=Host:admin.example.com"
       - "traefik.admin.frontend.auth.basic.users=user1:hash,user2:hash"
 

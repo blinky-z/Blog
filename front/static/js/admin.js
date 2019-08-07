@@ -126,31 +126,34 @@ function publishPost(action, domain) {
 }
 
 function deletePost(action) {
-    var actions = $(action).parent();
-    console.log(actions);
-    var postID = actions.attr("data-id");
-    console.log(postID);
+    var result = confirm("Are you sure you want to delete this post?");
+    if (result) {
+        var actions = $(action).parent();
+        console.log(actions);
+        var postID = actions.attr("data-id");
+        console.log(postID);
 
-    $.ajax(
-        {
-            url: `/api/posts/${postID}`,
-            type: 'DELETE',
-            beforeSend: function (xhr) {
-                // xhr.setRequestHeader('Authorization', `bearer ${token}`);
-            },
-            success: function (data, textStatus, jqXHR) {
-                alert("Post deleted");
-                document.location.reload()
-            },
-            statusCode: {
-                401: function () {
-                    alert("Please Log In first");
+        $.ajax(
+            {
+                url: `/api/posts/${postID}`,
+                type: 'DELETE',
+                beforeSend: function (xhr) {
+                    // xhr.setRequestHeader('Authorization', `bearer ${token}`);
+                },
+                success: function (data, textStatus, jqXHR) {
+                    alert("Post deleted");
+                    document.location.reload()
+                },
+                statusCode: {
+                    401: function () {
+                        alert("Please Log In first");
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    var response = JSON.parse(jqXHR.responseText);
+                    alert(response.error)
                 }
-            },
-            error: function (jqXHR, textStatus, errorThrown) {
-                var response = JSON.parse(jqXHR.responseText);
-                alert(response.error)
             }
-        }
-    );
+        );
+    }
 }
