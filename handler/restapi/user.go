@@ -49,21 +49,21 @@ func NewUserAPIHandler(db *sql.DB, jwtSecret []byte, admins *[]string, jwtUserPr
 // error codes for this API
 var (
 	// WrongCredentials - user inputs wrong password or login or email while logging in
-	WrongCredentials models.RequestErrorCode = models.NewRequestErrorCode("WRONG_CREDENTIALS")
+	WrongCredentials = models.NewRequestErrorCode("WRONG_CREDENTIALS")
 	// InvalidEmail - user inputs invalid email while registration or logging in
-	InvalidEmail models.RequestErrorCode = models.NewRequestErrorCode("INVALID_EMAIL")
+	InvalidEmail = models.NewRequestErrorCode("INVALID_EMAIL")
 	// InvalidUsername - user inputs invalid username while registration
-	InvalidUsername models.RequestErrorCode = models.NewRequestErrorCode("INVALID_LOGIN")
+	InvalidUsername = models.NewRequestErrorCode("INVALID_LOGIN")
 	// InvalidPassword - user inputs invalid password while registration
-	InvalidPassword models.RequestErrorCode = models.NewRequestErrorCode("INVALID_PASSWORD")
+	InvalidPassword = models.NewRequestErrorCode("INVALID_PASSWORD")
 	// UserAlreadyRegistered - user trying to register account while already registered
-	UserAlreadyRegistered models.RequestErrorCode = models.NewRequestErrorCode("USER_ALREADY_REGISTERED")
+	UserAlreadyRegistered = models.NewRequestErrorCode("USER_ALREADY_REGISTERED")
 	// IncompleteCredentials - user do not input full credentials: login, email, password
-	IncompleteCredentials models.RequestErrorCode = models.NewRequestErrorCode("INCOMPLETE_CREDENTIALS")
+	IncompleteCredentials = models.NewRequestErrorCode("INCOMPLETE_CREDENTIALS")
 	// InvalidFingerprint - user provided non-authentic or malformed fingerprint
-	InvalidFingerprint models.RequestErrorCode = models.NewRequestErrorCode("INVALID_FINGERPRINT")
+	InvalidFingerprint = models.NewRequestErrorCode("INVALID_FINGERPRINT")
 	// InvalidToken - user provided non-authentic or malformed token
-	InvalidToken models.RequestErrorCode = models.NewRequestErrorCode("INVALID_TOKEN")
+	InvalidToken = models.NewRequestErrorCode("INVALID_TOKEN")
 )
 
 // constants for use in validator methods
@@ -181,8 +181,9 @@ func (api *UserAPIHandler) FgpAuthentication(next http.Handler) http.Handler {
 	})
 }
 
+// unused
 // RegisterUserHandler - serves registration requests
-// This function generates hashed password with bcrypt library before saving user in database, so to compare password
+// This function generates hashed password with bcrypt library before saving user in database
 // use bcrypt.CompareHashAndPassword function to compare password from login form with actual hashed password
 func (api *UserAPIHandler) RegisterUserHandler() http.Handler {
 	logInfo := api.logInfo
@@ -252,7 +253,7 @@ func generateFingerprint() (string, error) {
 	return base64.URLEncoding.EncodeToString(bytes), nil
 }
 
-// IsUserAdmin - check if the given user is admin
+// IsUserAdmin - check if the given user is an admin
 func IsUserAdmin(username string, admins *[]string) bool {
 	for _, currentAdminUsername := range *admins {
 		if username == currentAdminUsername {
@@ -281,6 +282,7 @@ func generateJwtToken(login, fgp string, api *UserAPIHandler) (string, error) {
 	return token.SignedString(api.jwtSecret)
 }
 
+// unused
 // LoginUserHandler - serves user login request
 // This function sends back generated JWT token as payload
 func (api *UserAPIHandler) LoginUserHandler() http.Handler {
@@ -353,11 +355,6 @@ func (api *UserAPIHandler) LoginUserHandler() http.Handler {
 		ctxCookie := &http.Cookie{Name: "Secure-Fgp", Value: rawFgp, SameSite: http.SameSiteStrictMode, HttpOnly: true,
 			Secure: true, Expires: time.Now().Add(time.Hour * 1), Path: "/"}
 		http.SetCookie(w, ctxCookie)
-
-		// set cookie with username in it to detect if user is admin
-		usernameCookie := &http.Cookie{Name: "Login", Value: username, SameSite: http.SameSiteStrictMode, Secure: true,
-			Path: "/"}
-		http.SetCookie(w, usernameCookie)
 
 		// hash generated fingerprint for storing in JWT token
 		hashedFgp, err := bcrypt.GenerateFromPassword([]byte(rawFgp), bcrypt.DefaultCost)

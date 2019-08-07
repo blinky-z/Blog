@@ -13,8 +13,8 @@
             <div class="posts">
                 {{ range .Data.Posts }}
                     <div class="post">
-                        <div class="meta">{{ convertTime .Date }}</div>
-                        <a class="title" href="posts/{{.ID}}">{{.Title}}</a> &mdash;
+                        <div class="meta">{{ formatTime .Date }}</div>
+                        <a class="title" href="posts/{{.ID}}">{{.Title}}</a>
                         <span class="description">{{- .Snippet -}}</span>
                     </div>
                 {{- end -}}

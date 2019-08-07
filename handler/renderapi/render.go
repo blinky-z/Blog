@@ -8,10 +8,13 @@ import (
 	"github.com/blinky-z/Blog/service/postService"
 	"github.com/blinky-z/Blog/service/tagService"
 	"github.com/gorilla/mux"
+	"html"
 	"log"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
 )
@@ -20,15 +23,16 @@ type Handler struct {
 	db          *sql.DB
 	admins      *[]string
 	layoutsPath string
+	domain      *url.URL
 	logInfo     *log.Logger
 	logError    *log.Logger
 }
 
-func NewRenderAPIHandler(db *sql.DB, admins *[]string, layoutsPath string, logInfo, logError *log.Logger) *Handler {
+func NewRenderAPIHandler(db *sql.DB, layoutsPath string, domain *url.URL, logInfo, logError *log.Logger) *Handler {
 	return &Handler{
 		db:          db,
-		admins:      admins,
 		layoutsPath: layoutsPath,
+		domain:      domain,
 		logInfo:     logInfo,
 		logError:    logError,
 	}
@@ -40,14 +44,6 @@ const (
 	postsPerPage     int = 10
 	siteSuffix           = " | Progbloom - A blog about programming"
 )
-
-// pageSelector - represents page selector on index page
-type pageSelector struct {
-	NewerPostsLink string
-	OlderPostsLink string
-	HasNewerPosts  bool
-	HasOlderPosts  bool
-}
 
 // SiteHead - represents <head> tag data
 type SiteHead struct {
@@ -61,32 +57,33 @@ type SiteDescription struct {
 	Description string
 }
 
-var defaultSiteDescription = SiteDescription{
-	Title:       "Progbloom",
-	Description: "A blog about programming. I write about Linux, Java and low-level programming",
-}
-
 // Site - represents all site data
 type Site struct {
-	Head SiteHead
-	Desc SiteDescription
-	Data interface{}
+	Head   SiteHead
+	Desc   SiteDescription
+	Domain *url.URL
+	Data   interface{}
 }
 
-// indexPageData - represents index page
+// pageSelector - represents page selector (older and newer posts links)
+type pageSelector struct {
+	NewerPostsLink string
+	OlderPostsLink string
+	HasNewerPosts  bool
+	HasOlderPosts  bool
+}
+
+// indexPageData - represents index page data
 type indexPageData struct {
 	Posts []models.Post
 }
 
-// postPageData - represents a single post ("/posts/{id}") page
+// postPageData - represents a single post ("/posts/{id}") page data
 type postPageData struct {
-	Post          models.Post
-	Comments      []*models.CommentWithChilds
-	CommentsCount int
-	IsUserAdmin   bool
+	Post models.Post
 }
 
-// postPageData - represents all posts ("/posts") or all posts tagged with ("tags/{tag}) page
+// postPageData - represents all posts ("/posts") or all posts tagged with ("tags/{tag}) page data
 type allPostsPageData struct {
 	Posts        []models.Post
 	PageSelector pageSelector
@@ -94,25 +91,49 @@ type allPostsPageData struct {
 	Tag          string
 }
 
-func countComments(comments []*models.CommentWithChilds) int {
-	if len(comments) == 0 {
-		return 0
-	}
-
-	l1 := len(comments)
-	for _, currentComment := range comments {
-		l1 += countComments(currentComment.Childs)
-	}
-
-	return l1
+// adminEditorPageData - represents data for admin dashboard editor
+type adminEditorPageData struct {
+	Post        models.Post
+	PostPresent bool
 }
 
+var defaultMetadata = models.MetaData{
+	Description: "blog about programming and linux",
+	Keywords:    []string{"programming", "coding", "Linux", "Java", "C", "C++", "low-level programming"},
+}
+
+var defaultSiteDescription = SiteDescription{
+	Title:       "Progbloom 🌻",
+	Description: "A blog about programming. I write about Linux, Java and low-level programming",
+}
+
+// functions for use in go templates
 var renderFuncs = template.FuncMap{
-	"convertTime": convertTime,
+	"formatTime":    formatTime,
+	"unescape":      unescape,
+	"sliceToString": sliceToString,
 }
 
-func convertTime(t time.Time) string {
+// formatTime - formats time.Time and returns formatted time as string
+func formatTime(t time.Time) string {
 	return t.Format(timeFormat)
+}
+
+// unescape - unescapes string
+func unescape(s string) string {
+	return html.UnescapeString(s)
+}
+
+func sliceToString(a []string) string {
+	var sb strings.Builder
+	aLen := len(a) - 1
+	for index, elem := range a {
+		sb.WriteString(elem)
+		if index < aLen {
+			sb.WriteByte(',')
+		}
+	}
+	return sb.String()
 }
 
 // RenderPostPageHandler - handler for server-side rendering of /posts/{id} page
@@ -126,16 +147,7 @@ func (renderApi *Handler) RenderPostPageHandler() http.Handler {
 			return
 		}
 
-		var isUserAdmin bool
-
-		usernameCookie, err := r.Cookie("Login")
-		if err != nil {
-			isUserAdmin = false
-		} else {
-			isUserAdmin = restapi.IsUserAdmin(usernameCookie.Value, renderApi.admins)
-		}
-
-		returnedPost, err := postService.GetByID(renderApi.db, postID)
+		post, err := postService.GetByID(renderApi.db, postID)
 		if err != nil {
 			switch err {
 			case sql.ErrNoRows:
@@ -160,13 +172,13 @@ func (renderApi *Handler) RenderPostPageHandler() http.Handler {
 
 		var data Site
 		data.Head = SiteHead{
-			Title:    returnedPost.Title + siteSuffix,
-			Metadata: returnedPost.Metadata,
+			Title:    post.Title + siteSuffix,
+			Metadata: post.Metadata,
 		}
+		data.Domain = renderApi.domain
 		data.Desc = defaultSiteDescription
 		data.Data = postPageData{
-			Post:        returnedPost,
-			IsUserAdmin: isUserAdmin,
+			Post: post,
 		}
 
 		if err := tmpl.ExecuteTemplate(w, "post", data); err != nil {
@@ -183,6 +195,7 @@ func (renderApi *Handler) RenderIndexPageHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		posts, err := postService.GetPostsInRange(renderApi.db, 0, recentPostsCount)
 		if err != nil {
+			renderApi.logInfo.Printf("Error retrieving posts: %s", err)
 			restapi.Respond(w, http.StatusInternalServerError)
 			return
 		}
@@ -194,18 +207,17 @@ func (renderApi *Handler) RenderIndexPageHandler() http.Handler {
 				layoutsPath+filepath.FromSlash("partials/footer.html"),
 				layoutsPath+"index.html")
 		if err != nil {
+			logError.Printf("Error allocating index template: %s", err)
 			restapi.Respond(w, http.StatusInternalServerError)
 			return
 		}
 
 		var data Site
 		data.Head = SiteHead{
-			Title: "Recent Posts" + siteSuffix,
-			Metadata: models.MetaData{
-				Description: "blog about programming",
-				Keywords:    []string{"Programming", "Linux"},
-			},
+			Title:    "Home" + siteSuffix,
+			Metadata: defaultMetadata,
 		}
+		data.Domain = renderApi.domain
 		data.Desc = defaultSiteDescription
 		data.Data = indexPageData{
 			Posts: posts,
@@ -218,7 +230,7 @@ func (renderApi *Handler) RenderIndexPageHandler() http.Handler {
 	})
 }
 
-// RenderAllPostsPageHandler - handler for server-side rendering of all posts page
+// RenderAllPostsPageHandler - handler for server-side rendering of all posts and tagged posts page
 func (renderApi *Handler) RenderAllPostsPageHandler() http.Handler {
 	logError := renderApi.logError
 	layoutsPath := renderApi.layoutsPath
@@ -275,12 +287,10 @@ func (renderApi *Handler) RenderAllPostsPageHandler() http.Handler {
 		}
 
 		data.Head = SiteHead{
-			Title: Title,
-			Metadata: models.MetaData{
-				Description: "blog about programming",
-				Keywords:    []string{"Programming", "Linux"},
-			},
+			Title:    Title,
+			Metadata: defaultMetadata,
 		}
+		data.Domain = renderApi.domain
 		data.Desc = defaultSiteDescription
 
 		pageSelector := pageSelector{}
@@ -351,12 +361,10 @@ func (renderApi *Handler) RenderAllTagsPageHandler() http.Handler {
 
 		var data Site
 		data.Head = SiteHead{
-			Title: "Tags Cloud" + siteSuffix,
-			Metadata: models.MetaData{
-				Description: "blog about programming",
-				Keywords:    []string{"Programming", "Linux"},
-			},
+			Title:    "Tags Cloud" + siteSuffix,
+			Metadata: defaultMetadata,
 		}
+		data.Domain = renderApi.domain
 		data.Desc = defaultSiteDescription
 		data.Data = struct {
 			Tags []string
@@ -389,12 +397,10 @@ func (renderApi *Handler) RenderAboutPageHandler() http.Handler {
 
 		var data Site
 		data.Head = SiteHead{
-			Title: "All Posts" + siteSuffix,
-			Metadata: models.MetaData{
-				Description: "blog about programming",
-				Keywords:    []string{"Programming", "Linux"},
-			},
+			Title:    "About" + siteSuffix,
+			Metadata: defaultMetadata,
 		}
+		data.Domain = renderApi.domain
 		data.Desc = defaultSiteDescription
 		data.Data = struct {
 			Content string
@@ -414,12 +420,12 @@ func (renderApi *Handler) RenderAdminPageHandler() http.Handler {
 	logError := renderApi.logError
 	layoutsPath := renderApi.layoutsPath
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.New("about").Funcs(renderFuncs).
+		tmpl, err := template.New("admin").Funcs(renderFuncs).
 			ParseFiles(
 				layoutsPath+filepath.FromSlash("partials/head.html"),
 				layoutsPath+filepath.FromSlash("partials/header.html"),
 				layoutsPath+filepath.FromSlash("partials/footer.html"),
-				layoutsPath+"about.html")
+				layoutsPath+"admin.html")
 		if err != nil {
 			restapi.Respond(w, http.StatusInternalServerError)
 			return
@@ -428,21 +434,153 @@ func (renderApi *Handler) RenderAdminPageHandler() http.Handler {
 		var data Site
 
 		data.Head = SiteHead{
-			Title: "Admin Dashboard" + siteSuffix,
-			Metadata: models.MetaData{
-				Description: "blog about programming",
-				Keywords:    []string{"Programming", "Linux"},
-			},
+			Title:    "Admin Dashboard" + siteSuffix,
+			Metadata: defaultMetadata,
 		}
+		data.Domain = renderApi.domain
 		data.Desc = defaultSiteDescription
-		data.Data = struct {
-			Content string
-		}{
-			Content: "Приветствую на моем сайте!",
+		data.Data = nil
+
+		if err := tmpl.ExecuteTemplate(w, "admin", data); err != nil {
+			logError.Printf("Error rendering about page: %s", err)
+			restapi.Respond(w, http.StatusInternalServerError)
+		}
+	})
+}
+
+//RenderAdminPageHandler - handler for server-side rendering of admin dashboard editor page
+func (renderApi *Handler) RenderAdminEditorPageHandler() http.Handler {
+	logError := renderApi.logError
+	layoutsPath := renderApi.layoutsPath
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		adminEditorPageData := adminEditorPageData{}
+		postID := r.FormValue("id")
+		if postID != "" {
+			if !restapi.IsPostIDValid(postID) {
+				restapi.Respond(w, http.StatusNotFound)
+				return
+			}
+
+			post, err := postService.GetByID(renderApi.db, postID)
+			if err != nil {
+				switch err {
+				case sql.ErrNoRows:
+					restapi.Respond(w, http.StatusNotFound)
+					return
+				default:
+					restapi.Respond(w, http.StatusInternalServerError)
+					return
+				}
+			}
+			adminEditorPageData.Post = post
+			adminEditorPageData.PostPresent = true
+		} else {
+			adminEditorPageData.Post = models.Post{}
+			adminEditorPageData.PostPresent = false
 		}
 
-		if err := tmpl.ExecuteTemplate(w, "about", data); err != nil {
-			logError.Printf("Error rendering about page: %s", err)
+		tmpl, err := template.New("admin-editor").Funcs(renderFuncs).
+			ParseFiles(
+				layoutsPath+filepath.FromSlash("partials/head.html"),
+				layoutsPath+filepath.FromSlash("partials/header.html"),
+				layoutsPath+filepath.FromSlash("partials/footer.html"),
+				layoutsPath+"admin/editor.html")
+		if err != nil {
+			restapi.Respond(w, http.StatusInternalServerError)
+			return
+		}
+
+		var data Site
+
+		data.Head = SiteHead{
+			Title:    "Admin Dashboard - Editor" + siteSuffix,
+			Metadata: defaultMetadata,
+		}
+		data.Domain = renderApi.domain
+		data.Desc = defaultSiteDescription
+		data.Data = adminEditorPageData
+
+		if err := tmpl.ExecuteTemplate(w, "admin-editor", data); err != nil {
+			logError.Printf("Error rendering admin editor page: %s", err)
+			restapi.Respond(w, http.StatusInternalServerError)
+		}
+	})
+}
+
+// RenderAllPostsPageHandler - handler for server-side rendering of admin dashboard posts managing page
+func (renderApi *Handler) RenderAdminManagePostsPageHandler() http.Handler {
+	logError := renderApi.logError
+	layoutsPath := renderApi.layoutsPath
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rangeParams := &restapi.GetPostsRequestQueryParams{
+			Page:         r.FormValue("page"),
+			PostsPerPage: "",
+		}
+
+		validateQueryParamsError := restapi.ValidateGetPostsRequestQueryParams(rangeParams)
+		if validateQueryParamsError != nil {
+			restapi.Respond(w, http.StatusNotFound)
+			return
+		}
+		page, _ := strconv.Atoi(rangeParams.Page)
+
+		posts, err := postService.GetPostsInRange(renderApi.db, page, postsPerPage+1)
+		if err != nil {
+			restapi.Respond(w, http.StatusInternalServerError)
+			return
+		}
+
+		tmpl, err := template.New("admin-manage-posts").Funcs(renderFuncs).
+			ParseFiles(
+				layoutsPath+filepath.FromSlash("partials/head.html"),
+				layoutsPath+filepath.FromSlash("partials/header.html"),
+				layoutsPath+filepath.FromSlash("partials/footer.html"),
+				layoutsPath+"admin/manage-posts.html")
+		if err != nil {
+			logError.Printf("Error rendering admin dashboard posts managing page: %s", err)
+			restapi.Respond(w, http.StatusInternalServerError)
+			return
+		}
+
+		var data Site
+
+		var Title string
+		Title = "Admin Dashboard - Manage posts" + " | Progbloom - A blog about programming"
+
+		data.Head = SiteHead{
+			Title:    Title,
+			Metadata: defaultMetadata,
+		}
+		data.Domain = renderApi.domain
+		data.Desc = defaultSiteDescription
+
+		pageSelector := pageSelector{}
+		if page != 0 {
+			pageSelector.HasNewerPosts = true
+			pageSelector.NewerPostsLink = fmt.Sprintf("/manage-posts?page=%d", page-1)
+		} else {
+			pageSelector.HasNewerPosts = false
+		}
+
+		// hack here: if we were able to retrieve more posts than default value, then we have older posts
+		if len(posts) > postsPerPage {
+			pageSelector.HasOlderPosts = true
+			pageSelector.OlderPostsLink = fmt.Sprintf("/manage-posts?page=%d", page+1)
+
+			// remove very last post, as we need less posts
+			posts = posts[:postsPerPage]
+		} else {
+			pageSelector.HasOlderPosts = false
+		}
+
+		allPostsPageData := allPostsPageData{}
+		allPostsPageData.Posts = posts
+		allPostsPageData.PageSelector = pageSelector
+
+		data.Data = allPostsPageData
+
+		if err := tmpl.ExecuteTemplate(w, "admin-manage-posts", data); err != nil {
+			logError.Printf("Error rendering admin dashboard posts managing page: %s", err)
 			restapi.Respond(w, http.StatusInternalServerError)
 		}
 	})

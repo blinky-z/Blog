@@ -10,13 +10,13 @@ import (
 // general error codes
 var (
 	// TechnicalError - internal server error
-	TechnicalError models.RequestErrorCode = models.NewRequestErrorCode("TECHNICAL_ERROR")
+	TechnicalError = models.NewRequestErrorCode("TECHNICAL_ERROR")
 	// BadRequestBody - invalid body
-	BadRequestBody models.RequestErrorCode = models.NewRequestErrorCode("BAD_BODY")
+	BadRequestBody = models.NewRequestErrorCode("BAD_BODY")
 	// NoPermissions - user doesn't permissions to create/update/delete resource
-	NoPermissions models.RequestErrorCode = models.NewRequestErrorCode("NO_PERMISSIONS")
+	NoPermissions = models.NewRequestErrorCode("NO_PERMISSIONS")
 	// InvalidRequest - error code for other errors
-	InvalidRequest models.RequestErrorCode = models.NewRequestErrorCode("INVALID_REQUEST")
+	InvalidRequest = models.NewRequestErrorCode("INVALID_REQUEST")
 )
 
 // Respond - helper function for responding with only status code

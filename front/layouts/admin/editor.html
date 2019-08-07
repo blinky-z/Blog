@@ -1,0 +1,49 @@
+{{define "admin-editor"}}
+    <!DOCTYPE html>
+    <html lang="ru">
+    {{ template "head" . }}
+    <link rel="stylesheet" type="text/css" media="screen" href="/css/admin.css"/>
+    <script src="/js/admin.js"></script>
+    <body>
+    <div class="container wrapper">
+        {{ template "header" . }}
+
+        <form class="form-style-1">
+            <ul>
+                <li>
+                    <label for="title">Title</label>
+                    <input type="text" id="title" class="field-long" maxlength="300" value="{{.Data.Post.Title}}">
+                </li>
+                <li>
+                    <label for="metaDescription">Meta description</label>
+                    <input type="text" id="metaDescription" class="field-long" maxlength="400"
+                           value="{{.Data.Post.Metadata.Description}}">
+                </li>
+                <li>
+                    <label for="metaKeywords">Meta keywords</label>
+                    <input type="text" id="metaKeywords" class="field-long" maxlength="400"
+                           value="{{sliceToString .Data.Post.Metadata.Keywords}}">
+                </li>
+                <li>
+                    <label for="tags">Tags</label>
+                    <input type="text" id="tags" class="field-long" maxlength="400"
+                           value="{{sliceToString .Data.Post.Tags}}">
+                </li>
+            </ul>
+        </form>
+
+        <div id="contentTemp" style="display: none">
+            {{.Data.Post.Snippet}}
+            {{ "&lt;cut&gt;" }}
+            {{.Data.Post.Content}}
+        </div>
+        <div id="editSection"></div>
+
+        <div class="editor button-wrapper">
+            <button onclick="publishPost(this, '{{.Domain.String}}')" data-id="{{.Data.Post.ID}}">Publish</button>
+        </div>
+    </div>
+    {{ template "footer" . }}
+    </body>
+    </html>
+{{end}}

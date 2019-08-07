@@ -2,16 +2,19 @@
     <!DOCTYPE html>
     <html lang="ru">
     {{ template "head" . }}
+    <link rel="stylesheet" type="text/css" media="screen" href="/css/post.css"/>
+    <script src="/js/post.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
     <body>
     <div class="container wrapper post">
         {{ template "header" . }}
 
         <div class="post-header">
             <h1 class="title">{{ .Data.Post.Title }}</h1>
-            <div class="meta">Posted at &mdash; {{ convertTime .Data.Post.Date }}</div>
+            <div class="meta">Posted at &mdash; {{ formatTime .Data.Post.Date }}</div>
         </div>
 
-        <div class="markdown">
+        <div id="content">
             {{ .Data.Post.Content }}
         </div>
 

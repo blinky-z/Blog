@@ -1,0 +1,14 @@
+.post .post-header .title {
+    word-break: break-word;
+}
+
+.tui-editor-contents {
+    font-size: 14px;
+    word-break: break-word;
+    line-height: normal;
+}
+
+#content {
+    width: 100%;
+    max-width: 100%;
+}

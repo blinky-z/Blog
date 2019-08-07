@@ -1,12 +1,17 @@
-{{define "index"}}
+{{define "admin"}}
     <!DOCTYPE html>
     <html lang="ru">
     {{ template "head" . }}
+    <link rel="stylesheet" type="text/css" media="screen" href="/css/admin.css"/>
     <body>
     <div class="container wrapper">
         {{ template "header" . }}
 
-
+        <span>Tools:</span>
+        <ul>
+            <li><a href="/editor">Editor</a></li>
+            <li><a href="/manage-posts">Manage posts</a></li>
+        </ul>
     </div>
     {{ template "footer" . }}
     </body>

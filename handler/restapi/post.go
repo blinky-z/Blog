@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/blinky-z/Blog/models"
-	"github.com/blinky-z/Blog/service/commentService"
 	"github.com/blinky-z/Blog/service/postService"
 	"github.com/gorilla/mux"
 	"log"
@@ -37,17 +36,17 @@ type GetPostsRequestQueryParams struct {
 // error codes for this API
 var (
 	// InvalidPostTitle - invalid post title
-	InvalidPostTitle models.RequestErrorCode = models.NewRequestErrorCode("INVALID_TITLE")
+	InvalidPostTitle = models.NewRequestErrorCode("INVALID_TITLE")
 	// InvalidPostSnippet - invalid post snippet
-	InvalidPostSnippet models.RequestErrorCode = models.NewRequestErrorCode("INVALID_SNIPPET")
+	InvalidPostSnippet = models.NewRequestErrorCode("INVALID_SNIPPET")
 	// InvalidPostContent - invalid post content
-	InvalidPostContent models.RequestErrorCode = models.NewRequestErrorCode("INVALID_CONTENT")
+	InvalidPostContent = models.NewRequestErrorCode("INVALID_CONTENT")
 	// InvalidPostMetadata - invalid meta description or keywords
-	InvalidPostMetadata models.RequestErrorCode = models.NewRequestErrorCode("INVALID_METADATA")
+	InvalidPostMetadata = models.NewRequestErrorCode("INVALID_METADATA")
 	// NoSuchPost - post does not exist
-	NoSuchPost models.RequestErrorCode = models.NewRequestErrorCode("NO_SUCH_POST")
+	NoSuchPost = models.NewRequestErrorCode("NO_SUCH_POST")
 	// InvalidPostsRange - invalid range of posts
-	InvalidPostsRange models.RequestErrorCode = models.NewRequestErrorCode("INVALID_POSTS_RANGE")
+	InvalidPostsRange = models.NewRequestErrorCode("INVALID_POSTS_RANGE")
 )
 
 // constants for use in validator methods
@@ -68,7 +67,7 @@ const (
 
 	// MinMetaKeywordsAmount - min allowed amount of meta keywords
 	// 4 is a good value for search engines
-	MinMetaKeywordsAmount int = 1
+	MinMetaKeywordsAmount int = 0
 	// MaxMetaKeywordsAmount - max allowed amount of meta keywords. Don't overuse keywords.
 	// 4 is a good value for search engines
 	MaxMetaKeywordsAmount int = 4
@@ -158,9 +157,6 @@ func validateCreatePostRequest(request *models.CreatePostRequest) models.Request
 	if err := validatePostMetadata(&request.Metadata); err != nil {
 		return err
 	}
-	if err := validateUsername(request.Author); err != nil {
-		return err
-	}
 	if err := validatePostSnippet(&request.Snippet); err != nil {
 		return err
 	}
@@ -176,9 +172,6 @@ func validateUpdatePostRequest(request *models.UpdatePostRequest) models.Request
 		return err
 	}
 	if err := validatePostMetadata(&request.Metadata); err != nil {
-		return err
-	}
-	if err := validateUsername(request.Author); err != nil {
 		return err
 	}
 	if err := validatePostSnippet(&request.Snippet); err != nil {
@@ -208,12 +201,12 @@ func (api *PostAPIHandler) CreatePostHandler() http.Handler {
 	logInfo := api.logInfo
 	logError := api.logError
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userRole := r.Context().Value(CtxRoleKey).(models.UserRole)
-		if userRole != roleAdmin {
-			logError.Printf("User role doesn't have permissions to create posts. User role: %s", userRole)
-			RespondWithError(w, http.StatusForbidden, NoPermissions)
-			return
-		}
+		//userRole := r.Context().Value(CtxRoleKey).(models.UserRole)
+		//if userRole != roleAdmin {
+		//	logError.Printf("User role doesn't have permissions to create posts. User role: %s", userRole)
+		//	RespondWithError(w, http.StatusForbidden, NoPermissions)
+		//	return
+		//}
 
 		request := models.CreatePostRequest{}
 		err := json.NewDecoder(r.Body).Decode(&request)
@@ -233,7 +226,6 @@ func (api *PostAPIHandler) CreatePostHandler() http.Handler {
 
 		saveRequest := &postService.SaveRequest{
 			Title:    request.Title,
-			Author:   request.Author,
 			Snippet:  request.Snippet,
 			Content:  request.Content,
 			Metadata: request.Metadata,
@@ -255,11 +247,11 @@ func (api *PostAPIHandler) UpdatePostHandler() http.Handler {
 	logInfo := api.logInfo
 	logError := api.logError
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userRole := r.Context().Value(CtxRoleKey).(models.UserRole)
-		if userRole != roleAdmin {
-			RespondWithError(w, http.StatusForbidden, NoPermissions)
-			return
-		}
+		//userRole := r.Context().Value(CtxRoleKey).(models.UserRole)
+		//if userRole != roleAdmin {
+		//	RespondWithError(w, http.StatusForbidden, NoPermissions)
+		//	return
+		//}
 
 		request := models.UpdatePostRequest{}
 		err := json.NewDecoder(r.Body).Decode(&request)
@@ -300,7 +292,6 @@ func (api *PostAPIHandler) UpdatePostHandler() http.Handler {
 		updateRequest := &postService.UpdateRequest{
 			ID:       postID,
 			Title:    request.Title,
-			Author:   request.Author,
 			Snippet:  request.Snippet,
 			Content:  request.Content,
 			Metadata: request.Metadata,
@@ -322,11 +313,11 @@ func (api *PostAPIHandler) DeletePostHandler() http.Handler {
 	logInfo := api.logInfo
 	logError := api.logError
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userRole := r.Context().Value(CtxRoleKey).(models.UserRole)
-		if userRole != roleAdmin {
-			RespondWithError(w, http.StatusForbidden, NoPermissions)
-			return
-		}
+		//userRole := r.Context().Value(CtxRoleKey).(models.UserRole)
+		//if userRole != roleAdmin {
+		//	RespondWithError(w, http.StatusForbidden, NoPermissions)
+		//	return
+		//}
 
 		postID := mux.Vars(r)["id"]
 		logInfo.Printf("Got new post deletion request. Post ID: %s", postID)
@@ -346,6 +337,7 @@ func (api *PostAPIHandler) DeletePostHandler() http.Handler {
 	})
 }
 
+// unused
 // GetCertainPostHandler - this handler serves GET request for single post
 func (api *PostAPIHandler) GetCertainPostHandler() http.Handler {
 	logInfo := api.logInfo
@@ -374,22 +366,11 @@ func (api *PostAPIHandler) GetCertainPostHandler() http.Handler {
 			}
 		}
 
-		comments, err := commentService.GetAllByPostID(api.db, postID)
-		if err != nil {
-			logError.Printf("Error retrieving post from database: error retrieving comments. Post ID: %s. Error: %s",
-				postID, err)
-			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-			return
-		}
-
-		certainPostResponse := &models.CertainPost{
-			Post:     post,
-			Comments: comments,
-		}
-		RespondWithBody(w, http.StatusOK, certainPostResponse)
+		RespondWithBody(w, http.StatusOK, post)
 	})
 }
 
+// unused
 // GetPostsHandler - this handler serves GET request for all posts in the given range
 func (api *PostAPIHandler) GetPostsHandler() http.Handler {
 	logInfo := api.logInfo

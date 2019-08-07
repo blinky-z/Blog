@@ -1,4 +1,4 @@
-# for running with traefik enabled
+# for running with traefik
 version: '3'
 
 services:
@@ -10,18 +10,19 @@ services:
       - DB_NAME=postgres
       - DB_HOST=localhost
       - DB_PORT=5432
-      - JWT_SECRET_KEY=superSecretKey
-      - ADMINS=admin1, admin2
+      - DOMAIN=https://example.com
       - SERVER_PORT=8080
     restart: always
     networks:
       - web
+    container_name: blog
     labels:
       - "traefik.backend=blog"
-      - "traefik.frontend.rule=Host:"
       - "traefik.docker.network=web"
       - "traefik.port=8080"
-    container_name: blog
+      - "traefik.site.frontend.rule=Host:example.com"
+      - "traefik.admin.frontend.rule=Host:admin.example.com"
+      - "traefik.admin.frontend.auth.basic.users=user1:hash,user2:hash"
 
 networks:
   web:

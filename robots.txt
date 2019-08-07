@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /$
+Allow: /posts$
+Allow: /posts?page=*
+Allow: /posts/*
+Allow: /tags$
+Allow: /tags/*
+Allow: /about$
+Sitemap: https://example.com/sitemap

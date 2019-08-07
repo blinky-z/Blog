@@ -1,21 +1,25 @@
-{{define "all-posts"}}
+{{define "admin-manage-posts"}}
     <!DOCTYPE html>
     <html lang="ru">
     {{ template "head" . }}
+    <link rel="stylesheet" type="text/css" media="screen" href="/css/admin.css"/>
+    <script src="/js/admin.js"></script>
     <body>
-    <div class="container wrapper list">
+    <div class="container wrapper">
         {{ template "header" . }}
 
-        {{if eq .Data.Type "Tagged"}}
-            <h1>Entries tagged - <i>"{{.Data.Tag}}"</i></h1>
-        {{else}}
-            <h1 class="page-title">All articles</h1>
-        {{end}}
+        <h1>Manage posts</h1>
 
-        <ul class="posts">
+        <ul class="posts manage-posts">
+            {{$domain := .Domain.String}}
             {{ range .Data.Posts }}
                 <li class="post">
-                    <a href="/posts/{{.ID}}">{{.Title}}</a> <span class="meta">{{ formatTime .Date }}</span>
+                    <a href="{{$domain}}/posts/{{.ID}}">{{.Title}}</a>
+                    <span class="meta">{{ formatTime .Date }}</span>
+                    <div class="manage-links" data-id="{{.ID}}">
+                        <a href="#" onclick="deletePost(this)">Delete</a>
+                        <a href="/editor?id={{.ID}}">Edit</a>
+                    </div>
                 </li>
             {{- end -}}
         </ul>

@@ -1,22 +1,29 @@
 {{define "head"}}
-<head>
-    <meta charset="UTF-8">
-    <meta name="description" content="{{.Head.Metadata.Description}}">
-    <meta name="keywords"
-          content="{{range $i, $keyword := .Head.Metadata.Keywords}}{{if $i}},{{end}}{{$keyword}}{{end}}">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="description" content="{{.Head.Metadata.Description}}">
+        <meta name="keywords" content="{{sliceToString .Head.Metadata.Keywords}}">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-    <title>{{- .Head.Title -}}</title>
+        <title>{{- .Head.Title -}}</title>
 
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <link href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,300italic,400italic|Raleway:500,100,300"
-          rel="stylesheet">
-    <link rel="stylesheet" type="text/css" media="screen" href="/css/normalize.css"/>
-    <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css"/>
-
-    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
-    <script src="/js/feather.min.js"></script>
-    <script src="/js/main.js"></script>
-</head>
+        <link href="/images/favicon.ico" rel="icon" type="image/x-icon"/>
+        <link href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,300italic,400italic|Raleway:500,100,300"
+              rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+        <script src="https://code.jquery.com/jquery-3.4.1.min.js"
+                integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="https://uicdn.toast.com/tui-editor/latest/tui-editor.css"/>
+        <link rel="stylesheet" href="https://uicdn.toast.com/tui-editor/latest/tui-editor-contents.css"/>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.33.0/codemirror.css"/>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.9/highlight.min.js"></script>
+        <script src="https://uicdn.toast.com/tui-editor/latest/tui-editor-Editor-full.js"></script>
+        <link rel="stylesheet" type="text/css" media="screen" href="/css/normalize.css"/>
+        <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css"/>
+        <script src="/js/feather.min.js"></script>
+        <script src="/js/main.js"></script>
+    </head>
 {{end}}

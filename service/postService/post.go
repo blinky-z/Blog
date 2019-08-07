@@ -10,9 +10,9 @@ import (
 
 const (
 	// postsInsertFields - fields that should be filled while inserting a new entity
-	postsInsertFields = "title, author, snippet, content, metadata"
-	// postsAllFields - all entity fields
-	postsAllFields = "id, title, author, date, snippet, content, metadata"
+	postsInsertFields = "title, snippet, content, metadata"
+	// postsAllFieldsWithHtmlContent - all entity fields
+	postsAllFieldsWithHtmlContent = "id, title, date, snippet, content, metadata"
 )
 
 // Save - saves a new post
@@ -27,10 +27,11 @@ func Save(db *sql.DB, request *SaveRequest) (createdPost *models.Post, err error
 	}
 
 	var metadataAsJSONString string
-	if err = db.QueryRow("insert into posts ("+postsInsertFields+") values($1, $2, $3, $4, $5) "+
-		"RETURNING "+postsAllFields, request.Title, request.Author, request.Snippet, request.Content, encodedMetadata).
-		Scan(&createdPost.ID, &createdPost.Title, &createdPost.Author, &createdPost.Date, &createdPost.Snippet,
-			&createdPost.Content, &metadataAsJSONString); err != nil {
+	if err = db.QueryRow("insert into posts ("+postsInsertFields+") values($1, $2, $3, $4) "+
+		"RETURNING "+postsAllFieldsWithHtmlContent,
+		request.Title, request.Snippet, request.Content, encodedMetadata).
+		Scan(&createdPost.ID, &createdPost.Title, &createdPost.Date, &createdPost.Snippet, &createdPost.Content,
+			&metadataAsJSONString); err != nil {
 		return
 	}
 
@@ -54,11 +55,11 @@ func Update(db *sql.DB, request *UpdateRequest) (updatedPost *models.Post, err e
 	}
 
 	var metadataAsJSONString string
-	if err = db.QueryRow("UPDATE posts SET ("+postsInsertFields+") = ($1, $2, $3, $4, $5) "+
-		"WHERE id = $6 RETURNING "+postsAllFields, request.Title, request.Author, request.Snippet, request.Content,
-		encodedMetadata, request.ID).
-		Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Author, &updatedPost.Date, &updatedPost.Snippet,
-			&updatedPost.Content, &metadataAsJSONString); err != nil {
+	if err = db.QueryRow("UPDATE posts SET ("+postsInsertFields+") = ($1, $2, $3, $4) "+
+		"WHERE id = $5 RETURNING "+postsAllFieldsWithHtmlContent,
+		request.Title, request.Snippet, request.Content, encodedMetadata, request.ID).
+		Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Date, &updatedPost.Snippet, &updatedPost.Content,
+			&metadataAsJSONString); err != nil {
 		return
 	}
 	err = json.Unmarshal([]byte(metadataAsJSONString), &updatedPost.Metadata)
@@ -90,8 +91,8 @@ func GetByID(db *sql.DB, postID string) (models.Post, error) {
 	var post models.Post
 
 	var metadataAsJSONString string
-	if err := db.QueryRow("select "+postsAllFields+" from posts where id = $1", postID).
-		Scan(&post.ID, &post.Title, &post.Author, &post.Date, &post.Snippet, &post.Content, &metadataAsJSONString); err != nil {
+	if err := db.QueryRow("select "+postsAllFieldsWithHtmlContent+" from posts where id = $1", postID).
+		Scan(&post.ID, &post.Title, &post.Date, &post.Snippet, &post.Content, &metadataAsJSONString); err != nil {
 		if err == sql.ErrNoRows {
 			return post, err
 		}
@@ -137,7 +138,7 @@ func fillTags(db *sql.DB, posts []models.Post) ([]models.Post, error) {
 func GetPostsInRange(db *sql.DB, page, postsPerPage int) ([]models.Post, error) {
 	var posts []models.Post
 
-	rows, err := db.Query("select "+postsAllFields+" from posts order by id DESC offset $1 limit $2",
+	rows, err := db.Query("select "+postsAllFieldsWithHtmlContent+" from posts order by id DESC offset $1 limit $2",
 		page*postsPerPage, postsPerPage)
 	if err != nil {
 		return posts, err
@@ -146,7 +147,7 @@ func GetPostsInRange(db *sql.DB, page, postsPerPage int) ([]models.Post, error) 
 	for rows.Next() {
 		var currentPost models.Post
 		var metadataAsJSONString string
-		if err = rows.Scan(&currentPost.ID, &currentPost.Title, &currentPost.Author, &currentPost.Date,
+		if err = rows.Scan(&currentPost.ID, &currentPost.Title, &currentPost.Date,
 			&currentPost.Snippet, &currentPost.Content, &metadataAsJSONString); err != nil {
 			return posts, err
 		}
@@ -171,7 +172,7 @@ func GetPostsInRangeByTag(db *sql.DB, page, postsPerPage int, t string) ([]model
 		return posts, err
 	}
 
-	rows, err := db.Query("select "+postsAllFields+" from posts where id = any($1) order by id DESC offset $2 limit $3",
+	rows, err := db.Query("select "+postsAllFieldsWithHtmlContent+" from posts where id = any($1) order by id DESC offset $2 limit $3",
 		pg.Array(postIds), page*postsPerPage, postsPerPage)
 	if err != nil {
 		return posts, err
@@ -180,7 +181,7 @@ func GetPostsInRangeByTag(db *sql.DB, page, postsPerPage int, t string) ([]model
 	for rows.Next() {
 		var currentPost models.Post
 		var metadataAsJSONString string
-		if err = rows.Scan(&currentPost.ID, &currentPost.Title, &currentPost.Author, &currentPost.Date,
+		if err = rows.Scan(&currentPost.ID, &currentPost.Title, &currentPost.Date,
 			&currentPost.Snippet, &currentPost.Content, &metadataAsJSONString); err != nil {
 			return posts, err
 		}

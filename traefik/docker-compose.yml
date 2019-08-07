@@ -15,7 +15,7 @@ services:
       - /opt/traefik/acme.json:/acme.json
     container_name: traefik
     labels: 
-      - "traefik.frontend.rule="
+      - "traefik.frontend.rule=Host:monitor.example.com"
       - "traefik.port=8081"
 
 networks:
