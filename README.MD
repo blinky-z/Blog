@@ -21,7 +21,7 @@
 docker-compose -f local-docker-compose.yml up -d
 ```
 
-Данный способ не рекомендуется к использованию, так как в такой конфигурации админка не защищена.
+Данный способ не рекомендуется к использованию, так как в такой конфигурации не защищена админка.
 
 ---
 
@@ -106,7 +106,7 @@ labels:
 * *traefik.site.frontend.rule=Host:<domain>* - основной путь для доступа к сайту
 * *traefik.adminRobot.frontend.rule=Host:admin.<domain>;Path:/robots.txt* - специальное правило для поисковых роботов: мы не защищаем этот путь, чтобы робот смог получить robots.txt для админки
 * *traefik.admin.frontend.rule=Host:admin.<domain>* - путь для доступа к админке
-* *traefik.admin.frontend.auth.basic.users=user:hash* - Basic auth для админки. Используйте или уже раннее сгенерированные данные, или сгенерируйте новые по тому же принципу. **Важно:**: знаки '$' должны быть дублированы для эскейпинга. Например, если хэш - `$2y$05$qZmUyodGOgHfc7momnSAcehoXD8ue8ZXI0wFBdLpCb9faNsgWSk2W`, то эскейпированная строка: `$$2y$$05$$qZmUyodGOgHfc7momnSAcehoXD8ue8ZXI0wFBdLpCb9faNsgWSk2W`.
+* *traefik.admin.frontend.auth.basic.users=user:hash* - Basic auth для админки. Используйте или уже раннее сгенерированные данные, или сгенерируйте новые по тому же принципу. **Важно:** знаки '$' должны быть продублированы для эскейпинга. Например, если хэш - `$2y$05$qZmUyodGOgHfc7momnSAcehoXD8ue8ZXI0wFBdLpCb9faNsgWSk2W`, то эскейпированная строка: `$$2y$$05$$qZmUyodGOgHfc7momnSAcehoXD8ue8ZXI0wFBdLpCb9faNsgWSk2W`.
 
 2) Убедитесь, что в label *"traefik.port="* стоит тот же самый порт, что и в env переменной *SERVER_PORT*.
 
