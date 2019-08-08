@@ -405,7 +405,13 @@ func (renderApi *Handler) RenderAboutPageHandler() http.Handler {
 		data.Data = struct {
 			Content string
 		}{
-			Content: "Приветствую на моем сайте!",
+			Content: `Приветствую на моем сайте! Я пишу о Linux, Java и низкоуровневом программировании
+				<br>
+				<hr>
+				<b>Мои труды:</b>
+				<ul>
+			<li><a href="https://habr.com/ru/post/460257/">Hello, World! Глубокое погружение в Терминалы</a></li>
+			</ul>`,
 		}
 
 		if err := tmpl.ExecuteTemplate(w, "about", data); err != nil {

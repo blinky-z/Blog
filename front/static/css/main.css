@@ -375,10 +375,14 @@ ul {
     word-break: break-word;
 }
 
-.post #content {
+.post .content {
     font-size: 14px;
     word-break: break-word;
     line-height: normal;
     width: 100%;
     max-width: 100%;
+}
+
+.post .content.about ul {
+    margin-left: 10px;
 }

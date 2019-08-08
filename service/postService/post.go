@@ -87,16 +87,13 @@ func Delete(db *sql.DB, postID string) error {
 }
 
 // GetByID - retrieves post with the given ID
+// if post does not exist, err.SqlNoRows error will be returned
 func GetByID(db *sql.DB, postID string) (models.Post, error) {
 	var post models.Post
 
 	var metadataAsJSONString string
 	if err := db.QueryRow("select "+postsAllFieldsWithHtmlContent+" from posts where id = $1", postID).
 		Scan(&post.ID, &post.Title, &post.Date, &post.Snippet, &post.Content, &metadataAsJSONString); err != nil {
-		if err == sql.ErrNoRows {
-			return post, err
-		}
-
 		return post, err
 	}
 
