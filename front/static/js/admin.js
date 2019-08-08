@@ -126,7 +126,7 @@ function publishPost(action, domain) {
 }
 
 function deletePost(action) {
-    var result = confirm("Are you sure you want to delete this post?");
+    var result = confirm("You sure you want to delete this post?");
     if (result) {
         var actions = $(action).parent();
         console.log(actions);

@@ -83,22 +83,28 @@ select {
     color: red;
 }
 
-.posts.manage-posts .post {
+.admin-dash .posts.manage-posts .post {
     border-radius: 10px;
     border-top: #4691A4;
     border-bottom: #4691A4;
 }
 
-.posts.manage-posts .post .manage-links a {
+.admin-dash .posts.manage-posts .post .manage-links a {
     display: inline-flex;
     color: mediumblue;
     margin: 0 6px;
 }
 
-.editor.button-wrapper {
+.admin-dash .editor .button-wrapper {
     margin: 10px 0;
 }
 
-.editor.button-wrapper button {
+.admin-dash .editor .button-wrapper button {
     color: mediumblue;
+}
+
+.admin-dash .editor .tui-editor-contents {
+    font-size: 14px;
+    word-break: break-word;
+    line-height: normal;
 }
