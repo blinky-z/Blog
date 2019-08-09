@@ -1,6 +1,7 @@
 var cutDelimiter = '&lt;cut&gt;';
 var editor;
 var tagsInputTagify;
+const editorTextBackupKey = "editor-text";
 
 // initialize editor section: create tui-editor and add available tags to tagify suggestions
 $(document).ready(function () {
@@ -15,10 +16,15 @@ $(document).ready(function () {
         });
 
         var contentTemp = $("#contentTemp");
-        var content = contentTemp.html();
-        if (content !== "") {
-            editor.setHtml(content);
+        var postID = contentTemp.attr("data-postID");
+
+        var backupText = localStorage.getItem(editorTextBackupKey + postID);
+        if (backupText != null) {
+            editor.setHtml(backupText)
+        } else {
+            editor.setHtml(contentTemp.html())
         }
+
         contentTemp.remove();
 
         var tagsInput = document.querySelector("#tags");
@@ -31,7 +37,11 @@ $(document).ready(function () {
 
         tagsInputTagify = new Tagify(tagsInput, {
             whitelist: allTags,
-        })
+        });
+
+        window.setInterval(function () {
+            localStorage.setItem(editorTextBackupKey + postID, editor.getHtml())
+        }, 5000);
     }
 });
 
@@ -97,6 +107,8 @@ function publishPost(action, domain) {
         url = `/api/posts/${postID}`;
         type = 'PUT';
     }
+
+    localStorage.setItem(editorTextBackupKey + postID, editor.getHTML());
 
     $.ajax(
         {

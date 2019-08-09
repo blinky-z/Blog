@@ -45,7 +45,7 @@
                 </ul>
             </form>
 
-            <div id="contentTemp" style="display: none">
+            <div id="contentTemp" data-postID="{{.Data.Post.ID}}" style="display: none">
                 {{.Data.Post.Snippet}}
                 {{ "&lt;cut&gt;" }}
                 {{.Data.Post.Content}}
