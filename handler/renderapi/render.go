@@ -478,21 +478,21 @@ func (renderApi *Handler) RenderAdminEditorPageHandler() http.Handler {
 			}
 			adminEditorPageData.Post = post
 			adminEditorPageData.PostPresent = true
-
-			allTags, err := tagService.GetAll(renderApi.db)
-			if err != nil {
-				restapi.Respond(w, http.StatusInternalServerError)
-				return
-			}
-			allTagsAsStringSlice := make([]string, len(allTags))
-			for tagIndex, tag := range allTags {
-				allTagsAsStringSlice[tagIndex] = tag.Name
-			}
-			adminEditorPageData.Tags = allTagsAsStringSlice
 		} else {
 			adminEditorPageData.Post = models.Post{}
 			adminEditorPageData.PostPresent = false
 		}
+
+		allTags, err := tagService.GetAll(renderApi.db)
+		if err != nil {
+			restapi.Respond(w, http.StatusInternalServerError)
+			return
+		}
+		allTagsAsStringSlice := make([]string, len(allTags))
+		for tagIndex, tag := range allTags {
+			allTagsAsStringSlice[tagIndex] = tag.Name
+		}
+		adminEditorPageData.Tags = allTagsAsStringSlice
 
 		tmpl, err := template.New("admin-editor").Funcs(renderFuncs).
 			ParseFiles(
