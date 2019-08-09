@@ -4,13 +4,16 @@
     {{ template "head" . }}
     <link rel="stylesheet" type="text/css" media="screen" href="/css/admin.css"/>
     <body>
-    <div class="container wrapper">
+    <div class="container wrapper admin-dash">
         {{ template "header" . }}
+
+        <h2>Admin Dashboard</h2>
 
         <span>Tools:</span>
         <ul>
             <li><a href="/editor">Editor</a></li>
             <li><a href="/manage-posts">Manage posts</a></li>
+            <li><a href="/manage-tags">Manage tags</a></li>
         </ul>
     </div>
     {{ template "footer" . }}

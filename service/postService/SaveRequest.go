@@ -9,4 +9,5 @@ type SaveRequest struct {
 	Snippet  string
 	Content  string
 	Metadata models.MetaData
+	Tags     []string
 }

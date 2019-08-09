@@ -108,3 +108,7 @@ select {
     word-break: break-word;
     line-height: normal;
 }
+
+.admin-dash .back-to-dash-wrapper a {
+    color: rebeccapurple;
+}

@@ -224,11 +224,18 @@ func (api *PostAPIHandler) CreatePostHandler() http.Handler {
 			return
 		}
 
+		// trim spaces
+		tags := make([]string, len(request.Tags))
+		for tagIndex, tag := range request.Tags {
+			tags[tagIndex] = strings.TrimSpace(tag)
+		}
+
 		saveRequest := &postService.SaveRequest{
 			Title:    request.Title,
 			Snippet:  request.Snippet,
 			Content:  request.Content,
 			Metadata: request.Metadata,
+			Tags:     tags,
 		}
 		createdPost, err := postService.Save(api.db, saveRequest)
 		if err != nil {
@@ -289,12 +296,19 @@ func (api *PostAPIHandler) UpdatePostHandler() http.Handler {
 			return
 		}
 
+		// trim spaces
+		tags := make([]string, len(request.Tags))
+		for tagIndex, tag := range request.Tags {
+			tags[tagIndex] = strings.TrimSpace(tag)
+		}
+
 		updateRequest := &postService.UpdateRequest{
 			ID:       postID,
 			Title:    request.Title,
 			Snippet:  request.Snippet,
 			Content:  request.Content,
 			Metadata: request.Metadata,
+			Tags:     tags,
 		}
 		updatedPost, err := postService.Update(api.db, updateRequest)
 		if err != nil {
@@ -328,8 +342,10 @@ func (api *PostAPIHandler) DeletePostHandler() http.Handler {
 			return
 		}
 
-		if err := postService.Delete(api.db, postID); err != nil {
-			logError.Printf("Error deleting post. Post ID: %s. Error: %s", postID, err)
+		if err := postService.DeleteByID(api.db, postID); err != nil {
+			logError.Printf("Error deleting a post. Post ID: %s. Error: %s", postID, err)
+			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
+			return
 		}
 
 		logInfo.Printf("Post deleted. Post ID: %s", postID)

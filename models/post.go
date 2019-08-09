@@ -3,6 +3,13 @@ package models
 import "time"
 
 // Post - represents blog post
+// @ID - ID created by database
+// @Title - title
+// @Date - creation time
+// @Snippet - short description of this post
+// @Content - content
+// @Metadata - site metadata for this post. It replaces description and keywords in <head> tag
+// @Tags - tags
 type Post struct {
 	ID       string
 	Title    string

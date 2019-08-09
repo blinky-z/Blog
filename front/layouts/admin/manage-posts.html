@@ -8,6 +8,10 @@
     <div class="container wrapper admin-dash">
         {{ template "header" . }}
 
+        <div class="back-to-dash-wrapper">
+            <a href="/">← Back to Admin Dashboard</a>
+        </div>
+
         <h1>Manage posts</h1>
 
         <ul class="posts manage-posts">
@@ -17,7 +21,7 @@
                     <a href="{{$domain}}/posts/{{.ID}}">{{.Title}}</a>
                     <span class="meta">{{ formatTime .Date }}</span>
                     <div class="manage-links" data-id="{{.ID}}">
-                        <a href="#" onclick="deletePost(this)">Delete</a>
+                        <a href="#" onclick="deletePost(this); return false">Delete</a>
                         <a href="/editor?id={{.ID}}">Edit</a>
                     </div>
                 </li>

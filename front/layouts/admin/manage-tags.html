@@ -1,0 +1,36 @@
+{{define "admin-manage-tags"}}
+    <!DOCTYPE html>
+    <html lang="ru">
+    {{ template "head" . }}
+    <link rel="stylesheet" type="text/css" media="screen" href="/css/admin.css"/>
+    <script src="/js/admin.js"></script>
+    <body>
+    <div class="container wrapper admin-dash">
+        {{ template "header" . }}
+
+        <div class="back-to-dash-wrapper">
+            <a href="/">← Back to Admin Dashboard</a>
+        </div>
+
+        <h1>Manage tags</h1>
+
+        <button onclick="createTag()">Create a new tag</button>
+
+        <ul class="posts manage-posts">
+            {{$domain := .Domain.String}}
+            {{ range .Data.Tags }}
+                {{$tagName := .Name}}
+                <li class="post">
+                    <a href="{{$domain}}/tags/{{$tagName}}">{{$tagName}}</a>
+                    <div class="manage-links" data-id="{{.ID}}" data-name="{{$tagName}}">
+                        <a href="#" onclick="deleteTag(this); return false">Delete</a>
+                        <a href="#" onclick="editTag(this); return false">Edit</a>
+                    </div>
+                </li>
+            {{- end -}}
+        </ul>
+    </div>
+    {{ template "footer" . }}
+    </body>
+    </html>
+{{end}}

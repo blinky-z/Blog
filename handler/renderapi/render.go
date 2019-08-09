@@ -8,7 +8,6 @@ import (
 	"github.com/blinky-z/Blog/service/postService"
 	"github.com/blinky-z/Blog/service/tagService"
 	"github.com/gorilla/mux"
-	"html"
 	"log"
 	"net/http"
 	"net/url"
@@ -88,12 +87,13 @@ type allPostsPageData struct {
 	Posts        []models.Post
 	PageSelector pageSelector
 	Type         string
-	Tag          string
+	Tag          string // set if it's the tags/{tag} page
 }
 
 // adminEditorPageData - represents data for admin dashboard editor
 type adminEditorPageData struct {
 	Post        models.Post
+	Tags        []string
 	PostPresent bool
 }
 
@@ -110,18 +110,12 @@ var defaultSiteDescription = SiteDescription{
 // functions for use in go templates
 var renderFuncs = template.FuncMap{
 	"formatTime":    formatTime,
-	"unescape":      unescape,
 	"sliceToString": sliceToString,
 }
 
 // formatTime - formats time.Time and returns formatted time as string
 func formatTime(t time.Time) string {
 	return t.Format(timeFormat)
-}
-
-// unescape - unescapes string
-func unescape(s string) string {
-	return html.UnescapeString(s)
 }
 
 func sliceToString(a []string) string {
@@ -353,10 +347,14 @@ func (renderApi *Handler) RenderAllTagsPageHandler() http.Handler {
 			return
 		}
 
-		tags, err := tagService.GetAll(renderApi.db)
+		allTags, err := tagService.GetAll(renderApi.db)
 		if err != nil {
 			restapi.Respond(w, http.StatusInternalServerError)
 			return
+		}
+		allTagsAsStringSlice := make([]string, len(allTags))
+		for tagIndex, tag := range allTags {
+			allTagsAsStringSlice[tagIndex] = tag.Name
 		}
 
 		var data Site
@@ -369,7 +367,7 @@ func (renderApi *Handler) RenderAllTagsPageHandler() http.Handler {
 		data.Data = struct {
 			Tags []string
 		}{
-			Tags: tags,
+			Tags: allTagsAsStringSlice,
 		}
 
 		if err := tmpl.ExecuteTemplate(w, "all-tags", data); err != nil {
@@ -405,7 +403,7 @@ func (renderApi *Handler) RenderAboutPageHandler() http.Handler {
 		data.Data = struct {
 			Content string
 		}{
-			Content: `Приветствую на моем сайте! Я пишу о Linux, Java и низкоуровневом программировании
+			Content: `Приветствую на моем сайте! Я пишу о Linux, Java и низкоуровневом программировании.
 				<br>
 				<hr>
 				<b>Мои труды:</b>
@@ -480,6 +478,17 @@ func (renderApi *Handler) RenderAdminEditorPageHandler() http.Handler {
 			}
 			adminEditorPageData.Post = post
 			adminEditorPageData.PostPresent = true
+
+			allTags, err := tagService.GetAll(renderApi.db)
+			if err != nil {
+				restapi.Respond(w, http.StatusInternalServerError)
+				return
+			}
+			allTagsAsStringSlice := make([]string, len(allTags))
+			for tagIndex, tag := range allTags {
+				allTagsAsStringSlice[tagIndex] = tag.Name
+			}
+			adminEditorPageData.Tags = allTagsAsStringSlice
 		} else {
 			adminEditorPageData.Post = models.Post{}
 			adminEditorPageData.PostPresent = false
@@ -543,18 +552,15 @@ func (renderApi *Handler) RenderAdminManagePostsPageHandler() http.Handler {
 				layoutsPath+filepath.FromSlash("partials/footer.html"),
 				layoutsPath+"admin/manage-posts.html")
 		if err != nil {
-			logError.Printf("Error rendering admin dashboard posts managing page: %s", err)
+			logError.Printf("Error allocating admin dashboard posts managing page: %s", err)
 			restapi.Respond(w, http.StatusInternalServerError)
 			return
 		}
 
 		var data Site
 
-		var Title string
-		Title = "Admin Dashboard - Manage posts" + " | Progbloom - A blog about programming"
-
 		data.Head = SiteHead{
-			Title:    Title,
+			Title:    "Admin Dashboard - Manage posts" + " | Progbloom - A blog about programming",
 			Metadata: defaultMetadata,
 		}
 		data.Domain = renderApi.domain
@@ -587,6 +593,49 @@ func (renderApi *Handler) RenderAdminManagePostsPageHandler() http.Handler {
 
 		if err := tmpl.ExecuteTemplate(w, "admin-manage-posts", data); err != nil {
 			logError.Printf("Error rendering admin dashboard posts managing page: %s", err)
+			restapi.Respond(w, http.StatusInternalServerError)
+		}
+	})
+}
+
+func (renderApi *Handler) RenderAdminManageTagsPageHandler() http.Handler {
+	logError := renderApi.logError
+	layoutsPath := renderApi.layoutsPath
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.New("admin-manage-tags").Funcs(renderFuncs).
+			ParseFiles(
+				layoutsPath+filepath.FromSlash("partials/head.html"),
+				layoutsPath+filepath.FromSlash("partials/header.html"),
+				layoutsPath+filepath.FromSlash("partials/footer.html"),
+				layoutsPath+"admin/manage-tags.html")
+		if err != nil {
+			logError.Printf("Error allocating admin dashboard tags managing page: %s", err)
+			restapi.Respond(w, http.StatusInternalServerError)
+			return
+		}
+
+		tags, err := tagService.GetAll(renderApi.db)
+		if err != nil {
+			logError.Printf("Error retrieving all tags: %s", err)
+			restapi.Respond(w, http.StatusInternalServerError)
+			return
+		}
+
+		var data Site
+		data.Head = SiteHead{
+			Title:    "Admin Dashboard - Manage tags" + " | Progbloom - A blog about programming",
+			Metadata: defaultMetadata,
+		}
+		data.Domain = renderApi.domain
+		data.Desc = defaultSiteDescription
+		data.Data = struct {
+			Tags []models.Tag
+		}{
+			Tags: tags,
+		}
+
+		if err := tmpl.ExecuteTemplate(w, "admin-manage-tags", data); err != nil {
+			logError.Printf("Error rendering admin dashboard tags managing page: %s", err)
 			restapi.Respond(w, http.StatusInternalServerError)
 		}
 	})

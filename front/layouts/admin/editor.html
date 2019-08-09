@@ -7,11 +7,17 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.33.0/codemirror.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/>
     <script src="https://uicdn.toast.com/tui-editor/latest/tui-editor-Editor-full.js"></script>
+    <link rel="stylesheet" type="text/css" href="/css/tagify.css"/>
+    <script src="/js/tagify.js"></script>
     <link rel="stylesheet" type="text/css" media="screen" href="/css/admin.css"/>
     <script src="/js/admin.js"></script>
     <body>
     <div class="container wrapper admin-dash">
         {{ template "header" . }}
+
+        <div class="back-to-dash-wrapper">
+            <a href="/">← Back to Admin Dashboard</a>
+        </div>
 
         <div class="editor">
             <form class="form-style-1">
@@ -32,7 +38,8 @@
                     </li>
                     <li>
                         <label for="tags">Tags</label>
-                        <input type="text" id="tags" class="field-long" maxlength="400"
+                        <input type="text" id="tags" class="field-long" data-allTags="{{sliceToString .Data.Tags}}"
+                               maxlength="400"
                                value="{{sliceToString .Data.Post.Tags}}">
                     </li>
                 </ul>

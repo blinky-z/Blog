@@ -1,10 +1,10 @@
 CREATE TABLE if not exists tags
 (
     TAG_ID SERIAL PRIMARY KEY,
-    TAG    varchar(36) UNIQUE not null
+    TAG    varchar(36) not null
 );
 
-Create index tagsTagIndex on tags (TAG);
+Create UNIQUE index tagsTagIndex on tags (TAG);
 
 CREATE TABLE if not exists post_tags
 (

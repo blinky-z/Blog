@@ -11,63 +11,86 @@ import (
 const (
 	// postsInsertFields - fields that should be filled while inserting a new entity
 	postsInsertFields = "title, snippet, content, metadata"
-	// postsAllFieldsWithHtmlContent - all entity fields
-	postsAllFieldsWithHtmlContent = "id, title, date, snippet, content, metadata"
+	// postsAllFields - all entity fields
+	postsAllFields = "id, title, date, snippet, content, metadata"
 )
 
 // Save - saves a new post
 // returns a created post pointed to by 'createdPost' and error
-func Save(db *sql.DB, request *SaveRequest) (createdPost *models.Post, err error) {
-	createdPost = &models.Post{}
-	err = nil
+func Save(db *sql.DB, request *SaveRequest) (*models.Post, error) {
+	createdPost := &models.Post{}
 
 	encodedMetadata, err := json.Marshal(request.Metadata)
 	if err != nil {
-		return
+		return createdPost, err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return createdPost, err
 	}
 
 	var metadataAsJSONString string
-	if err = db.QueryRow("insert into posts ("+postsInsertFields+") values($1, $2, $3, $4) "+
-		"RETURNING "+postsAllFieldsWithHtmlContent,
+	if err = tx.QueryRow("insert into posts ("+postsInsertFields+") values($1, $2, $3, $4) "+
+		"RETURNING "+postsAllFields,
 		request.Title, request.Snippet, request.Content, encodedMetadata).
 		Scan(&createdPost.ID, &createdPost.Title, &createdPost.Date, &createdPost.Snippet, &createdPost.Content,
 			&metadataAsJSONString); err != nil {
-		return
+		return createdPost, err
 	}
 
-	err = json.Unmarshal([]byte(metadataAsJSONString), &createdPost.Metadata)
+	if err = json.Unmarshal([]byte(metadataAsJSONString), &createdPost.Metadata); err != nil {
+		tx.Rollback()
+		return createdPost, err
+	}
+
+	err = tagService.SavePostTags(tx, createdPost.ID, request.Tags)
 	if err != nil {
-		return
+		tx.Rollback()
+		return createdPost, err
 	}
 
-	return
+	createdPost.Tags = request.Tags
+	return createdPost, tx.Commit()
 }
 
 // Update - updates post
 // returns an updated post pointed to by 'updatedPost' and error
-func Update(db *sql.DB, request *UpdateRequest) (updatedPost *models.Post, err error) {
-	updatedPost = &models.Post{}
-	err = nil
+func Update(db *sql.DB, request *UpdateRequest) (*models.Post, error) {
+	updatedPost := &models.Post{}
 
 	encodedMetadata, err := json.Marshal(request.Metadata)
 	if err != nil {
-		return
+		return updatedPost, err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return updatedPost, err
 	}
 
 	var metadataAsJSONString string
-	if err = db.QueryRow("UPDATE posts SET ("+postsInsertFields+") = ($1, $2, $3, $4) "+
-		"WHERE id = $5 RETURNING "+postsAllFieldsWithHtmlContent,
+	if err = tx.QueryRow("UPDATE posts SET ("+postsInsertFields+") = ($1, $2, $3, $4) "+
+		"WHERE id = $5 RETURNING "+postsAllFields,
 		request.Title, request.Snippet, request.Content, encodedMetadata, request.ID).
 		Scan(&updatedPost.ID, &updatedPost.Title, &updatedPost.Date, &updatedPost.Snippet, &updatedPost.Content,
 			&metadataAsJSONString); err != nil {
-		return
-	}
-	err = json.Unmarshal([]byte(metadataAsJSONString), &updatedPost.Metadata)
-	if err != nil {
-		return
+		return updatedPost, err
 	}
 
-	return
+	if err = json.Unmarshal([]byte(metadataAsJSONString), &updatedPost.Metadata); err != nil {
+		tx.Rollback()
+		return updatedPost, err
+	}
+
+	err = tagService.SavePostTags(tx, updatedPost.ID, request.Tags)
+	if err != nil {
+		tx.Rollback()
+		return updatedPost, err
+	}
+
+	updatedPost.Tags = request.Tags
+	return updatedPost, tx.Commit()
 }
 
 // ExistsByID - checks if post with the given ID exists
@@ -78,11 +101,22 @@ func ExistsByID(db *sql.DB, postID string) (bool, error) {
 	return postExists, err
 }
 
-// Delete - deletes post from database
-func Delete(db *sql.DB, postID string) error {
-	if _, err := db.Exec("DELETE FROM posts WHERE id = $1", postID); err != nil {
+// DeleteByID - deletes post from database
+func DeleteByID(db *sql.DB, postID string) error {
+	tx, err := db.Begin()
+	if err != nil {
 		return err
 	}
+
+	if _, err := tx.Exec("DELETE FROM posts WHERE id = $1", postID); err != nil {
+		return err
+	}
+
+	if err = tagService.DeletePostTags(tx, postID); err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	return nil
 }
 
@@ -92,7 +126,7 @@ func GetByID(db *sql.DB, postID string) (models.Post, error) {
 	var post models.Post
 
 	var metadataAsJSONString string
-	if err := db.QueryRow("select "+postsAllFieldsWithHtmlContent+" from posts where id = $1", postID).
+	if err := db.QueryRow("select "+postsAllFields+" from posts where id = $1", postID).
 		Scan(&post.ID, &post.Title, &post.Date, &post.Snippet, &post.Content, &metadataAsJSONString); err != nil {
 		return post, err
 	}
@@ -135,7 +169,7 @@ func fillTags(db *sql.DB, posts []models.Post) ([]models.Post, error) {
 func GetPostsInRange(db *sql.DB, page, postsPerPage int) ([]models.Post, error) {
 	var posts []models.Post
 
-	rows, err := db.Query("select "+postsAllFieldsWithHtmlContent+" from posts order by id DESC offset $1 limit $2",
+	rows, err := db.Query("select "+postsAllFields+" from posts order by id DESC offset $1 limit $2",
 		page*postsPerPage, postsPerPage)
 	if err != nil {
 		return posts, err
@@ -161,15 +195,15 @@ func GetPostsInRange(db *sql.DB, page, postsPerPage int) ([]models.Post, error) 
 
 // TODO: тесты
 // GetPostsInRangeByTag - retrieves all posts in the given range with the given tag
-func GetPostsInRangeByTag(db *sql.DB, page, postsPerPage int, t string) ([]models.Post, error) {
+func GetPostsInRangeByTag(db *sql.DB, page, postsPerPage int, tag string) ([]models.Post, error) {
 	var posts []models.Post
 
-	postIds, err := tagService.GetAllPostIDsByTag(db, t)
+	postIds, err := tagService.GetAllPostIDsByTag(db, tag)
 	if err != nil {
 		return posts, err
 	}
 
-	rows, err := db.Query("select "+postsAllFieldsWithHtmlContent+" from posts where id = any($1) order by id DESC offset $2 limit $3",
+	rows, err := db.Query("select "+postsAllFields+" from posts where id = any($1) order by id DESC offset $2 limit $3",
 		pg.Array(postIds), page*postsPerPage, postsPerPage)
 	if err != nil {
 		return posts, err

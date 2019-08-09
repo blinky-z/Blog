@@ -1,6 +1,8 @@
 var cutDelimiter = '&lt;cut&gt;';
 var editor;
+var tagsInputTagify;
 
+// initialize editor section: create tui-editor and add available tags to tagify suggestions
 $(document).ready(function () {
     if ($('#editSection').length) {
         editor = new tui.Editor({
@@ -18,6 +20,18 @@ $(document).ready(function () {
             editor.setHtml(content);
         }
         contentTemp.remove();
+
+        var tagsInput = document.querySelector("#tags");
+        var allTags = tagsInput.getAttribute("data-allTags");
+        if (allTags !== "") {
+            allTags = allTags.split(",")
+        } else {
+            allTags = []
+        }
+
+        tagsInputTagify = new Tagify(tagsInput, {
+            whitelist: allTags,
+        })
     }
 });
 
@@ -45,19 +59,10 @@ function getEditorInput() {
         keywords: keywords
     };
 
-    var tags = $("#tags").val();
-    if (tags !== "") {
-        tags = tags.split(",");
-    } else {
-        tags = [];
-    }
-
-    console.log({
-        title: title,
-        snippet: snippet,
-        content: content,
-        metadata: metadata,
-        tags: tags
+    var tagsTagify = tagsInputTagify.value;
+    var tags = [];
+    tagsTagify.forEach(function (elem) {
+        tags.push(elem.value);
     });
 
     return {
@@ -129,9 +134,7 @@ function deletePost(action) {
     var result = confirm("You sure you want to delete this post?");
     if (result) {
         var actions = $(action).parent();
-        console.log(actions);
         var postID = actions.attr("data-id");
-        console.log(postID);
 
         $.ajax(
             {
@@ -142,6 +145,105 @@ function deletePost(action) {
                 },
                 success: function (data, textStatus, jqXHR) {
                     alert("Post deleted");
+                    document.location.reload()
+                },
+                statusCode: {
+                    401: function () {
+                        alert("Please Log In first");
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    var response = JSON.parse(jqXHR.responseText);
+                    alert(response.error)
+                }
+            }
+        );
+    }
+}
+
+function createTag() {
+    var tagName = prompt("Enter a tag name");
+    if (tagName == null) {
+        return
+    }
+
+    var data = {Name: tagName};
+
+    $.ajax(
+        {
+            url: '/api/tags',
+            type: 'POST',
+            data: JSON.stringify(data),
+            beforeSend: function (xhr) {
+                // xhr.setRequestHeader('Authorization', `bearer ${token}`);
+            },
+            success: function (data, textStatus, jqXHR) {
+                document.location.reload()
+            },
+            statusCode: {
+                401: function () {
+                    alert("Please Log In first");
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                var response = JSON.parse(jqXHR.responseText);
+                alert(response.error)
+            }
+        }
+    );
+}
+
+function editTag(action) {
+    var actions = $(action).parent();
+    var tagID = actions.attr("data-id");
+    var tagName = actions.attr("data-name");
+
+    var newTagName = prompt("Enter a new tag name", tagName);
+    if (newTagName == null) {
+        return false
+    }
+
+    var data = {Name: newTagName};
+
+    $.ajax(
+        {
+            url: `/api/tags/${tagID}`,
+            type: 'PUT',
+            data: JSON.stringify(data),
+            beforeSend: function (xhr) {
+                // xhr.setRequestHeader('Authorization', `bearer ${token}`);
+            },
+            success: function (data, textStatus, jqXHR) {
+                document.location.reload()
+            },
+            statusCode: {
+                401: function () {
+                    alert("Please Log In first");
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                var response = JSON.parse(jqXHR.responseText);
+                alert(response.error)
+            }
+        }
+    );
+}
+
+function deleteTag(action) {
+    var result = confirm("You sure you want to delete this tag?");
+    if (result) {
+        var actions = $(action).parent();
+        var tagID = actions.attr("data-id");
+
+        $.ajax(
+            {
+                url: `/api/tags/${tagID}`,
+                type: 'DELETE',
+                beforeSend: function (xhr) {
+                    // xhr.setRequestHeader('Authorization', `bearer ${token}`);
+                },
+                success: function (data, textStatus, jqXHR) {
+                    alert("Tag deleted");
                     document.location.reload()
                 },
                 statusCode: {

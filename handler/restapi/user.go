@@ -9,6 +9,7 @@ import (
 	"github.com/blinky-z/Blog/models"
 	"github.com/blinky-z/Blog/service/userService"
 	"github.com/dgrijalva/jwt-go"
+	pg "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
@@ -208,19 +209,6 @@ func (api *UserAPIHandler) RegisterUserHandler() http.Handler {
 		username := strings.TrimSpace(request.Username)
 		password := []byte(request.Password)
 
-		isUserExists, err := userService.ExistsByUsernameOrEmail(api.db, username, email)
-		if err != nil {
-			logError.Printf("Can't register user: error checking user for presence. Username: %s. Error: %s",
-				username, err)
-			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-			return
-		}
-		if isUserExists {
-			logError.Printf("Can't register user: user already registered. Username: %s", username)
-			RespondWithError(w, http.StatusBadRequest, UserAlreadyRegistered)
-			return
-		}
-
 		// generate hashed password
 		hashedPassword, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
 		if err != nil {
@@ -232,6 +220,12 @@ func (api *UserAPIHandler) RegisterUserHandler() http.Handler {
 
 		if err := userService.Save(api.db, username, email, string(hashedPassword)); err != nil {
 			logError.Printf("Error saving user in database. Username: %s. Error: %s", username, err)
+
+			// check for duplicate error
+			if err.(*pg.Error).Code == "23505" {
+				RespondWithError(w, http.StatusBadRequest, UserAlreadyRegistered)
+				return
+			}
 			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
 			return
 		}

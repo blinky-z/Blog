@@ -10,4 +10,5 @@ type UpdateRequest struct {
 	Snippet  string
 	Content  string
 	Metadata models.MetaData
+	Tags     []string
 }

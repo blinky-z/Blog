@@ -105,6 +105,9 @@ func RunServer() {
 	postAPIHandler := restapi.NewPostAPIHandler(Db,
 		log.New(os.Stdout, "[restApi.post] INFO: ", log.Ltime),
 		log.New(os.Stderr, "[restApi.post] ERROR: ", log.Ltime))
+	tagAPIHandler := restapi.NewTagAPIHandler(Db,
+		log.New(os.Stdout, "[restApi.tag] INFO: ", log.Ltime),
+		log.New(os.Stderr, "[restApi.tag] ERROR: ", log.Ltime))
 	//userAPIHandler := restapi.NewUserAPIHandler(Db,
 	//	jwtSecret,
 	//	&admins,
@@ -129,6 +132,10 @@ func RunServer() {
 	//	jwtMiddleware.Handler(userAPIHandler.FgpAuthentication(postAPIHandler.DeletePostHandler()))).Methods("DELETE")
 
 	router.HandleFunc("/api/hc", func(w http.ResponseWriter, r *http.Request) {
+		if err = Db.Ping(); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		w.WriteHeader(200)
 	}).Methods("GET")
 
@@ -156,12 +163,12 @@ func RunServer() {
 	mainRouter.Path("/sitemap").HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		http.ServeFile(writer, request, "sitemap.xml")
 	}).Methods("GET")
-	domain.String()
 
 	adminRouter := router.Host("admin." + domain.Host).Subrouter()
 	adminRouter.Path("/").Handler(renderAPIHandler.RenderAdminPageHandler()).Methods("GET")
 	adminRouter.Path("/editor").Handler(renderAPIHandler.RenderAdminEditorPageHandler()).Methods("GET")
 	adminRouter.Path("/manage-posts").Handler(renderAPIHandler.RenderAdminManagePostsPageHandler()).Methods("GET")
+	adminRouter.Path("/manage-tags").Handler(renderAPIHandler.RenderAdminManageTagsPageHandler()).Methods("GET")
 	adminRouter.Path("/robots.txt").HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		http.ServeFile(writer, request, "robots_admin.txt")
 	}).Methods("GET")
@@ -170,6 +177,9 @@ func RunServer() {
 	adminRouter.Handle("/api/posts", postAPIHandler.CreatePostHandler()).Methods("POST")
 	adminRouter.Handle("/api/posts/{id}", postAPIHandler.UpdatePostHandler()).Methods("PUT")
 	adminRouter.Handle("/api/posts/{id}", postAPIHandler.DeletePostHandler()).Methods("DELETE")
+	adminRouter.Handle("/api/tags", tagAPIHandler.CreateTagHandler()).Methods("POST")
+	adminRouter.Handle("/api/tags/{id}", tagAPIHandler.UpdateTagHandler()).Methods("PUT")
+	adminRouter.Handle("/api/tags/{id}", tagAPIHandler.DeleteTagHandler()).Methods("DELETE")
 
 	serverPort := viper.GetString(serverPortEnvKey)
 	logInfo.Printf("Starting server on port %s", serverPort)
