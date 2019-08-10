@@ -44,28 +44,31 @@ func updatePostTags(tx *sql.Tx, postID string, tags []string) error {
 		return err
 	}
 
-	tagIDs, err := getTagIDsByNames(tx, tags)
-	if err != nil {
-		return err
-	}
+	if len(tags) != 0 {
+		tagIDs, err := getTagIDsByNames(tx, tags)
+		if err != nil {
+			return err
+		}
 
-	query := "insert into post_tags (" + postTagsInsertFields + ") values "
-	args := make([]interface{}, 0)
+		query := "insert into post_tags (" + postTagsInsertFields + ") values "
+		args := make([]interface{}, 0)
 
-	iter := 1
-	for _, tag := range tags {
-		query += fmt.Sprintf("($%d, $%d),", iter, iter+1)
-		args = append(args, postID, tagIDs[tag])
-		iter = iter + 2
-	}
-	query = strings.TrimSuffix(query, ",")
+		iter := 1
+		for _, tag := range tags {
+			query += fmt.Sprintf("($%d, $%d),", iter, iter+1)
+			args = append(args, postID, tagIDs[tag])
+			iter = iter + 2
+		}
+		query = strings.TrimSuffix(query, ",")
 
-	if stmt, err := tx.Prepare(query); err != nil {
-		return err
-	} else {
-		_, err := stmt.Exec(args...)
-		return err
+		if stmt, err := tx.Prepare(query); err != nil {
+			return err
+		} else {
+			_, err := stmt.Exec(args...)
+			return err
+		}
 	}
+	return nil
 }
 
 // DeletePostTags - removes all post tags. Usually you want to call this function when deleting a post
@@ -110,22 +113,25 @@ func DeleteByID(db *sql.DB, tagID string) error {
 
 // saveNewTags - saves bunch of tags. If tag already exists, it is omitted
 func saveNewTags(tx *sql.Tx, tags []string) error {
-	query := "insert into tags (" + tagsInsertFields + ") values "
-	args := make([]interface{}, len(tags))
+	if len(tags) != 0 {
+		query := "insert into tags (" + tagsInsertFields + ") values "
+		args := make([]interface{}, len(tags))
 
-	for index, tag := range tags {
-		query += fmt.Sprintf("($%d),", index+1)
-		args[index] = tag
-	}
-	query = strings.TrimSuffix(query, ",")
+		for index, tag := range tags {
+			query += fmt.Sprintf("($%d),", index+1)
+			args[index] = tag
+		}
+		query = strings.TrimSuffix(query, ",")
 
-	query += " on conflict do nothing"
-	if stmt, err := tx.Prepare(query); err != nil {
-		return err
-	} else {
-		_, err := stmt.Exec(args...)
-		return err
+		query += " on conflict do nothing"
+		if stmt, err := tx.Prepare(query); err != nil {
+			return err
+		} else {
+			_, err := stmt.Exec(args...)
+			return err
+		}
 	}
+	return nil
 }
 
 // GetAllByPostID - returns all tags of the given post

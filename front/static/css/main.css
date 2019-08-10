@@ -3,7 +3,9 @@ body {
     font-weight: 300;
     color: #333;
     line-height: 1.6;
-    font-size: 16px;
+    font-style: normal;
+    text-rendering: optimizeLegibility;
+    font-size: 15px;
 }
 
 a, a:hover {
@@ -74,7 +76,7 @@ a:hover {
 }
 
 h1, h2, h3, h4, h5, h6 {
-    font-family: raleway, sans-serif;
+    font-family: 'Fira Sans', sans-serif;
     line-height: 1.2;
     color: #333;
     font-weight: 100
@@ -376,13 +378,42 @@ ul {
 }
 
 .post .content {
-    font-size: 14px;
+    font-family: "-apple-system", BlinkMacSystemFont, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.56;
+    font-weight: 400;
+    font-style: normal;
+    text-rendering: optimizeLegibility;
     word-break: break-word;
-    line-height: normal;
     width: 100%;
     max-width: 100%;
 }
 
 .post .content.about ul {
     margin-left: 10px;
+}
+
+h1.page-title,
+.post-header.about h1.title,
+.header h1.site-title {
+    font-weight: 200;
+    font-size: 36px;
+    font-family: raleway, sans-serif;
+}
+
+.header .site-description h2 {
+    font-weight: 300;
+    font-family: raleway, sans-serif;
+}
+
+.post .post-header .meta {
+    font-size: 0.815rem;
+}
+
+.post .post-header h1.title {
+    font-size: 2rem;
+}
+
+.section .section-header {
+    font-family: "ubuntu", sans-serif;
 }

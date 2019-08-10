@@ -2,7 +2,6 @@ package restapi
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/blinky-z/Blog/models"
 	"net/http"
 )
@@ -43,8 +42,6 @@ func RespondWithError(w http.ResponseWriter, code int, errorCode models.RequestE
 		return
 	}
 
-	fmt.Printf("Built response: %v\n", string(encodedResponse))
-
 	respondWithJSON(w, code, encodedResponse)
 }
 
@@ -60,8 +57,6 @@ func RespondWithBody(w http.ResponseWriter, code int, payload interface{}) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	fmt.Printf("Built response: %v\n", string(encodedResponse))
 
 	respondWithJSON(w, code, encodedResponse)
 }

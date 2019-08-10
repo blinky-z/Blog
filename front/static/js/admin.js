@@ -108,7 +108,7 @@ function publishPost(action, domain) {
         type = 'PUT';
     }
 
-    localStorage.setItem(editorTextBackupKey + postID, editor.getHTML());
+    localStorage.setItem(editorTextBackupKey + postID, editor.getHtml());
 
     $.ajax(
         {

@@ -51,35 +51,32 @@ var (
 
 // constants for use in validator methods
 const (
-	// MinPostTitleLen - maximum post title length
+	// MinPostTitleLen - minimum post title length
 	MinPostTitleLen int = 10
 	// MaxPostTitleLen - maximum post title length
-	MaxPostTitleLen int = 120
+	MaxPostTitleLen int = 200
 
 	// MaxPostsPerPage - maximum posts that can be displayed per page
 	MaxPostsPerPage int = 40
 
 	// MinMetaDescriptionLen - min meta description length.
-	MinMetaDescriptionLen int = 40
+	MinMetaDescriptionLen int = 20
 	// MaxMetaDescriptionLen - max meta description length.
-	// 160 is a good value for search engines
-	MaxMetaDescriptionLen int = 160
+	MaxMetaDescriptionLen int = 240
 
 	// MinMetaKeywordsAmount - min allowed amount of meta keywords
-	// 4 is a good value for search engines
 	MinMetaKeywordsAmount int = 0
-	// MaxMetaKeywordsAmount - max allowed amount of meta keywords. Don't overuse keywords.
-	// 4 is a good value for search engines
-	MaxMetaKeywordsAmount int = 4
+	// MaxMetaKeywordsAmount - max allowed amount of meta keywords
+	MaxMetaKeywordsAmount int = 10
 	// MinMetaKeywordLen - min length of each meta keyword
-	MinMetaKeywordLen int = 4
+	MinMetaKeywordLen int = 1
 	// MaxMetaKeywordLen - max length of each meta keyword
-	MaxMetaKeywordLen int = 20
+	MaxMetaKeywordLen int = 80
 
-	// MaxSnippetLen - max length of post snippet
-	MaxSnippetLen int = 350
 	// MinSnippetLen - min length of post snippet
-	MinSnippetLen int = 40
+	MinSnippetLen int = 10
+	// MaxSnippetLen - max length of post snippet
+	MaxSnippetLen int = 500
 )
 
 // other API constants

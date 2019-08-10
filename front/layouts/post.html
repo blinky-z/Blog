@@ -11,7 +11,8 @@
 
         <div class="post-header">
             <h1 class="title">{{ .Data.Post.Title }}</h1>
-            <div class="meta">Posted at &mdash; {{ formatTime .Data.Post.Date }}</div>
+            <div class="meta">
+                Posted at &mdash; <i>{{ formatTime .Data.Post.Date }}</i></div>
         </div>
 
         <div class="content">
