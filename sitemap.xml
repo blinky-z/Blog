@@ -8,25 +8,25 @@
 
 
     <url>
-        <loc>https://progbloom.dev:443/</loc>
+        <loc>https://progbloom.dev/</loc>
         <lastmod>2019-08-07T11:54:16+00:00</lastmod>
         <changefreq>daily</changefreq>
         <priority>1.00</priority>
     </url>
     <url>
-        <loc>https://progbloom.dev:443/posts</loc>
+        <loc>https://progbloom.dev/posts</loc>
         <lastmod>2019-08-07T11:54:16+00:00</lastmod>
         <changefreq>daily</changefreq>
         <priority>0.80</priority>
     </url>
     <url>
-        <loc>https://progbloom.dev:443/tags</loc>
+        <loc>https://progbloom.dev/tags</loc>
         <lastmod>2019-08-07T11:54:16+00:00</lastmod>
         <changefreq>daily</changefreq>
         <priority>0.80</priority>
     </url>
     <url>
-        <loc>https://progbloom.dev:443/about</loc>
+        <loc>https://progbloom.dev/about</loc>
         <lastmod>2019-08-07T11:54:16+00:00</lastmod>
         <changefreq>weekly</changefreq>
         <priority>1.00</priority>
