@@ -221,10 +221,14 @@ func (api *PostAPIHandler) CreatePostHandler() http.Handler {
 			return
 		}
 
-		// trim spaces
-		tags := make([]string, len(request.Tags))
+		// trim spaces in all tags
 		for tagIndex, tag := range request.Tags {
-			tags[tagIndex] = strings.TrimSpace(tag)
+			request.Tags[tagIndex] = strings.TrimSpace(tag)
+		}
+
+		// trim spaces in all meta keywords
+		for keywordIndex, keyword := range request.Metadata.Keywords {
+			request.Metadata.Keywords[keywordIndex] = strings.TrimSpace(keyword)
 		}
 
 		saveRequest := &postService.SaveRequest{
@@ -232,7 +236,7 @@ func (api *PostAPIHandler) CreatePostHandler() http.Handler {
 			Snippet:  request.Snippet,
 			Content:  request.Content,
 			Metadata: request.Metadata,
-			Tags:     tags,
+			Tags:     request.Tags,
 		}
 		createdPost, err := postService.Save(api.db, saveRequest)
 		if err != nil {
@@ -293,10 +297,14 @@ func (api *PostAPIHandler) UpdatePostHandler() http.Handler {
 			return
 		}
 
-		// trim spaces
-		tags := make([]string, len(request.Tags))
+		// trim spaces in all tags
 		for tagIndex, tag := range request.Tags {
-			tags[tagIndex] = strings.TrimSpace(tag)
+			request.Tags[tagIndex] = strings.TrimSpace(tag)
+		}
+
+		// trim spaces in all meta keywords
+		for keywordIndex, keyword := range request.Metadata.Keywords {
+			request.Metadata.Keywords[keywordIndex] = strings.TrimSpace(keyword)
 		}
 
 		updateRequest := &postService.UpdateRequest{
@@ -305,7 +313,7 @@ func (api *PostAPIHandler) UpdatePostHandler() http.Handler {
 			Snippet:  request.Snippet,
 			Content:  request.Content,
 			Metadata: request.Metadata,
-			Tags:     tags,
+			Tags:     request.Tags,
 		}
 		updatedPost, err := postService.Update(api.db, updateRequest)
 		if err != nil {

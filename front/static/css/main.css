@@ -417,3 +417,11 @@ h1.page-title,
 .section .section-header {
     font-family: "ubuntu", sans-serif;
 }
+
+.post .content code {
+    background: #f1f1f1;
+}
+
+.post .content code.hljs {
+    font-size: 14px;
+}
