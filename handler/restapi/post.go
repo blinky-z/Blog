@@ -62,7 +62,7 @@ const (
 	// MinMetaDescriptionLen - min meta description length.
 	MinMetaDescriptionLen int = 20
 	// MaxMetaDescriptionLen - max meta description length.
-	MaxMetaDescriptionLen int = 240
+	MaxMetaDescriptionLen int = 400
 
 	// MinMetaKeywordsAmount - min allowed amount of meta keywords
 	MinMetaKeywordsAmount int = 0
@@ -216,7 +216,7 @@ func (api *PostAPIHandler) CreatePostHandler() http.Handler {
 
 		validatePostError := validateCreatePostRequest(&request)
 		if validatePostError != nil {
-			logError.Printf("Can't create post: invalid request. Error: %s", validatePostError)
+			logInfo.Printf("Can't create post: invalid request. Error: %s", validatePostError)
 			RespondWithError(w, http.StatusBadRequest, validatePostError)
 			return
 		}
@@ -272,7 +272,7 @@ func (api *PostAPIHandler) UpdatePostHandler() http.Handler {
 		logInfo.Printf("Got new post update request. Post ID: %s", postID)
 
 		if !IsPostIDValid(postID) {
-			logError.Printf("Can't update post: invalid post ID. Post ID: %s", postID)
+			logInfo.Printf("Can't update post: invalid post ID. Post ID: %s", postID)
 			RespondWithError(w, http.StatusBadRequest, InvalidRequest)
 			return
 		}
@@ -281,19 +281,6 @@ func (api *PostAPIHandler) UpdatePostHandler() http.Handler {
 		if validatePostError != nil {
 			logInfo.Printf("Can't update post: invalid request. Post ID: %s. Error: %s", postID, validatePostError)
 			RespondWithError(w, http.StatusBadRequest, validatePostError)
-			return
-		}
-
-		isPostExists, err := postService.ExistsByID(api.db, postID)
-		if err != nil {
-			logError.Printf("Can't update post: error checking post for presence. Post ID: %s. Error: %s",
-				postID, err)
-			RespondWithError(w, http.StatusInternalServerError, TechnicalError)
-			return
-		}
-		if !isPostExists {
-			logInfo.Printf("Can't update post: post does not exist. Post ID: %s", postID)
-			RespondWithError(w, http.StatusBadRequest, NoSuchPost)
 			return
 		}
 

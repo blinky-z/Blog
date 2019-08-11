@@ -93,14 +93,6 @@ func Update(db *sql.DB, request *UpdateRequest) (*models.Post, error) {
 	return updatedPost, tx.Commit()
 }
 
-// ExistsByID - checks if post with the given ID exists
-// returns boolean indicating whether post exists or not and error
-func ExistsByID(db *sql.DB, postID string) (bool, error) {
-	var postExists bool
-	err := db.QueryRow("select exists(select 1 from posts where id = $1)", postID).Scan(&postExists)
-	return postExists, err
-}
-
 // DeleteByID - deletes post from database
 func DeleteByID(db *sql.DB, postID string) error {
 	tx, err := db.Begin()
@@ -117,7 +109,7 @@ func DeleteByID(db *sql.DB, postID string) error {
 		return err
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 // GetByID - retrieves post with the given ID
@@ -152,7 +144,7 @@ func fillTags(db *sql.DB, posts []models.Post) ([]models.Post, error) {
 	}
 	postTags, err := tagService.GetAllInRangeOfPosts(db, postIDs)
 	if err != nil {
-		return nil, err
+		return posts, err
 	}
 
 	for postIndex, post := range posts {

@@ -72,7 +72,7 @@ func updatePostTags(tx *sql.Tx, postID string, tags []string) error {
 }
 
 // DeletePostTags - removes all post tags. Usually you want to call this function when deleting a post
-// Notice that tags itself will not be deleted, but only tags will be removed from post
+// Notice that tags itself will not be deleted
 func DeletePostTags(tx *sql.Tx, postID string) error {
 	_, err := tx.Exec("delete from post_tags where post_id = $1", postID)
 	return err
