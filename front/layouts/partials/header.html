@@ -1,6 +1,7 @@
 {{define "header"}}
     <div class="header">
-        <h1 class="site-title">{{- .Desc.Title -}}</h1>
+        {{$domain := .Domain.String}}
+        <h1 class="site-title"><a href="{{$domain}}">{{- .Desc.Title -}}</a></h1>
 
         <div class="site-description">
             <h2>{{- .Desc.Description -}}</h2>
@@ -26,10 +27,10 @@
 
         <nav>
             <ul class="flat">
-                <li><a href='{{.Domain.String}}/'>Home</a></li>
-                <li><a href='{{.Domain.String}}/posts'>All Posts</a></li>
-                <li><a href='{{.Domain.String}}/about'>About</a></li>
-                <li><a href='{{.Domain.String}}/tags'>Tags</a></li>
+                <li><a href='{{$domain}}/'>Home</a></li>
+                <li><a href='{{$domain}}/posts'>All Posts</a></li>
+                <li><a href='{{$domain}}/about'>About</a></li>
+                <li><a href='{{$domain}}/tags'>Tags</a></li>
             </ul>
         </nav>
     </div>
