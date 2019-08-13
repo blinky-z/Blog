@@ -125,8 +125,14 @@ function publishPost(action, domain) {
                 var response = JSON.parse(jqXHR.responseText);
                 var createdPost = response.body;
 
-                var postID = createdPost.ID;
-                window.location.href = `${domain}/posts/${postID}`
+                var createdPostID = createdPost.ID;
+
+                // avoid situation when post might be published again
+                if (postID === "") {
+                    window.location.replace(`${domain}/posts/${createdPostID}`)
+                } else {
+                    window.location.href = `${domain}/posts/${createdPostID}`
+                }
             },
             statusCode: {
                 401: function () {
