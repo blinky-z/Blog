@@ -97,10 +97,8 @@ type adminEditorPageData struct {
 	PostPresent bool
 }
 
-var defaultMetadata = models.MetaData{
-	Description: "blog about programming and linux",
-	Keywords:    []string{"programming", "coding", "Linux", "Java", "C", "C++", "low-level programming"},
-}
+var defaultMetaKeywords = []string{"programming", "coding", "Linux", "Java", "C", "C++", "low-level programming", "algorithms",
+	"data structures"}
 
 var defaultSiteDescription = SiteDescription{
 	Title:       "Progbloom 🌻",
@@ -208,8 +206,11 @@ func (renderApi *Handler) RenderIndexPageHandler() http.Handler {
 
 		var data Site
 		data.Head = SiteHead{
-			Title:    "Home" + siteSuffix,
-			Metadata: defaultMetadata,
+			Title: "Home" + siteSuffix,
+			Metadata: models.MetaData{
+				Description: "Progbloom - A blog about programming. I write about Linux, Java and low-level programming. Recent posts",
+				Keywords:    defaultMetaKeywords,
+			},
 		}
 		data.Domain = renderApi.domain
 		data.Desc = defaultSiteDescription
@@ -281,8 +282,11 @@ func (renderApi *Handler) RenderAllPostsPageHandler() http.Handler {
 		}
 
 		data.Head = SiteHead{
-			Title:    Title,
-			Metadata: defaultMetadata,
+			Title: Title,
+			Metadata: models.MetaData{
+				Description: "Progbloom - A blog about programming. All posts",
+				Keywords:    defaultMetaKeywords,
+			},
 		}
 		data.Domain = renderApi.domain
 		data.Desc = defaultSiteDescription
@@ -359,8 +363,11 @@ func (renderApi *Handler) RenderAllTagsPageHandler() http.Handler {
 
 		var data Site
 		data.Head = SiteHead{
-			Title:    "Tags Cloud" + siteSuffix,
-			Metadata: defaultMetadata,
+			Title: "Tags Cloud" + siteSuffix,
+			Metadata: models.MetaData{
+				Description: "Progbloom - A blog about programming. All tags",
+				Keywords:    defaultMetaKeywords,
+			},
 		}
 		data.Domain = renderApi.domain
 		data.Desc = defaultSiteDescription
@@ -395,8 +402,11 @@ func (renderApi *Handler) RenderAboutPageHandler() http.Handler {
 
 		var data Site
 		data.Head = SiteHead{
-			Title:    "About" + siteSuffix,
-			Metadata: defaultMetadata,
+			Title: "About" + siteSuffix,
+			Metadata: models.MetaData{
+				Description: "Progbloom - A blog about programming. About my site",
+				Keywords:    defaultMetaKeywords,
+			},
 		}
 		data.Domain = renderApi.domain
 		data.Desc = defaultSiteDescription
@@ -439,7 +449,7 @@ func (renderApi *Handler) RenderAdminPageHandler() http.Handler {
 
 		data.Head = SiteHead{
 			Title:    "Admin Dashboard" + siteSuffix,
-			Metadata: defaultMetadata,
+			Metadata: models.MetaData{},
 		}
 		data.Domain = renderApi.domain
 		data.Desc = defaultSiteDescription
@@ -509,7 +519,7 @@ func (renderApi *Handler) RenderAdminEditorPageHandler() http.Handler {
 
 		data.Head = SiteHead{
 			Title:    "Admin Dashboard - Editor" + siteSuffix,
-			Metadata: defaultMetadata,
+			Metadata: models.MetaData{},
 		}
 		data.Domain = renderApi.domain
 		data.Desc = defaultSiteDescription
@@ -561,7 +571,7 @@ func (renderApi *Handler) RenderAdminManagePostsPageHandler() http.Handler {
 
 		data.Head = SiteHead{
 			Title:    "Admin Dashboard - Manage posts" + " | Progbloom - A blog about programming",
-			Metadata: defaultMetadata,
+			Metadata: models.MetaData{},
 		}
 		data.Domain = renderApi.domain
 		data.Desc = defaultSiteDescription
@@ -624,7 +634,7 @@ func (renderApi *Handler) RenderAdminManageTagsPageHandler() http.Handler {
 		var data Site
 		data.Head = SiteHead{
 			Title:    "Admin Dashboard - Manage tags" + " | Progbloom - A blog about programming",
-			Metadata: defaultMetadata,
+			Metadata: models.MetaData{},
 		}
 		data.Domain = renderApi.domain
 		data.Desc = defaultSiteDescription
