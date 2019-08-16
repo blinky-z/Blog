@@ -76,7 +76,7 @@ const (
 	// MinSnippetLen - min length of post snippet
 	MinSnippetLen int = 10
 	// MaxSnippetLen - max length of post snippet
-	MaxSnippetLen int = 500
+	MaxSnippetLen int = 600
 )
 
 // other API constants
