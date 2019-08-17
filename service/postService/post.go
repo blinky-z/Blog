@@ -155,14 +155,18 @@ func fillTags(db *sql.DB, posts []models.Post) ([]models.Post, error) {
 }
 
 // TODO: тесты
-// GetPostsInRange - retrieves all posts in the given range
-// Range is described by page and entities per page args
-// returns slice which len is equal to `postsPerPage` and error
-func GetPostsInRange(db *sql.DB, page, postsPerPage int) ([]models.Post, error) {
+// GetPostsInRangeByTag - retrieves all posts in the given range with the given tag
+// the returned slice is sorted by post creation time in descending order
+func GetPostsInRangeByTag(db *sql.DB, offset, postsPerPage int, tag string) ([]models.Post, error) {
 	var posts []models.Post
 
-	rows, err := db.Query("select "+postsAllFields+" from posts order by id DESC offset $1 limit $2",
-		page*postsPerPage, postsPerPage)
+	postIds, err := tagService.GetAllPostIDsByTag(db, tag)
+	if err != nil {
+		return posts, err
+	}
+
+	rows, err := db.Query("select "+postsAllFields+" from posts where id = any($1) order by date DESC offset $2 limit $3",
+		pg.Array(postIds), offset, postsPerPage)
 	if err != nil {
 		return posts, err
 	}
@@ -186,17 +190,15 @@ func GetPostsInRange(db *sql.DB, page, postsPerPage int) ([]models.Post, error) 
 }
 
 // TODO: тесты
-// GetPostsInRangeByTag - retrieves all posts in the given range with the given tag
-func GetPostsInRangeByTag(db *sql.DB, page, postsPerPage int, tag string) ([]models.Post, error) {
+// GetPostsInRange - retrieves all posts in the given range
+// Range is described by page and entities per page args
+// returns slice which len is equal to `postsPerPage` and error
+// the returned slice is sorted by post creation time in descending order
+func GetPostsInRange(db *sql.DB, offset, postsPerPage int) ([]models.Post, error) {
 	var posts []models.Post
 
-	postIds, err := tagService.GetAllPostIDsByTag(db, tag)
-	if err != nil {
-		return posts, err
-	}
-
-	rows, err := db.Query("select "+postsAllFields+" from posts where id = any($1) order by id DESC offset $2 limit $3",
-		pg.Array(postIds), page*postsPerPage, postsPerPage)
+	rows, err := db.Query("select "+postsAllFields+" from posts order by date DESC offset $1 limit $2",
+		offset, postsPerPage)
 	if err != nil {
 		return posts, err
 	}

@@ -251,9 +251,9 @@ func (renderApi *Handler) RenderAllPostsPageHandler() http.Handler {
 		var posts []models.Post
 		var err error
 		if tag != "" {
-			posts, err = postService.GetPostsInRangeByTag(renderApi.db, page, postsPerPage+1, tag)
+			posts, err = postService.GetPostsInRangeByTag(renderApi.db, page*postsPerPage, postsPerPage+1, tag)
 		} else {
-			posts, err = postService.GetPostsInRange(renderApi.db, page, postsPerPage+1)
+			posts, err = postService.GetPostsInRange(renderApi.db, page*postsPerPage, postsPerPage+1)
 		}
 		if err != nil {
 			restapi.Respond(w, http.StatusInternalServerError)
