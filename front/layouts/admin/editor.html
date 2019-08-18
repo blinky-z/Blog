@@ -47,7 +47,7 @@
 
             {{if .Data.PostPresent}}
                 <div class="button-wrapper">
-                    <button onclick="updateFromServer(this)" data-id="{{.Data.Post.ID}}">Update from server</button>
+                    <button onclick="replaceContentWithActual()">Replace content with actual</button>
                 </div>
             {{end}}
             <div id="contentTemp" data-postID="{{.Data.Post.ID}}" style="display: none">

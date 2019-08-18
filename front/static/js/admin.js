@@ -24,7 +24,6 @@ $(document).ready(function () {
         } else {
             editor.setHtml(contentTemp.html());
         }
-        contentTemp.remove();
 
         var tagsInput = document.querySelector("#tags");
         var allTags = tagsInput.getAttribute("data-allTags");
@@ -44,11 +43,8 @@ $(document).ready(function () {
     }
 });
 
-function updateFromServer(action) {
-    var postID = $(action).attr("data-id");
-
-    localStorage.removeItem(editorTextBackupKey + postID);
-    location.reload();
+function replaceContentWithActual() {
+    editor.setHtml($("#contentTemp").html());
 }
 
 function getEditorInput() {
