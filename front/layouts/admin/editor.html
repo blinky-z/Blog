@@ -45,9 +45,11 @@
                 </ul>
             </form>
 
-            <div class="button-wrapper">
-                <button onclick="restoreCache(this)" data-id="{{.Data.Post.ID}}">Restore from cache</button>
-            </div>
+            {{if .Data.PostPresent}}
+                <div class="button-wrapper">
+                    <button onclick="updateFromServer(this)" data-id="{{.Data.Post.ID}}">Update from server</button>
+                </div>
+            {{end}}
             <div id="contentTemp" data-postID="{{.Data.Post.ID}}" style="display: none">
                 {{.Data.Post.Snippet}}
                 {{ "&lt;cut&gt;" }}

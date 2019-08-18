@@ -17,7 +17,13 @@ $(document).ready(function () {
 
         var contentTemp = $("#contentTemp");
         var postID = contentTemp.attr("data-postID");
-        editor.setHtml(contentTemp.html());
+
+        var backupText = localStorage.getItem(editorTextBackupKey + postID);
+        if (backupText != null) {
+            editor.setHtml(backupText);
+        } else {
+            editor.setHtml(contentTemp.html());
+        }
         contentTemp.remove();
 
         var tagsInput = document.querySelector("#tags");
@@ -38,15 +44,11 @@ $(document).ready(function () {
     }
 });
 
-function restoreCache(action) {
+function updateFromServer(action) {
     var postID = $(action).attr("data-id");
 
-    var backupText = localStorage.getItem(editorTextBackupKey + postID);
-    if (backupText != null) {
-        editor.setHtml(backupText)
-    } else {
-        alert("Cache is empty!")
-    }
+    localStorage.removeItem(editorTextBackupKey + postID);
+    location.reload();
 }
 
 function getEditorInput() {
