@@ -3,6 +3,20 @@
     <html lang="ru">
     {{ template "head" . }}
     <body>
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.9/highlight.min.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            asciimath2jax: {
+                delimiters: [['$$', '$$']]
+            }
+        });
+
+    </script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=AM_CHTML"
+            async></script>
     <script>hljs.initHighlightingOnLoad();</script>
     <div class="container wrapper post">
         {{ template "header" . }}
