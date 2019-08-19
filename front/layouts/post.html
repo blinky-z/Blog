@@ -10,7 +10,9 @@
     <script type="text/x-mathjax-config">
         MathJax.Hub.Config({
             asciimath2jax: {
-                delimiters: [['$$', '$$']]
+                skipTags: ["script","noscript","style","textarea","code"],
+                delimiters: [['$$', '$$']],
+                processClass: "lang-math"
             }
         });
 
