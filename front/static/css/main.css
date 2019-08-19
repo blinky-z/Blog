@@ -38,7 +38,6 @@ hr {
 }
 
 audio, canvas, img, video {
-    width: 100%;
     vertical-align: middle
 }
 
