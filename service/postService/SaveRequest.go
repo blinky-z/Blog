@@ -5,9 +5,10 @@ import (
 )
 
 type SaveRequest struct {
-	Title    string
-	Snippet  string
-	Content  string
-	Metadata models.MetaData
-	Tags     []string
+	Title     string
+	Snippet   string
+	Content   string
+	ContentMD string
+	Metadata  models.MetaData
+	Tags      []string
 }

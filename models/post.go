@@ -22,18 +22,20 @@ type Post struct {
 
 //CreatePostRequest - represents post creation request
 type CreatePostRequest struct {
-	Title    string   `json:"title"`
-	Snippet  string   `json:"snippet"`
-	Content  string   `json:"content"`
-	Metadata MetaData `json:"metadata"`
-	Tags     []string `json:"tags"`
+	Title     string   `json:"title"`
+	Snippet   string   `json:"snippet"`
+	Content   string   `json:"content"`
+	ContentMD string   `json:"contentMD"`
+	Metadata  MetaData `json:"metadata"`
+	Tags      []string `json:"tags"`
 }
 
 //UpdatePostRequest - represents post update request
 type UpdatePostRequest struct {
-	Title    string   `json:"title"`
-	Snippet  string   `json:"snippet"`
-	Content  string   `json:"content"`
-	Metadata MetaData `json:"metadata"`
-	Tags     []string `json:"tags"`
+	Title     string   `json:"title"`
+	Snippet   string   `json:"snippet"`
+	Content   string   `json:"content"`
+	ContentMD string   `json:"contentMD"`
+	Metadata  MetaData `json:"metadata"`
+	Tags      []string `json:"tags"`
 }

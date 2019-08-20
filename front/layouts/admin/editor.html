@@ -50,12 +50,12 @@
                     <button onclick="replaceContentWithActual()">Replace content with actual</button>
                 </div>
             {{end}}
-            <div id="contentTemp" data-postID="{{.Data.Post.ID}}" style="display: none">
-                {{.Data.Post.Snippet}}
-                {{ "&lt;cut&gt;" }}
-                {{.Data.Post.Content}}
-            </div>
+            <textarea id="contentTemp" data-id="{{.Data.Post.ID}}"
+                      style="display: none">{{.Data.Post.Content}}</textarea>
             <div id="editSection"></div>
+            <script>
+                initEditor();
+            </script>
 
             <div class="button-wrapper">
                 <button onclick="publishPost(this, '{{.Domain.String}}')" data-id="{{.Data.Post.ID}}">Publish</button>

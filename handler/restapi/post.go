@@ -232,11 +232,12 @@ func (api *PostAPIHandler) CreatePostHandler() http.Handler {
 		}
 
 		saveRequest := &postService.SaveRequest{
-			Title:    request.Title,
-			Snippet:  request.Snippet,
-			Content:  request.Content,
-			Metadata: request.Metadata,
-			Tags:     request.Tags,
+			Title:     request.Title,
+			Snippet:   request.Snippet,
+			Content:   request.Content,
+			ContentMD: request.ContentMD,
+			Metadata:  request.Metadata,
+			Tags:      request.Tags,
 		}
 		createdPost, err := postService.Save(api.db, saveRequest)
 		if err != nil {
@@ -295,12 +296,13 @@ func (api *PostAPIHandler) UpdatePostHandler() http.Handler {
 		}
 
 		updateRequest := &postService.UpdateRequest{
-			ID:       postID,
-			Title:    request.Title,
-			Snippet:  request.Snippet,
-			Content:  request.Content,
-			Metadata: request.Metadata,
-			Tags:     request.Tags,
+			ID:        postID,
+			Title:     request.Title,
+			Snippet:   request.Snippet,
+			Content:   request.Content,
+			ContentMD: request.ContentMD,
+			Metadata:  request.Metadata,
+			Tags:      request.Tags,
 		}
 		updatedPost, err := postService.Update(api.db, updateRequest)
 		if err != nil {

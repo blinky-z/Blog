@@ -1,9 +1,10 @@
 CREATE TABLE if not exists posts
 (
-    ID       SERIAL PRIMARY KEY,
-    TITLE    CHARACTER VARYING(120) not null,
-    DATE     TIMESTAMPTZ DEFAULT NOW(),
-    METADATA text                   not null,
-    SNIPPET  text                   not null,
-    CONTENT  text                   not null
+    ID         SERIAL PRIMARY KEY,
+    TITLE      CHARACTER VARYING(120) not null,
+    DATE       TIMESTAMPTZ DEFAULT NOW(),
+    METADATA   text                   not null,
+    SNIPPET    text                   not null,
+    CONTENT    text                   not null,
+    CONTENT_MD text
 );

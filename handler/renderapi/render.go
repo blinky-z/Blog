@@ -475,7 +475,7 @@ func (renderApi *Handler) RenderAdminEditorPageHandler() http.Handler {
 				return
 			}
 
-			post, err := postService.GetByID(renderApi.db, postID)
+			post, err := postService.GetByIDWithMarkdownContent(renderApi.db, postID)
 			if err != nil {
 				switch err {
 				case sql.ErrNoRows:
@@ -549,7 +549,7 @@ func (renderApi *Handler) RenderAdminManagePostsPageHandler() http.Handler {
 		}
 		page, _ := strconv.Atoi(rangeParams.Page)
 
-		posts, err := postService.GetPostsInRange(renderApi.db, page, postsPerPage+1)
+		posts, err := postService.GetPostsInRange(renderApi.db, page*postsPerPage, postsPerPage+1)
 		if err != nil {
 			restapi.Respond(w, http.StatusInternalServerError)
 			return

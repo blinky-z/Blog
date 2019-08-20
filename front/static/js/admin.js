@@ -1,47 +1,46 @@
-var cutDelimiter = '&lt;cut&gt;';
+var cutDelimiter = '<cut data-tomark-pass=""></cut>';
 var editor;
 var tagsInputTagify;
 const editorTextBackupKey = "editor-text";
 
 // initialize editor section: create tui-editor and add available tags to tagify suggestions
-$(document).ready(function () {
-    if ($('#editSection').length) {
-        editor = new tui.Editor({
-            el: document.querySelector('#editSection'),
-            initialEditType: 'markdown',
-            previewStyle: 'tab',
-            height: '600px',
-            usageStatistics: false,
-            placeholder: 'write here...'
-        });
+function initEditor() {
+    editor = new tui.Editor({
+        el: document.querySelector('#editSection'),
+        initialEditType: 'markdown',
+        previewStyle: 'tab',
+        height: '600px',
+        usageStatistics: false
+    });
 
-        var contentTemp = $("#contentTemp");
-        var postID = contentTemp.attr("data-postID");
+    contentTemp = $("#contentTemp");
 
-        var backupText = localStorage.getItem(editorTextBackupKey + postID);
-        if (backupText != null) {
-            editor.setHtml(backupText);
-        } else {
-            editor.setHtml(contentTemp.html());
-        }
+    var postID = contentTemp.attr("data-id");
+    var content = contentTemp.val();
 
-        var tagsInput = document.querySelector("#tags");
-        var allTags = tagsInput.getAttribute("data-allTags");
-        if (allTags !== "") {
-            allTags = allTags.split(",")
-        } else {
-            allTags = []
-        }
-
-        tagsInputTagify = new Tagify(tagsInput, {
-            whitelist: allTags,
-        });
-
-        window.setInterval(function () {
-            localStorage.setItem(editorTextBackupKey + postID, editor.getHtml())
-        }, 5000);
+    var backupText = localStorage.getItem(editorTextBackupKey + postID);
+    if (backupText != null) {
+        editor.setMarkdown(backupText);
+    } else {
+        editor.setMarkdown(content);
     }
-});
+
+    var tagsInput = document.querySelector("#tags");
+    var allTags = tagsInput.getAttribute("data-allTags");
+    if (allTags !== "") {
+        allTags = allTags.split(",")
+    } else {
+        allTags = []
+    }
+
+    tagsInputTagify = new Tagify(tagsInput, {
+        whitelist: allTags,
+    });
+
+    window.setInterval(function () {
+        localStorage.setItem(editorTextBackupKey + postID, editor.getMarkdown())
+    }, 5000);
+}
 
 function replaceContentWithActual() {
     editor.setHtml($("#contentTemp").html());
@@ -51,6 +50,8 @@ function getEditorInput() {
     var title = $("#title").val();
     var content = editor.getHtml();
 
+    console.log(`Content HTML: ${content}`);
+
     var indexOfCut = content.indexOf(cutDelimiter);
     if (indexOfCut === -1) {
         alert("Please insert cut delimiter");
@@ -58,6 +59,8 @@ function getEditorInput() {
     }
     var snippet = content.substring(0, indexOfCut);
     content = content.substring(indexOfCut + cutDelimiter.length);
+
+    var contentMD = editor.getMarkdown();
 
     var keywords = $("#metaKeywords").val();
     if (keywords !== "") {
@@ -81,6 +84,7 @@ function getEditorInput() {
         title: title,
         snippet: snippet,
         content: content,
+        contentMD: contentMD,
         metadata: metadata,
         tags: tags
     };
@@ -110,7 +114,7 @@ function publishPost(action, domain) {
         type = 'PUT';
     }
 
-    localStorage.setItem(editorTextBackupKey + postID, editor.getHtml());
+    localStorage.setItem(editorTextBackupKey + postID, editor.getMarkdown());
 
     $.ajax(
         {
