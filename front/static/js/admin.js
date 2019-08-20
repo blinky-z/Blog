@@ -13,7 +13,7 @@ function initEditor() {
         usageStatistics: false
     });
 
-    contentTemp = $("#contentTemp");
+    var contentTemp = $("#contentTemp");
 
     var postID = contentTemp.attr("data-id");
     var content = contentTemp.val();
@@ -43,7 +43,7 @@ function initEditor() {
 }
 
 function replaceContentWithActual() {
-    editor.setHtml($("#contentTemp").html());
+    editor.setMarkdown($("#contentTemp").val());
 }
 
 function getEditorInput() {
