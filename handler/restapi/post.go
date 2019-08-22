@@ -47,6 +47,8 @@ var (
 	NoSuchPost = models.NewRequestErrorCode("NO_SUCH_POST")
 	// InvalidPostsRange - invalid range of posts
 	InvalidPostsRange = models.NewRequestErrorCode("INVALID_POSTS_RANGE")
+	// InvalidPostTags - invalid tags
+	InvalidPostTags = models.NewRequestErrorCode("INVALID_TAGS")
 )
 
 // constants for use in validator methods
@@ -72,6 +74,11 @@ const (
 	MinMetaKeywordLen int = 1
 	// MaxMetaKeywordLen - max length of each meta keyword
 	MaxMetaKeywordLen int = 80
+
+	// MinTagLen - min length of each tag
+	MinTagLen int = 1
+	// MaxTagLen - max length of each tag
+	MaxTagLen int = 20
 
 	// MinSnippetLen - min length of post snippet
 	MinSnippetLen int = 10
@@ -105,7 +112,7 @@ func ValidateGetPostsRequestQueryParams(rangeParams *GetPostsRequestQueryParams)
 }
 
 func validatePostTitle(title *string) models.RequestErrorCode {
-	titleLen := len(strings.TrimSpace(*title))
+	titleLen := len([]rune(*title))
 	if titleLen > MaxPostTitleLen || titleLen < MinPostTitleLen {
 		return InvalidPostTitle
 	}
@@ -113,7 +120,7 @@ func validatePostTitle(title *string) models.RequestErrorCode {
 }
 
 func validatePostMetadata(metadata *models.MetaData) models.RequestErrorCode {
-	descriptionLen := len(strings.TrimSpace(metadata.Description))
+	descriptionLen := len([]rune(metadata.Description))
 	if descriptionLen > MaxMetaDescriptionLen || descriptionLen < MinMetaDescriptionLen {
 		return InvalidPostMetadata
 	}
@@ -124,7 +131,7 @@ func validatePostMetadata(metadata *models.MetaData) models.RequestErrorCode {
 	}
 
 	for _, keyword := range metadata.Keywords {
-		keywordLen := len(strings.TrimSpace(keyword))
+		keywordLen := len([]rune(keyword))
 		if keywordLen > MaxMetaKeywordLen || keywordLen < MinMetaKeywordLen {
 			return InvalidPostMetadata
 		}
@@ -133,7 +140,7 @@ func validatePostMetadata(metadata *models.MetaData) models.RequestErrorCode {
 }
 
 func validatePostSnippet(snippet *string) models.RequestErrorCode {
-	snippetLen := len(strings.TrimSpace(*snippet))
+	snippetLen := len([]rune(strings.TrimSpace(*snippet)))
 	if snippetLen > MaxSnippetLen || snippetLen < MinSnippetLen {
 		return InvalidPostSnippet
 	}
@@ -143,6 +150,16 @@ func validatePostSnippet(snippet *string) models.RequestErrorCode {
 func validatePostContent(content *string) models.RequestErrorCode {
 	if len(*content) == 0 {
 		return InvalidPostContent
+	}
+	return nil
+}
+
+func validatePostTags(tags *[]string) models.RequestErrorCode {
+	for _, tag := range *tags {
+		tagLen := len([]rune(tag))
+		if tagLen > MaxTagLen || tagLen < MinTagLen {
+			return InvalidPostTags
+		}
 	}
 	return nil
 }
@@ -158,6 +175,9 @@ func validateCreatePostRequest(request *models.CreatePostRequest) models.Request
 		return err
 	}
 	if err := validatePostContent(&request.Content); err != nil {
+		return err
+	}
+	if err := validatePostTags(&request.Tags); err != nil {
 		return err
 	}
 
@@ -214,13 +234,6 @@ func (api *PostAPIHandler) CreatePostHandler() http.Handler {
 
 		logInfo.Printf("Got new post creation request. Request: %+v", request)
 
-		validatePostError := validateCreatePostRequest(&request)
-		if validatePostError != nil {
-			logInfo.Printf("Can't create post: invalid request. Error: %s", validatePostError)
-			RespondWithError(w, http.StatusBadRequest, validatePostError)
-			return
-		}
-
 		// trim spaces in all tags
 		for tagIndex, tag := range request.Tags {
 			request.Tags[tagIndex] = strings.TrimSpace(tag)
@@ -229,6 +242,13 @@ func (api *PostAPIHandler) CreatePostHandler() http.Handler {
 		// trim spaces in all meta keywords
 		for keywordIndex, keyword := range request.Metadata.Keywords {
 			request.Metadata.Keywords[keywordIndex] = strings.TrimSpace(keyword)
+		}
+
+		validatePostError := validateCreatePostRequest(&request)
+		if validatePostError != nil {
+			logInfo.Printf("Can't create post: invalid request. Error: %s", validatePostError)
+			RespondWithError(w, http.StatusBadRequest, validatePostError)
+			return
 		}
 
 		saveRequest := &postService.SaveRequest{
