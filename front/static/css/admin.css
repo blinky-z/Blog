@@ -112,3 +112,11 @@ select {
 .admin-dash .back-to-dash-wrapper a {
     color: rebeccapurple;
 }
+
+.CodeMirror-code {
+    font-family: "DejaVu Sans Mono", monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 300;
+    letter-spacing: normal;
+}
