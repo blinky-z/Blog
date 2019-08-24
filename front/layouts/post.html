@@ -9,6 +9,11 @@
     <script>hljs.initHighlightingOnLoad();</script>
     <script type="text/x-mathjax-config">
         MathJax.Hub.Config({
+            CommonHTML: {
+                linebreaks: {
+                    automatic: true
+                }
+            },
             asciimath2jax: {
                 skipTags: ["script","noscript","style","textarea","code"],
                 delimiters: [['$', '$']],
