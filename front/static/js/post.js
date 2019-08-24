@@ -5,3 +5,6 @@ $.fancybox.defaults.buttons = [
     "close"
 ];
 $.fancybox.defaults.toolbar = false;
+$.fancybox.defaults.mobile = {
+    clickSlide: "close"
+};
