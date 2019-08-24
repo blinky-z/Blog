@@ -38,7 +38,9 @@ hr {
 }
 
 audio, canvas, img, video {
-    vertical-align: middle
+    vertical-align: middle;
+    max-width: 100%;
+    height: auto;
 }
 
 fieldset {
