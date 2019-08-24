@@ -114,7 +114,7 @@ select {
 }
 
 .CodeMirror-code {
-    font-family: "DejaVu Sans Mono", monospace;
+    font-family: DejaVu Sans Mono, Menlo, Monaco, Lucida Console, monospace;
     font-size: 13px;
     line-height: 1.5;
     font-weight: 300;
