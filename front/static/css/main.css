@@ -445,14 +445,11 @@ summary {
     font-weight: bold;
     margin: -.5em -.5em 0;
     padding: .5em;
+    cursor: pointer;
 }
 
 details[open] {
     padding: .5em;
-}
-
-details :hover {
-    cursor: pointer;
 }
 
 details[open] summary {
